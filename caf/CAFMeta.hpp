@@ -1210,7 +1210,12 @@ inline nlohmann::json toJson(const Type& type) {
  * @return nlohmann::json the JSON representation of the given object.
  */
 inline nlohmann::json toJson(const Function& api) {
-  // TODO: Implement toJson(const Function &).
+  auto json = nlohmann::json::object();
+  json["id"] = api.id();
+  json["name"] = api.name();
+  json["signature"] = toJson(api.signature());
+
+  return json;
 }
 
 /**

@@ -73,6 +73,13 @@ public:
     return _args;
   }
 
+  /**
+   * @brief Get the JSON representation of this FunctionSignature instance.
+   * 
+   * @return nlohmann::json JSON representation of this object.
+   */
+  nlohmann::json toJson() const noexcept;
+
 private:
   CAFStoreRef<Type> _returnType;
   std::vector<CAFStoreRef<Type>> _args;
@@ -214,6 +221,16 @@ public:
    */
   T* operator->() const;
 
+  /**
+   * @brief Get the JSON representation of this CAFStoreRef instance.
+   * 
+   * @tparam T the type of the pointee.
+   * @return nlohmann::json JSON representation of this object.
+   */
+  nlohmann::json toJson() const noexcept {
+    return nlohmann::json(_slot);
+  }
+
 private:
   CAFStore* _store;
   size_t _slot;
@@ -329,6 +346,27 @@ enum class TypeKind {
 };
 
 /**
+ * @brief Get the string representation of the given TypeKind value.
+ * 
+ * @param typeKind the TypeKind value to be serialized.
+ * @return std::string the string representation of the given TypeKind value.
+ */
+inline std::string toString(TypeKind typeKind) {
+  switch (typeKind) {
+    case TypeKind::Bits:
+      return "Bits";
+    case TypeKind::Pointer:
+      return "Pointer";
+    case TypeKind::Array:
+      return "Array";
+    case TypeKind::Struct:
+      return "Struct";
+    default:
+      return "Unknown";
+  }
+}
+
+/**
  * @brief Abstract base class of a type.
  * 
  */
@@ -348,6 +386,14 @@ public:
    * 
    */
   virtual ~Type() = default;
+
+  /**
+   * @brief Convert the given Type object into JSON representation.
+   * 
+   * @param type the object to be serialized.
+   * @return nlohmann::json the JSON representation of the given object.
+   */
+  nlohmann::json toJson() const noexcept;
 
 protected:
   /**
@@ -430,6 +476,17 @@ public:
     return _size;
   }
 
+  /**
+   * @brief Populate this BitsType instance onto the given JSON container.
+   * 
+   * @param json the JSON container onto which this BitsType object will be
+   * populated.
+   */
+  void populateJson(nlohmann::json& json) const noexcept {
+    json["name"] = name();
+    json["size"] = _size;
+  }
+
 private:
   size_t _size;
 };
@@ -462,6 +519,16 @@ public:
    */
   CAFStoreRef<Type> pointeeType() const noexcept {
     return _pointeeType;
+  }
+
+  /**
+   * @brief Populate this PointerType instance onto the given JSON container.
+   * 
+   * @param json the JSON container onto which this PointerType object will
+   * be populated.
+   */
+  void populateJson(nlohmann::json& json) const noexcept {
+    json["pointee"] = _pointeeType.toJson();
   }
 
 private:
@@ -505,6 +572,17 @@ public:
    */
   CAFStoreRef<Type> elementType() const noexcept {
     return _elementType;
+  }
+
+  /**
+   * @brief Populate this ArrayType instance onto the given JSON container.
+   * 
+   * @param json the JSON container onto which this ArrayType object will be
+   * populated.
+   */
+  void populateJson(nlohmann::json& json) const noexcept {
+    json["size"] = _size;
+    json["element"] = _elementType.toJson();
   }
 
 private:
@@ -569,6 +647,27 @@ public:
     _fieldTypes.push_back(field);
   }
 
+  /**
+   * @brief Populate this StructType instance onto the given JSON container.
+   * 
+   * @param json the JSON container onto which this StructType object will be
+   * populated.
+   */
+  void populateJson(nlohmann::json& json) const noexcept {
+    auto activators = nlohmann::json::array();
+    for (const auto& act : _activators) {
+      activators.push_back(act->toJson());
+    }
+
+    auto fields = nlohmann::json::array();
+    for (const auto& fie : _fieldTypes) {
+      fields.push_back(fie->toJson());
+    }
+
+    json["activators"] = std::move(activators);
+    json["fields"] = std::move(fields);
+  }
+
 private:
   std::vector<std::unique_ptr<Activator>> _activators;
   std::vector<CAFStoreRef<Type>> _fieldTypes;
@@ -583,6 +682,24 @@ enum class ActivatorKind {
   Constructor,
   Factory
 }; // enum class ActivatorKind
+
+/**
+ * @brief Get the string representation of the given ActivatorKind value.
+ * 
+ * @param activatorKind the ActivatorKind value to be serialized.
+ * @return std::string the string representation of the given ActivatorKind
+ * value.
+ */
+inline std::string toString(ActivatorKind activatorKind) {
+  switch (activatorKind) {
+    case ActivatorKind::Constructor:
+      return "Constructor";
+    case ActivatorKind::Factory:
+      return "Factory";
+    default:
+      return "Unknown";
+  }
+}
 
 /**
  * @brief Abstract base class of activators. 
@@ -637,6 +754,13 @@ public:
   ActivatorKind kind() const noexcept {
     return _kind;
   }
+
+  /**
+   * @brief Get the JSON representation of this Activator instance.
+   * 
+   * @return nlohmann::json JSON representation of this Activator object.
+   */
+  nlohmann::json toJson() const noexcept;
 
 protected:
   /**
@@ -761,6 +885,20 @@ public:
    */
   const std::string& name() const noexcept {
     return _name;
+  }
+
+  /**
+   * @brief Convert this Function object into JSON representation.
+   * 
+   * @return nlohmann::json the JSON representation of this Function object.
+   */
+  nlohmann::json toJson() const noexcept {
+    auto json = nlohmann::json::object();
+    json["id"] = id();
+    json["name"] = _name;
+    json["signature"] = signature().toJson();
+
+    return json;
   }
 
 private:
@@ -889,6 +1027,24 @@ public:
     return addApi(std::move(api));
   }
 
+  nlohmann::json toJson() const noexcept {
+    auto types = nlohmann::json::array();
+    for (const auto& type : _types) {
+      types.push_back(type->toJson());
+    }
+
+    auto apis = nlohmann::json::array();
+    for (const auto& api : _apis) {
+      apis.push_back(api->toJson());
+    }
+
+    auto ret = nlohmann::json::object();
+    ret["types"] = std::move(types);
+    ret["apis"] = std::move(apis);
+
+    return ret;
+  }
+
 private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _apis;
@@ -947,6 +1103,16 @@ private:
     _typeIds.emplace(typeId, slot);
 
     return CAFStoreRef<T> { this, slot };
+  }
+
+  /**
+   * @brief Add the given Type object into the store, with polymorphic dispatch.
+   * 
+   * @param type the type object to be added.
+   * @return CAFStoreRef<Type> pointer to the added type object.
+   */
+  CAFStoreRef<Type> addTypePolymorphic(std::unique_ptr<Type> type) {
+    // TODO: Implement CAFStore::addTypePolymorphic(std::unique_ptr<Type>).
   }
 
   template <typename T>
@@ -1028,228 +1194,52 @@ T* CAFStoreRef<T>::operator->() const {
 }
 
 
-namespace serialization {
-
-/**
- * @brief Get the string representation of the given TypeKind value.
- * 
- * @param typeKind the TypeKind value to be serialized.
- * @return std::string the string representation of the given TypeKind value.
- */
-inline std::string toString(TypeKind typeKind) {
-  switch (typeKind) {
-    case TypeKind::Bits:
-      return "Bits";
-    case TypeKind::Pointer:
-      return "Pointer";
-    case TypeKind::Array:
-      return "Array";
-    case TypeKind::Struct:
-      return "Struct";
-    default:
-      return "Unknown";
-  }
-}
-
-/**
- * @brief Get the string representation of the given ActivatorKind value.
- * 
- * @param activatorKind the ActivatorKind value to be serialized.
- * @return std::string the string representation of the given ActivatorKind
- * value.
- */
-inline std::string toString(ActivatorKind activatorKind) {
-  switch (activatorKind) {
-    case ActivatorKind::Constructor:
-      return "Constructor";
-    case ActivatorKind::Factory:
-      return "Factory";
-    default:
-      return "Unknown";
-  }
-}
-
-/**
- * @brief Get the JSON representation of the given CAFStoreRef instance.
- * 
- * @tparam T the type of the pointee.
- * @param ref the object to be serialized.
- * @return nlohmann::json JSON representation of the given object.
- */
-template <typename T>
-inline nlohmann::json toJson(const CAFStoreRef<T>& ref) {
-  return nlohmann::json(ref.slot());
-}
-
-/**
- * @brief Get the JSON representation of the given FunctionSignature instance.
- * 
- * @param signature the object to be serialized.
- * @return nlohmann::json JSON representation of the given object.
- */
-inline nlohmann::json toJson(const FunctionSignature& signature) {
+nlohmann::json FunctionSignature::toJson() const noexcept {
   auto json = nlohmann::json::object();
-  json["returnType"] = toJson(signature.returnType());
+  json["returnType"] = returnType().toJson();
   
-  auto args = nlohmann::json::array();
-  for (const auto& a : signature.args()) {
-    args.push_back(toJson(a));
+  auto argsJson = nlohmann::json::array();
+  for (const auto& a : args()) {
+    argsJson.push_back(a.toJson());
   }
 
-  json["args"] = std::move(args);
+  json["args"] = std::move(argsJson);
   return json;
 }
 
-/**
- * @brief Get the JSON representation of the given Activator instance.
- * 
- * @param activator the object to be serialized.
- * @return nlohmann::json JSON representation of the given object.
- */
-inline nlohmann::json toJson(const Activator& activator) {
+nlohmann::json Type::toJson() const noexcept  {
   auto json = nlohmann::json::object();
-  json["id"] = activator.id();
-  json["kind"] = toString(activator.kind());
-  json["name"] = activator.name();
-  json["constructingType"] = toJson(activator.constructingType());
-  json["signature"] = toJson(activator.signature());
+  json["id"] = id();
+  json["kind"] = toString(_kind);
 
-  return json;
-}
-
-/**
- * @brief Populate the given BitsType instance onto the given JSON container.
- * 
- * @param type the object to be serialized.
- * @param json the JSON container onto which the given BitsType object will be
- * populated.
- */
-inline void populateJson(const BitsType& type, nlohmann::json& json) {
-  json["name"] = type.name();
-  json["size"] = type.size();
-}
-
-/**
- * @brief Populate the PointerType instance onto the given JSON container.
- * 
- * @param type the object to be serialized.
- * @param json the JSON container onto which the given PointerType object will
- * be populated.
- */
-inline void populateJson(const PointerType& type, nlohmann::json& json) {
-  json["pointee"] = toJson(type.pointeeType());
-}
-
-/**
- * @brief Populate the ArrayType instance onto the given JSON container.
- * 
- * @param type the object to be serialized.
- * @param json the JSON container onto which the given ArrayType object will be
- * populated.
- */
-inline void populateJson(const ArrayType& type, nlohmann::json& json) {
-  json["element"] = toJson(type.elementType());
-  json["size"] = type.size();
-}
-
-/**
- * @brief Populate the StructType instance onto the given JSON container.
- * 
- * @param type the object to be serialized.
- * @param json the JSON container onto which the given StructType object will be
- * populated.
- */
-inline void populateJson(const StructType& type, nlohmann::json& json) {
-  auto activators = nlohmann::json::array();
-  for (const auto& act : type.activators()) {
-    activators.push_back(toJson(*act));
-  }
-
-  auto fields = nlohmann::json::array();
-  for (const auto& fie : type.fieldTypes()) {
-    fields.push_back(toJson(fie));
-  }
-
-  json["activators"] = std::move(activators);
-  json["fields"] = std::move(fields);
-}
-
-/**
- * @brief Convert the given Type object into JSON representation.
- * 
- * @param type the object to be serialized.
- * @return nlohmann::json the JSON representation of the given object.
- */
-inline nlohmann::json toJson(const Type& type) {
-  auto json = nlohmann::json::object();
-  json["id"] = type.id();
-  json["kind"] = toString(type.kind());
-
-  switch (type.kind()) {
+  switch (_kind) {
     case TypeKind::Bits:
-      populateJson(dynamic_cast<const BitsType &>(type), json);
+      dynamic_cast<const BitsType *>(this)->populateJson(json);
       break;
     case TypeKind::Pointer:
-      populateJson(dynamic_cast<const PointerType &>(type), json);
+      dynamic_cast<const PointerType *>(this)->populateJson(json);
       break;
     case TypeKind::Array:
-      populateJson(dynamic_cast<const ArrayType &>(type), json);
+      dynamic_cast<const ArrayType *>(this)->populateJson(json);
       break;
     case TypeKind::Struct:
-      populateJson(dynamic_cast<const StructType &>(type), json);
+      dynamic_cast<const StructType *>(this)->populateJson(json);
       break;
   }
 
   return json;
 }
 
-/**
- * @brief Convert the given Function object into JSON representation.
- * 
- * @param api the object to be serialized.
- * @return nlohmann::json the JSON representation of the given object.
- */
-inline nlohmann::json toJson(const Function& api) {
+nlohmann::json Activator::toJson() const noexcept {
   auto json = nlohmann::json::object();
-  json["id"] = api.id();
-  json["name"] = api.name();
-  json["signature"] = toJson(api.signature());
+  json["id"] = id();
+  json["kind"] = toString(_kind);
+  json["name"] = name();
+  json["constructingType"] = _constructingType.toJson();
+  json["signature"] = signature().toJson();
 
   return json;
 }
-
-/**
- * @brief Convert the given CAFStore object into JSON representation.
- * 
- * @param store the CAFStore object to be converted.
- * @return nlohmann::json the JSON representation of the given CAFStore object.
- */
-inline nlohmann::json toJson(const CAFStore& store) {
-  auto types = nlohmann::json::array();
-  for (const auto& type : store.types()) {
-    types.push_back(toJson(*type));
-  }
-
-  auto apis = nlohmann::json::array();
-  for (const auto& api : store.apis()) {
-    apis.push_back(toJson(*api));
-  }
-
-  auto ret = nlohmann::json::object();
-  ret["types"] = std::move(types);
-  ret["apis"] = std::move(apis);
-
-  return ret;
-}
-
-} // namespace serialization
-
-
-namespace deserialization {
-
-// TODO: Implement deserialization logic.
-
-} // namespace deserialization
 
 
 #ifdef CAF_NO_EXPORTED_SYMBOL

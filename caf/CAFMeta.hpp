@@ -9,6 +9,7 @@
 #include <vector>
 #include <unordered_map>
 #include <type_traits>
+#include <stdexcept>
 
 #include <json/json.hpp>
 
@@ -56,6 +57,15 @@ public:
   { }
 
   /**
+   * @brief Construct a new FunctionSignature object.
+   * 
+   */
+  explicit FunctionSignature() noexcept
+    : _returnType { },
+      _args { }
+  { }
+
+  /**
    * @brief Get the return type of the function.
    * 
    * @return CAFStoreRef<Type> the return type of the function.
@@ -78,11 +88,24 @@ public:
    * 
    * @return nlohmann::json JSON representation of this object.
    */
-  nlohmann::json toJson() const noexcept;
+  inline nlohmann::json toJson() const noexcept;
 
 private:
+
   CAFStoreRef<Type> _returnType;
   std::vector<CAFStoreRef<Type>> _args;
+
+public:
+  /**
+   * @brief Deserialize a FunctionSignature instance from the given JSON 
+   * snippet.
+   * 
+   * @param context CAFStore instance holding CAF related metadata.
+   * @param json the JSON snippet to deserialize FunctionSignature object from.
+   * @return FunctionSignature 
+   */
+  inline static FunctionSignature fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
 };
 
 /**
@@ -113,8 +136,43 @@ protected:
     : _signature(signature)
   { }
 
+  /**
+   * @brief Construct a new FunctionLike object.
+   * 
+   */
+  explicit FunctionLike() noexcept
+    : _signature { }
+  { }
+
 private:
-  const FunctionSignature& _signature;
+  FunctionSignature _signature;
+
+protected:
+  /**
+   * @brief Serialize the fields of the FunctionLike object into JSON
+   * representation and populate them into the given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const FunctionLike& object, nlohmann::json& json) noexcept {
+    json["signature"] = object._signature.toJson();
+  }
+
+  /**
+   * @brief Deserialize fields of FunctionLike from the given JSON container
+   * and populate them onto the given FunctionLike object.
+   * 
+   * @param context the CAFStore holding CAF related metadata.
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      CAFStore* context, FunctionLike& object, const nlohmann::json& json) 
+      noexcept {
+    object._signature = FunctionSignature::fromJson(context, json);
+  }
 };
 
 
@@ -173,9 +231,21 @@ public:
    * @param store the CAFStore object that owns the pointee.
    * @param slot the index of the slot.
    */
-  explicit CAFStoreRef(CAFStore* store, size_t slot)
+  explicit CAFStoreRef(CAFStore* store, size_t slot) noexcept
     : _store(store),
       _slot(slot)
+  { }
+
+  /**
+   * @brief Apply type conversion on the template type arguments.
+   * 
+   * @tparam U the original type.
+   * @param another CAFStoreRef that points to an instance of the original type.
+   */
+  template <typename U>
+  CAFStoreRef(const CAFStoreRef<U>& another) noexcept
+    : _store(another._store),
+      _slot(another._slot)
   { }
 
   /**
@@ -211,7 +281,7 @@ public:
    * 
    * @return T& reference to the pointee.
    */
-  T& operator*() const;
+  inline T& operator*() const;
 
   /**
    * @brief Dereference the smart pointer and returns a raw pointer to the 
@@ -219,7 +289,7 @@ public:
    * 
    * @return T* raw pointer to the pointee.
    */
-  T* operator->() const;
+  inline T* operator->() const;
 
   /**
    * @brief Get the JSON representation of this CAFStoreRef instance.
@@ -234,6 +304,19 @@ public:
 private:
   CAFStore* _store;
   size_t _slot;
+
+public:
+  /**
+   * @brief Deserialize a CAFStoreRef instance from the given JSON snippet.
+   * 
+   * @param context pointer to the store object owning the pointee.
+   * @param json the JSON snippet.
+   * @return CAFStoreRef<T> the deserialized object.
+   */
+  static CAFStoreRef<T> fromJson(CAFStore* context, const nlohmann::json& json) {
+    auto slot = json.get<size_t>();
+    return CAFStoreRef<T> { context, slot };
+  }
 };
 
 
@@ -307,8 +390,44 @@ protected:
     : _id(id)
   { }
 
+  /**
+   * @brief Set the ID of this object.
+   * 
+   * @param id the new ID of this object.
+   */
+  void setId(Id id) noexcept {
+    _id = id;
+  }
+
 private:
   Id _id;
+
+protected:
+  /**
+   * @brief Serialize the object ID of the given object and populate it into the
+   * given JSON container.
+   * 
+   * @param object the object to serialize.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const Identity<Concrete, Id, IdAllocator>& object, 
+      nlohmann::json& json) noexcept {
+    json["id"] = _id;
+  }
+
+  /**
+   * @brief Deserialize object ID from the given JSON snippet and populate it
+   * onto the given object.
+   * 
+   * @param object the object to populate object ID onto.
+   * @param json the JSON snippet.
+   */
+  static void populateFromJson(
+      Identity<Concrete, Id, IdAllocator>& object, const nlohmann::json& json)
+      noexcept {
+    object._id = json.get<Id>();
+  }
 };
 
 template <typename Concrete, typename Id, typename IdAllocator>
@@ -351,7 +470,7 @@ enum class TypeKind {
  * @param typeKind the TypeKind value to be serialized.
  * @return std::string the string representation of the given TypeKind value.
  */
-inline std::string toString(TypeKind typeKind) {
+inline std::string toString(TypeKind typeKind) noexcept {
   switch (typeKind) {
     case TypeKind::Bits:
       return "Bits";
@@ -363,6 +482,28 @@ inline std::string toString(TypeKind typeKind) {
       return "Struct";
     default:
       return "Unknown";
+  }
+}
+
+/**
+ * @brief Parse the given string into corresponding TypeKind value.
+ * 
+ * @param s the string value to parse.
+ * @return TypeKind the corresponding TypeKind value.
+ * @throw std::invalid_argument if the given string is not a valid TypeKind
+ * representation.
+ */
+inline TypeKind parseTypeKind(const std::string& s) {
+  if (s == "Bits") {
+    return TypeKind::Bits;
+  } else if (s == "Pointer") {
+    return TypeKind::Pointer;
+  } else if (s == "Array") {
+    return TypeKind::Array;
+  } else if (s == "Struct") {
+    return TypeKind::Struct;
+  } else {
+    throw std::invalid_argument { "Invalid string representation of TypeKind." };
   }
 }
 
@@ -388,12 +529,12 @@ public:
   virtual ~Type() = default;
 
   /**
-   * @brief Convert the given Type object into JSON representation.
+   * @brief When overridden in derived classes, convert this Type object into 
+   * JSON representation.
    * 
-   * @param type the object to be serialized.
-   * @return nlohmann::json the JSON representation of the given object.
+   * @return nlohmann::json the JSON representation of this Type object.
    */
-  nlohmann::json toJson() const noexcept;
+  virtual nlohmann::json toJson() const noexcept = 0;
 
 protected:
   /**
@@ -409,6 +550,45 @@ protected:
 
 private:
   TypeKind _kind;
+
+public:
+  /**
+   * @brief Deserialize a polymorphic Type instance from the given JSON snippet.
+   * 
+   * The serialized Type instance will be added to the given CAFStore.
+   * 
+   * @param store CAFStore instance holding CAF related metadata.
+   * @param json the JSON snippet.
+   * @return CAFStoreRef<Type> pointer to the deserialized object.
+   */
+  inline static CAFStoreRef<Type> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
+
+protected:
+  /**
+   * @brief Serialize the given Type object and populate its fields into the 
+   * given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(const Type& object, nlohmann::json& json) noexcept {
+    Identity<Type, uint64_t>::populateJson(object, json);
+    json["kind"] = toString(object._kind);
+  }
+
+  /**
+   * @brief Deserialize the members of the given Type object from the given JSON
+   * snippet and populate them onto the object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON snippet.
+   */
+  static void populateFromJson(
+      Type& object, const nlohmann::json& json) noexcept {
+    Identity<Type, uint64_t>::populateFromJson(object, json);
+    object._kind = parseTypeKind(json["kind"].get<std::string>());
+  }
 };
 
 
@@ -443,6 +623,33 @@ protected:
 
 private:
   std::string _name;
+
+protected:
+  /**
+   * @brief Serialize the fields of the given object into JSON representation
+   * and populate them into the given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const NamedType& object, nlohmann::json& json) noexcept {
+    Type::populateJson(object, json);
+    json["name"] = object._name;
+  }
+
+  /**
+   * @brief Deserialize fields of NamedType instance from the given JSON 
+   * container and populate them onto the given object.
+   * 
+   * @param object the existing NamedType object. 
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      NamedType& object, const nlohmann::json& json) noexcept {
+    Type::populateFromJson(object, json);
+    object._name = json["name"].get<std::string>();
+  }
 };
 
 
@@ -482,13 +689,65 @@ public:
    * @param json the JSON container onto which this BitsType object will be
    * populated.
    */
-  void populateJson(nlohmann::json& json) const noexcept {
-    json["name"] = name();
-    json["size"] = _size;
+  nlohmann::json toJson() const noexcept override {
+    auto json = nlohmann::json::object();
+    populateJson(*this, json);
+
+    return json;
   }
 
 private:
+  /**
+   * @brief Construct a new BitsType object.
+   * 
+   * @param store the store holding this object.
+   */
+  explicit BitsType(CAFStore* store) noexcept
+    : NamedType { store, std::string(), TypeKind::Bits },
+      _size(0)
+  { }
+
   size_t _size;
+
+public:
+  /**
+   * @brief Deserialize an instance of BitsType from the given JSON container.
+   * 
+   * The deserialized object will be added to the given CAFStore.
+   * 
+   * @param context CAFStore instance holding CAF related metadata.
+   * @param json the JSON container.
+   * @return std::unique_ptr<BitsType> the deserialized object.
+   */
+  inline static CAFStoreRef<BitsType> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
+
+protected:
+  /**
+   * @brief Serialize the given object's fields into JSON representation and
+   * populate them into the given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const BitsType& object, nlohmann::json& json) noexcept {
+    NamedType::populateJson(object, json);
+    json["size"] = object._size;
+  }
+
+  /**
+   * @brief Deserialize fields of BitsType from the given JSON container and 
+   * populate them onto the given BitsType object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      BitsType& object, const nlohmann::json& json) noexcept {
+    NamedType::populateFromJson(object, json);
+    object._size = json["size"].get<size_t>();
+  }
 };
 
 
@@ -522,17 +781,71 @@ public:
   }
 
   /**
-   * @brief Populate this PointerType instance onto the given JSON container.
+   * @brief Serialize this PointerType object into JSON representation.
    * 
-   * @param json the JSON container onto which this PointerType object will
-   * be populated.
+   * @return nlohmann::json JSON representation of this PointerType object.
    */
-  void populateJson(nlohmann::json& json) const noexcept {
-    json["pointee"] = _pointeeType.toJson();
+  nlohmann::json toJson() const noexcept override {
+    auto json = nlohmann::json::object();
+    populateJson(*this, json);
+
+    return json;
   }
 
 private:
+  /**
+   * @brief Construct a new PointerType object.
+   * 
+   * @param store the CAFStore instance holding this object.
+   */
+  explicit PointerType(CAFStore* store) noexcept
+    : Type { store, TypeKind::Pointer },
+      _pointeeType { }
+  { }
+
   CAFStoreRef<Type> _pointeeType;
+
+public:
+  /**
+   * @brief Deserialize an instance of PointerType from the given JSON 
+   * container.
+   * 
+   * The deserialized object will be added to the given CAFStore.
+   * 
+   * @param context the CAFStore instance holding the deserialized object.
+   * @param json the JSON container.
+   * @return CAFStoreRef<PointerType> pointer to the deserialized object.
+   */
+  inline static CAFStoreRef<PointerType> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
+
+protected:
+  /**
+   * @brief Serialize the fields of the given object into JSON representation
+   * and populate them into the given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const PointerType& object, nlohmann::json& json) noexcept {
+    Type::populateJson(object, json);
+    json["pointee"] = object._pointeeType.toJson();
+  }
+
+  /**
+   * @brief Deserialize the fields of PointerType from the given JSON container
+   * and populate them onto the given object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      PointerType& object, const nlohmann::json& json) noexcept {
+    Type::populateFromJson(object, json);
+    object._pointeeType = CAFStoreRef<PointerType>::fromJson(
+        object.store(), json);
+  }
 };
 
 
@@ -573,21 +886,76 @@ public:
   CAFStoreRef<Type> elementType() const noexcept {
     return _elementType;
   }
-
+  
   /**
-   * @brief Populate this ArrayType instance onto the given JSON container.
+   * @brief Serialize this ArrayType object into JSON representation.
    * 
-   * @param json the JSON container onto which this ArrayType object will be
-   * populated.
+   * @return nlohmann::json JSON representation of this ArrayType object.
    */
-  void populateJson(nlohmann::json& json) const noexcept {
-    json["size"] = _size;
-    json["element"] = _elementType.toJson();
+  nlohmann::json toJson() const noexcept override {
+    auto json = nlohmann::json::object();
+    populateJson(*this, json);
+
+    return json;
   }
 
 private:
+  /**
+   * @brief Construct a new ArrayType object.
+   * 
+   * @param store CAFStore instance holding this object.
+   */
+  explicit ArrayType(CAFStore* store) noexcept
+    : Type { store, TypeKind::Array },
+      _size(0),
+      _elementType { }
+  { }
+
   size_t _size;
   CAFStoreRef<Type> _elementType;
+
+public:
+  /**
+   * @brief Deserialize an instance of ArrayType from the given JSON container.
+   * 
+   * The deserialized object will be added to the given CAFStore.
+   * 
+   * @param context CAFStore holding the deserialized object.
+   * @param json the JSON container.
+   * @return CAFStoreRef<ArrayType> pointer to the deserialized object.
+   */
+  inline static CAFStoreRef<ArrayType> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
+
+protected:
+  /**
+   * @brief Serialize the given object and populate the fields into the given
+   * JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const ArrayType& object, nlohmann::json& json) noexcept {
+    Type::populateJson(object, json);
+    json["size"] = object._size;
+    json["elementType"] = object._elementType.toJson();
+  }
+
+  /**
+   * @brief Deserialize fields of ArrayType from the given JSON container and
+   * populate them onto the given object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      ArrayType& object, const nlohmann::json& json) noexcept {
+    Type::populateFromJson(object, json);
+    object._size = json["size"].get<size_t>();
+    object._elementType = CAFStoreRef<Type>::fromJson(
+        object.store(), json["elementType"]);
+  }
 };
 
 
@@ -648,19 +1016,64 @@ public:
   }
 
   /**
-   * @brief Populate this StructType instance onto the given JSON container.
+   * @brief Serialize this StructType object into JSON representation.
    * 
-   * @param json the JSON container onto which this StructType object will be
-   * populated.
+   * @return nlohmann::json JSON representation of this StructType object.
    */
-  void populateJson(nlohmann::json& json) const noexcept {
+  nlohmann::json toJson() const noexcept override {
+    auto json = nlohmann::json::object();
+    populateJson(*this, json);
+
+    return json;
+  }
+
+private:
+  /**
+   * @brief Construct a new StructType object.
+   * 
+   * @param store CAFStore holding this object.
+   */
+  explicit StructType(CAFStore* store) noexcept
+    : NamedType { store, std::string(), TypeKind::Struct },
+      _activators { },
+      _fieldTypes { }
+  { }
+
+  std::vector<std::unique_ptr<Activator>> _activators;
+  std::vector<CAFStoreRef<Type>> _fieldTypes;
+
+public:
+  /**
+   * @brief Deserialize an instance of StructType from the given JSON container.
+   * 
+   * The deserialized object will be added to the given CAFStore.
+   * 
+   * @param context the CAFStore holding the deserialized object.
+   * @param json the JSON container.
+   * @return CAFStoreRef<StructType> pointer to the deserialized object.
+   */
+  inline static CAFStoreRef<StructType> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept;
+
+protected:
+  /**
+   * @brief Serialize the fields of the given StructType instance into JSON
+   * and populate them into the given JSON container.
+   * 
+   * @param object the StructType object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const StructType& object, nlohmann::json& json) noexcept {
+    NamedType::populateJson(object, json);
+    
     auto activators = nlohmann::json::array();
-    for (const auto& act : _activators) {
+    for (const auto& act : object._activators) {
       activators.push_back(act->toJson());
     }
 
     auto fields = nlohmann::json::array();
-    for (const auto& fie : _fieldTypes) {
+    for (const auto& fie : object._fieldTypes) {
       fields.push_back(fie->toJson());
     }
 
@@ -668,9 +1081,15 @@ public:
     json["fields"] = std::move(fields);
   }
 
-private:
-  std::vector<std::unique_ptr<Activator>> _activators;
-  std::vector<CAFStoreRef<Type>> _fieldTypes;
+  /**
+   * @brief Deserialize fields of StructType from the given JSON container and
+   * populate them onto the given object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  inline static void populateFromJson(
+      StructType& object, const nlohmann::json& json) noexcept;
 };
 
 
@@ -690,7 +1109,7 @@ enum class ActivatorKind {
  * @return std::string the string representation of the given ActivatorKind
  * value.
  */
-inline std::string toString(ActivatorKind activatorKind) {
+inline std::string toString(ActivatorKind activatorKind) noexcept {
   switch (activatorKind) {
     case ActivatorKind::Constructor:
       return "Constructor";
@@ -698,6 +1117,24 @@ inline std::string toString(ActivatorKind activatorKind) {
       return "Factory";
     default:
       return "Unknown";
+  }
+}
+
+/**
+ * @brief Parse an ActivatorKind value from its string representation.
+ * 
+ * @param s string representation of an ActivatorKind value.
+ * @return ActivatorKind the corresponding ActivatorKind value of the given
+ * string representation.
+ */
+inline ActivatorKind parseActivatorKind(const std::string& s) {
+  if (s == "Constructor") {
+    return ActivatorKind::Constructor;
+  } else if (s == "Factory") {
+    return ActivatorKind::Factory;
+  } else {
+    throw std::invalid_argument { 
+        "Invalid string representation of ActivatorKind." };
   }
 }
 
@@ -714,19 +1151,26 @@ class Activator : public FunctionLike,
                   public Identity<Activator, uint64_t> {
 public:
   /**
-   * @brief Destroy the Activator object.
+   * @brief Construct a new Activator object.
    * 
+   * @param store the store holding this object.
+   * @param constructingType the type of the object constructed by the activator.
+   * @param kind the kind of the activator.
+   * @param name the name of the activator.
+   * @param signature the signature of the activator.
    */
-  virtual ~Activator();
-
-  /**
-   * @brief Get the ID of the activator.
-   * 
-   * @return id_t the ID of the activator.
-   */
-  id_t id() const noexcept {
-    return _id;
-  }
+  explicit Activator(
+      CAFStore* store,
+      CAFStoreRef<Type> constructingType, 
+      ActivatorKind kind, 
+      std::string name, 
+      const FunctionSignature& signature) noexcept
+    : FunctionLike { signature },
+      CAFStoreManaged { store },
+      _constructingType(constructingType),
+      _kind(kind),
+      _name(std::move(name))
+  { }
 
   /**
    * @brief Get the type that this activator constructs.
@@ -760,99 +1204,80 @@ public:
    * 
    * @return nlohmann::json JSON representation of this Activator object.
    */
-  nlohmann::json toJson() const noexcept;
+  nlohmann::json toJson() const noexcept {
+    auto json = nlohmann::json::object();
+    populateJson(*this, json);
 
-protected:
+    return json;
+  }
+
+private:
   /**
    * @brief Construct a new Activator object.
    * 
-   * @param store the store holding this object.
-   * @param constructingType the type of the object constructed by the activator.
-   * @param kind the kind of the activator.
-   * @param name the name of the activator.
-   * @param signature the signature of the activator.
+   * @param store CAFStore instance holding this object.
    */
-  explicit Activator(
-      CAFStore* store,
-      CAFStoreRef<Type> constructingType, 
-      ActivatorKind kind, 
-      std::string name, 
-      const FunctionSignature& signature) noexcept
-    : FunctionLike { signature },
+  explicit Activator(CAFStore* store) noexcept
+    : FunctionLike { },
       CAFStoreManaged { store },
-      _constructingType(constructingType),
-      _kind(kind),
-      _name(std::move(name))
+      _kind(ActivatorKind::Constructor),
+      _constructingType { },
+      _name { }
   { }
+
+  ActivatorKind _kind;
+  CAFStoreRef<Type> _constructingType;
+  std::string _name;
+
+public:
+  /**
+   * @brief Deserialize an instance of Activator from the given JSON container.
+   * 
+   * @param context the CAFStore holding CAF related metadata.
+   * @param json the JSON container.
+   * @return std::unique_ptr<Activator> deserialized object.
+   */
+  static std::unique_ptr<Activator> fromJson(
+      CAFStore* context, const nlohmann::json& json) noexcept {
+    auto object = std::unique_ptr<Activator> { new Activator(context) };
+    populateFromJson(*object, json);
+
+    return object;
+  }
 
 private:
-  id_t _id;
-  CAFStoreRef<Type> _constructingType;
-  ActivatorKind _kind;
-  std::string _name;
-};
-
-
-/**
- * @brief Represents a constructor.
- * 
- */
-class Constructor : public Activator {
-public:
-  // TODO: Refactor here to ellide constructingType parameter by replacing
-  // TODO: it with the first argument of signature.
   /**
-   * @brief Construct a new Constructor object.
+   * @brief Serialize fields of the given Activator object into JSON
+   * representation and populate them into the given JSON container.
    * 
-   * @param store the store holding this object.
-   * @param constructingType the type that this constructor constructs.
-   * @param name the name of the constructor.
-   * @param signature the signature of the constructor.
+   * @param object the object to be serialized.
+   * @param json the JSON container.
    */
-  explicit Constructor(
-      CAFStore* store,
-      CAFStoreRef<Type> constructingType,
-      std::string name,
-      const FunctionSignature& signature) noexcept
-    : Activator { store,
-                  constructingType, 
-                  ActivatorKind::Constructor, 
-                  std::move(name), 
-                  signature }
-  { }
-};
+  static void populateJson(
+      const Activator& object, nlohmann::json& json) noexcept {
+    Identity<Activator, uint64_t>::populateJson(object, json);
+    FunctionLike::populateJson(object, json);
+    json["kind"] = toString(object._kind);
+    json["name"] = object._name;
+    json["constructingType"] = object._constructingType.toJson();
+  }
 
-
-/**
- * @brief Represents a factory function.
- * 
- * A factory function is a function that takes no arguments and returns an
- * instance of some type.
- * 
- */
-class Factory : public Activator {
-public:
-  // TODO: Refactor here to ellide construtingType parameter by replacing
-  // TODO: it with the return type of signature.
   /**
-   * @brief Construct a new Factory object.
+   * @brief Deserialize fields of an Activator instance from the given JSON
+   * container and populate them onto the given object.s
    * 
-   * @param store the store holding this object.
-   * @param constructingType the type that this factory function constructs.
-   * @param name the name of the factory function.
-   * @param signature the signature of the factory function.
+   * @param object the object to be populated.
+   * @param json the JSON container.
    */
-  explicit Factory(
-      CAFStore* store,
-      CAFStoreRef<Type> constructingType,
-      std::string name,
-      const FunctionSignature& signature) noexcept
-    : Activator { store,
-                  constructingType,
-                  ActivatorKind::Factory,
-                  std::move(name),
-                  signature }
-  { }
+  static void populateFromJson(
+      Activator& object, const nlohmann::json& json) noexcept {
+    Identity<Activator, uint64_t>::populateFromJson(object, json);
+    FunctionLike::populateFromJson(object.store(), object, json);
+    object._kind = parseActivatorKind(json["kind"].get<std::string>());
+    object._name = json["name"].get<std::string>();
+    object._constructingType = CAFStoreRef<Type>::fromJson(object.store(),
+        json["constructingType"]);
+  }
 };
 
 
@@ -894,15 +1319,71 @@ public:
    */
   nlohmann::json toJson() const noexcept {
     auto json = nlohmann::json::object();
-    json["id"] = id();
-    json["name"] = _name;
-    json["signature"] = signature().toJson();
+    populateJson(*this, json);
 
     return json;
   }
 
 private:
+  /**
+   * @brief Construct a new Function object.
+   * 
+   * @param store the CAFStore object holding this object.
+   */
+  explicit Function(CAFStore* store)
+    : FunctionLike { },
+      CAFStoreManaged { store },
+      _name { }
+  { }
+
   std::string _name;
+
+public:
+  /**
+   * @brief Deserialize an instance of Function from the given JSON container.
+   * 
+   * The deserialized object will be added to the given CAFStore.
+   * 
+   * @param store the store holding the deserialized object.
+   * @param json the JSON container.
+   * @return CAFStoreRef<Function> pointer to the deserialized object.s
+   */
+  static CAFStoreRef<Function> fromJson(
+      CAFStore* store, const nlohmann::json& json) noexcept {
+    auto object = std::unique_ptr<Function> { new Function(store) };
+    populateFromJson(*object, json);
+
+    return store->addApi(std::move(object));
+  }
+
+protected:
+  /**
+   * @brief Serialize the given Function object into JSON representation and
+   * populate it into the given JSON container.
+   * 
+   * @param object the object to be serialized.
+   * @param json the JSON container.
+   */
+  static void populateJson(
+      const Function& object, nlohmann::json& json) noexcept {
+    FunctionLike::populateJson(object, json);
+    Identity<Function, uint64_t>::populateJson(object, json);
+    json["name"] = object._name;
+  }
+
+  /**
+   * @brief Deserialize fields of Function from the given JSON container and
+   * populate them onto the given object.
+   * 
+   * @param object the object to be populated.
+   * @param json the JSON container.
+   */
+  static void populateFromJson(
+      Function& object, const nlohmann::json& json) noexcept {
+    FunctionLike::populateFromJson(object.store(), object, json);
+    Identity<Function, uint64_t>::populateFromJson(object, json);
+    object._name = json["name"].get<std::string>();
+  }
 };
 
 
@@ -934,6 +1415,84 @@ public:
   
   template <typename T>
   friend class CAFStoreRef;
+  
+  /**
+   * @brief Add the given object to the store. The type of the object should
+   * derive from NamedType.
+   * 
+   * @tparam T the type of the object to be added.
+   * @param type the object to be added.
+   * @return CAFStoreRef<T> pointer to the object added, or empty if failed.
+   */
+  template <typename T,
+            typename std::enable_if<
+                std::is_base_of<NamedType, T>::value,
+                int
+              >::type = 0
+            >
+  CAFStoreRef<T> addType(std::unique_ptr<T> type) {
+    auto typeId = type->id();
+    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
+
+    auto typeName = type->name();
+    ENSURE_UNIQUE_TYPE_NAME(typeName, CAFStoreRef<T> { })
+
+    auto slot = static_cast<int>(_types.size());
+    _types.push_back(std::move(type));
+    _typeIds.emplace(typeId, slot);
+    _typeNames.emplace(std::move(typeName), slot);
+
+    return CAFStoreRef<T> { this, slot };
+  }
+
+  /**
+   * @brief Add the given object to the store. The type of the object should 
+   * derive from Type but not derive from NamedType.
+   * 
+   * @tparam T the type of the object to be added.
+   * @param type the object to be added.
+   * @return CAFStoreRef<T> pointer to the object added, or empty if failed.
+   */
+  template <typename T,
+            typename std::enable_if<
+                std::is_base_of<Type, T>::value &&
+                    !std::is_base_of<NamedType, T>::value,
+                int
+              >::type = 0
+            >
+  CAFStoreRef<T> addType(std::unique_ptr<T> type) {
+    auto typeId = type->id();
+    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
+
+    auto slot = static_cast<int>(_types.size());
+    _types.push_back(std::move(type));
+    _typeIds.emplace(typeId, slot);
+
+    return CAFStoreRef<T> { this, slot };
+  }
+
+  /**
+   * @brief Add the given function definition to the store.
+   * 
+   * @param api the function definition to be added.
+   * @return CAFStoreRef<Function> pointer to the added object.
+   */
+  CAFStoreRef<Function> addApi(std::unique_ptr<Function> api) {
+    auto raw = api.get();
+    
+    auto apiId = api->id();
+    ENSURE_UNIQUE_FUNCTION_ID(apiId, CAFStoreRef<Function> { })
+
+    auto apiName = api->name();
+    ENSURE_UNIQUE_FUNCTION_NAME(apiName, CAFStoreRef<Function> { })
+
+    auto slot = static_cast<int>(_apis.size());
+    _apis.push_back(std::move(api));
+    _apiIds.emplace(apiId, slot);
+    _apiNames.emplace(std::move(apiName), slot);
+
+    return CAFStoreRef<Function> { this, slot };
+  }
 
   /**
    * @brief Get type definitions stored and managed in this store.
@@ -967,7 +1526,7 @@ public:
     ENSURE_UNIQUE_TYPE_NAME(name, CAFStoreRef<BitsType> { })
 
     auto type = std::make_unique<BitsType>(this, std::move(name), size);
-    return addNamedType(std::move(type));
+    return addType(std::move(type));
   }
 
   /**
@@ -1008,7 +1567,7 @@ public:
     ENSURE_UNIQUE_TYPE_NAME(name, CAFStoreRef<StructType> { })
 
     auto type = std::make_unique<StructType>(this, std::move(name));
-    return addNamedType(std::move(type));
+    return addType(std::move(type));
   }
 
   /**
@@ -1054,89 +1613,6 @@ private:
   std::unordered_map<std::string, int> _apiNames;
 
   /**
-   * @brief Add the given object to the store. The type of the object should
-   * derive from NamedType.
-   * 
-   * @tparam T the type of the object to be added.
-   * @param type the object to be added.
-   * @return CAFStoreRef<T> pointer to the object added, or empty if failed.
-   */
-  template <typename T>
-  CAFStoreRef<T> addNamedType(std::unique_ptr<T> type) {
-    static_assert(std::is_base_of<NamedType, T>::value,
-        "T is not a derived type of NamedType.");
-
-    auto typeId = type->id();
-    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
-
-    auto typeName = type->name();
-    ENSURE_UNIQUE_TYPE_NAME(typeName, CAFStoreRef<T> { })
-
-    auto slot = static_cast<int>(_types.size());
-    _types.push_back(std::move(type));
-    _typeIds.emplace(typeId, slot);
-    _typeNames.emplace(std::move(typeName), slot);
-
-    return CAFStoreRef<T> { this, slot };
-  }
-
-  /**
-   * @brief Add the given object to the store. The type of the object should 
-   * derive from Type but not derive from NamedType.
-   * 
-   * @tparam T the type of the object to be added.
-   * @param type the object to be added.
-   * @return CAFStoreRef<T> pointer to the object added, or empty if failed.
-   */
-  template <typename T>
-  CAFStoreRef<T> addType(std::unique_ptr<T> type) {
-    static_assert(std::is_base_of<Type, T>::value, 
-        "T is not a derived type of Type.");
-    static_assert(!std::is_base_of<NamedType, T>::value,
-        "T is a derived type of NamedType. Please use addNamedType instead.");
-
-    auto typeId = type->id();
-    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
-
-    auto slot = static_cast<int>(_types.size());
-    _types.push_back(std::move(type));
-    _typeIds.emplace(typeId, slot);
-
-    return CAFStoreRef<T> { this, slot };
-  }
-
-  /**
-   * @brief Add the given Type object into the store, with polymorphic dispatch.
-   * 
-   * @param type the type object to be added.
-   * @return CAFStoreRef<Type> pointer to the added type object.
-   */
-  CAFStoreRef<Type> addTypePolymorphic(std::unique_ptr<Type> type) {
-    // TODO: Implement CAFStore::addTypePolymorphic(std::unique_ptr<Type>).
-  }
-
-  template <typename T>
-  CAFStoreRef<T> addApi(std::unique_ptr<T> api) {
-    static_assert(std::is_base_of<Function, T>::value,
-        "T is not a derived type of Function.");
-    
-    auto raw = api.get();
-    
-    auto apiId = api->id();
-    ENSURE_UNIQUE_FUNCTION_ID(apiId, CAFStoreRef<T> { })
-
-    auto apiName = api->name();
-    ENSURE_UNIQUE_FUNCTION_NAME(apiName, CAFStoreRef<T> { })
-
-    auto slot = static_cast<int>(_apis.size());
-    _apis.push_back(std::move(api));
-    _apiIds.emplace(apiId, slot);
-    _apiNames.emplace(std::move(apiName), slot);
-
-    return CAFStoreRef<T> { this, slot };
-  }
-
-  /**
    * @brief Dereference the given pointer on this store.
    * 
    * This overload is considered as a overload resolution candidate only when 
@@ -1180,6 +1656,8 @@ private:
 
 #undef ENSURE_UNIQUE_TYPE_ID
 #undef ENSURE_UNIQUE_TYPE_NAME
+#undef ENSURE_UNIQUE_FUNCTION_ID
+#undef ENSURE_UNIQUE_FUNCTION_NAME
 };
 
 
@@ -1207,38 +1685,82 @@ nlohmann::json FunctionSignature::toJson() const noexcept {
   return json;
 }
 
-nlohmann::json Type::toJson() const noexcept  {
-  auto json = nlohmann::json::object();
-  json["id"] = id();
-  json["kind"] = toString(_kind);
+FunctionSignature FunctionSignature::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  FunctionSignature signature { };
+  signature._returnType = CAFStoreRef<Type>::fromJson(context, json);
 
-  switch (_kind) {
-    case TypeKind::Bits:
-      dynamic_cast<const BitsType *>(this)->populateJson(json);
-      break;
-    case TypeKind::Pointer:
-      dynamic_cast<const PointerType *>(this)->populateJson(json);
-      break;
-    case TypeKind::Array:
-      dynamic_cast<const ArrayType *>(this)->populateJson(json);
-      break;
-    case TypeKind::Struct:
-      dynamic_cast<const StructType *>(this)->populateJson(json);
-      break;
+  for (const auto& a : json["args"]) {
+    signature._args.push_back(CAFStoreRef<Type>::fromJson(context, a));
   }
 
-  return json;
+  return signature;
 }
 
-nlohmann::json Activator::toJson() const noexcept {
-  auto json = nlohmann::json::object();
-  json["id"] = id();
-  json["kind"] = toString(_kind);
-  json["name"] = name();
-  json["constructingType"] = _constructingType.toJson();
-  json["signature"] = signature().toJson();
+CAFStoreRef<Type> Type::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  auto kind = parseTypeKind(json["kind"].get<std::string>());
+  switch (kind) {
+    case TypeKind::Bits:
+      return BitsType::fromJson(context, json);
+    case TypeKind::Pointer:
+      return PointerType::fromJson(context, json);
+    case TypeKind::Array:
+      return ArrayType::fromJson(context, json);
+    case TypeKind::Struct:
+      return StructType::fromJson(context, json);
+    default:
+      return CAFStoreRef<Type> { };
+  }
+}
 
-  return json;
+CAFStoreRef<BitsType> BitsType::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  // We cannot use std::make_unique here because the constructor used here
+  // is invisible inside std::make_unique.
+  auto object = std::unique_ptr<BitsType> { new BitsType(context) };
+  populateFromJson(*object, json);
+
+  return context->addType(std::move(object));
+}
+
+CAFStoreRef<PointerType> PointerType::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  auto object = std::unique_ptr<PointerType> { new PointerType(context) };
+  populateFromJson(*object, json);
+
+  return context->addType(std::move(object));
+}
+
+CAFStoreRef<ArrayType> ArrayType::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  auto object = std::unique_ptr<ArrayType> { new ArrayType(context) };
+  populateFromJson(*object, json);
+
+  return context->addType(std::move(object));
+}
+
+CAFStoreRef<StructType> StructType::fromJson(
+    CAFStore* context, const nlohmann::json& json) noexcept {
+  auto object = std::unique_ptr<StructType> { new StructType(context) };
+  populateFromJson(*object, json);
+
+  return context->addType(std::move(object));
+}
+
+void StructType::populateFromJson(
+    StructType& object, const nlohmann::json& json) noexcept {
+  NamedType::populateFromJson(object, json);
+
+  for (const auto& act : json["activators"]) {
+    auto activator = Activator::fromJson(object.store(), act);
+    object._activators.push_back(std::move(activator));
+  }
+
+  for (const auto& fie : json["fields"]) {
+    auto field = Type::fromJson(object.store(), fie);
+    object._fieldTypes.push_back(std::move(field));
+  }
 }
 
 

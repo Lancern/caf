@@ -132,7 +132,7 @@ protected:
    * 
    * @param signature signature of the function.
    */
-  explicit FunctionLike(const FunctionSignature& signature) noexcept
+  explicit FunctionLike(FunctionSignature signature) noexcept
     : _signature(signature)
   { }
 
@@ -1164,7 +1164,7 @@ public:
       CAFStoreRef<Type> constructingType, 
       ActivatorKind kind, 
       std::string name, 
-      const FunctionSignature& signature) noexcept
+      FunctionSignature signature) noexcept
     : FunctionLike { signature },
       CAFStoreManaged { store },
       _constructingType(constructingType),
@@ -1297,7 +1297,7 @@ public:
    * @param signature the signature of the function.
    */
   explicit Function(CAFStore* store, std::string name, 
-      const FunctionSignature& signature) noexcept
+      FunctionSignature signature) noexcept
     : FunctionLike { signature },
       CAFStoreManaged { store },
       _name(std::move(name))
@@ -1393,32 +1393,14 @@ protected:
  */
 class CAFStore {
 public:
-#define ENSURE_UNIQUE_TYPE_ID(id, retValue)         \
-  if (_typeIds.find(id) != _typeIds.end()) {        \
-    return (retValue);                              \
-  }
-
-#define ENSURE_UNIQUE_TYPE_NAME(name, retValue)     \
-  if (_typeNames.find(name) != _typeNames.end()) {  \
-    return (retValue);                              \
-  }
-
-#define ENSURE_UNIQUE_FUNCTION_ID(id, retValue)     \
-  if (_apiIds.find(id) != _apiIds.end()) {          \
-    return (retValue);                              \
-  }
-
-#define ENSURE_UNIQUE_FUNCTION_NAME(name, retValue) \
-  if (_apiNames.find(name) != _apiNames.end()) {    \
-    return (retValue);                              \
-  }
-  
   template <typename T>
   friend class CAFStoreRef;
   
   /**
    * @brief Add the given object to the store. The type of the object should
-   * derive from NamedType.
+   * derive from NamedType. If the ID or name of the given type already exist
+   * in the store, then the given type will not be added to the store and the
+   * already existed type will be returned.
    * 
    * @tparam T the type of the object to be added.
    * @param type the object to be added.
@@ -1432,10 +1414,14 @@ public:
             >
   CAFStoreRef<T> addType(std::unique_ptr<T> type) {
     auto typeId = type->id();
-    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
+    if (_typeIds.find(typeId) != _typeIds.end()) {
+      return CAFStoreRef<T> { this, _typeIds[typeId] };
+    }
 
     auto typeName = type->name();
-    ENSURE_UNIQUE_TYPE_NAME(typeName, CAFStoreRef<T> { })
+    if (_typeNames.find(typeName) != _typeNames.end()) {
+      return CAFStoreRef<T> { this, _typeNames[typeName] };
+    }
 
     auto slot = static_cast<int>(_types.size());
     _types.push_back(std::move(type));
@@ -1447,7 +1433,9 @@ public:
 
   /**
    * @brief Add the given object to the store. The type of the object should 
-   * derive from Type but not derive from NamedType.
+   * derive from Type but not derive from NamedType. If the ID of the given
+   * type already exists in the store, then the given type object will not be
+   * added to the store and the already existed type will be returned.
    * 
    * @tparam T the type of the object to be added.
    * @param type the object to be added.
@@ -1462,7 +1450,9 @@ public:
             >
   CAFStoreRef<T> addType(std::unique_ptr<T> type) {
     auto typeId = type->id();
-    ENSURE_UNIQUE_TYPE_ID(typeId, CAFStoreRef<T> { })
+    if (_typeIds.find(typeId) != _typeIds.end()) {
+      return CAFStoreRef<T> { this, _typeIds[typeId] };
+    }
 
     auto slot = static_cast<int>(_types.size());
     _types.push_back(std::move(type));
@@ -1472,7 +1462,10 @@ public:
   }
 
   /**
-   * @brief Add the given function definition to the store.
+   * @brief Add the given function definition to the store. If the name or the
+   * ID of the given function already exists in the store, the given function
+   * will not be added to the store and the already existed function will be
+   * returned.
    * 
    * @param api the function definition to be added.
    * @return CAFStoreRef<Function> pointer to the added object.
@@ -1481,10 +1474,14 @@ public:
     auto raw = api.get();
     
     auto apiId = api->id();
-    ENSURE_UNIQUE_FUNCTION_ID(apiId, CAFStoreRef<Function> { })
+    if (_apiIds.find(apiId) != _apiIds.end()) {
+      return CAFStoreRef<Function> { this, _apiIds[apiId] };
+    }
 
     auto apiName = api->name();
-    ENSURE_UNIQUE_FUNCTION_NAME(apiName, CAFStoreRef<Function> { })
+    if (_apiNames.find(apiName) != _apiNames.end()) {
+      return CAFStoreRef<Function> { this, _apiNames[apiName] };
+    }
 
     auto slot = static_cast<int>(_apis.size());
     _apis.push_back(std::move(api));
@@ -1515,7 +1512,10 @@ public:
   }
 
   /**
-   * @brief Create a BitsType object managed by this store.
+   * @brief Create a BitsType object managed by this store. If the name of the
+   * BitsType object given already exist in the store, then no BitsType
+   * instances will be created and the already existed BitsType instancew will
+   * be returned.
    * 
    * @param name the name of the bits type.
    * @param size the size of the bits type, in bytes.
@@ -1523,7 +1523,10 @@ public:
    * failed.
    */
   CAFStoreRef<BitsType> createBitsType(std::string name, size_t size) {
-    ENSURE_UNIQUE_TYPE_NAME(name, CAFStoreRef<BitsType> { })
+    auto i = _typeNames.find(name);
+    if (i != _typeNames.end()) {
+      return CAFStoreRef<BitsType> { this, i->second };
+    }
 
     auto type = std::make_unique<BitsType>(this, std::move(name), size);
     return addType(std::move(type));
@@ -1557,21 +1560,65 @@ public:
   }
 
   /**
-   * @brief Create a StructType object managed by this store.
+   * @brief Create a StructType object managed by this store. If the name of the
+   * given struct type already exist in the store, then no StructType instances
+   * will be created and the already existed instance will be returned.
    * 
    * @param name the name of the struct.
    * @return CAFStoreRef<StructType> pointer to the created object, or empty if 
    * failed.
    */
   CAFStoreRef<StructType> createStructType(std::string name) {
-    ENSURE_UNIQUE_TYPE_NAME(name, CAFStoreRef<StructType> { })
+    auto i = _typeNames.find(name);
+    if (i != _typeNames.end()) {
+      return CAFStoreRef<StructType> { this, i->second };
+    }
 
     auto type = std::make_unique<StructType>(this, std::move(name));
     return addType(std::move(type));
   }
 
   /**
-   * @brief Create a Function object representing an API in this store.
+   * @brief Create an unnamed struct type and add it to this store.
+   * 
+   * @return CAFStoreRef<StructType> the created unnamed struct type.
+   */
+  CAFStoreRef<StructType> createUnnamedStructType() {
+    auto type = std::make_unique<StructType>(this, "");
+    return addType(std::unique_ptr<Type> { std::move(type) });
+  }
+
+  /**
+   * @brief Test whether a type with the given name exists in the store.
+   * 
+   * @param name the name of the type to find.
+   * @return true if the type with the given name exists in the store.
+   * @return false if the type with the given name does not exist in the store.
+   */
+  bool containsType(const std::string& name) const noexcept {
+    return _typeNames.find(name) != _typeNames.end();
+  }
+
+  /**
+   * @brief Get the type with the given name in the store.
+   * 
+   * @param name the name of the type.
+   * @return CAFStoreRef<Type> pointer to the type, or empty if the name cannot
+   * be found.
+   */
+  CAFStoreRef<Type> getType(const std::string& name) noexcept {
+    auto i = _typeNames.find(name);
+    if (i != _typeNames.end()) {
+      return CAFStoreRef<Type> { this, i->second };
+    } else {
+      return CAFStoreRef<Type> { };
+    }
+  }
+
+  /**
+   * @brief Create a Function object representing an API in this store. If the
+   * name of the API already exists in the store, then no Function object will
+   * be created and the already existed Function object will be returned.
    * 
    * @param name the name of the function.
    * @param signature the signature of the function.
@@ -1580,12 +1627,20 @@ public:
    */
   CAFStoreRef<Function> createApi(
       std::string name, const FunctionSignature& signature) {
-    ENSURE_UNIQUE_FUNCTION_NAME(name, CAFStoreRef<Function> { })
+    auto i = _apiNames.find(name);
+    if (i != _apiNames.end()) {
+      return CAFStoreRef<Function> { this, i->second };
+    }
 
     auto api = std::make_unique<Function>(this, std::move(name), signature);
     return addApi(std::move(api));
   }
 
+  /**
+   * @brief Serialize the CAFStore instance into JSON representation.
+   * 
+   * @return nlohmann::json JSON representation of this CAFStore instance.
+   */
   nlohmann::json toJson() const noexcept {
     auto types = nlohmann::json::array();
     for (const auto& type : _types) {
@@ -1653,11 +1708,6 @@ private:
   T* deref(const CAFStoreRef<T>& ref) {
     return dynamic_cast<T *>(_apis[ref.slot()].get());
   }
-
-#undef ENSURE_UNIQUE_TYPE_ID
-#undef ENSURE_UNIQUE_TYPE_NAME
-#undef ENSURE_UNIQUE_FUNCTION_ID
-#undef ENSURE_UNIQUE_FUNCTION_NAME
 };
 
 

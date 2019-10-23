@@ -13,9 +13,12 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/IRBuilder.h"
 
+#include "CAFSymbolTable.hpp"
+
 #include <cxxabi.h>
 #include <utility>
 #include <iterator>
+#include <fstream>
 #include <string>
 #include <unordered_map>
 #include <algorithm>
@@ -347,6 +350,8 @@ public:
     // fields of this class.
     extractModuleFunctions(module);
 
+    saveCAFStore();
+
     llvm::Function* call_me_to_invoke_api = gen_call_me_to_invoke_api(module);
 
     //
@@ -502,14 +507,8 @@ public:
   }
 
 private:
-  // Top-level APIs.
-  std::vector<llvm::Function *> _apis;
-
-  // List of constructors.
-  std::unordered_map<std::string, std::vector<llvm::Function *>> _ctors;
-  // List of factory functions, a.k.a. functions whose arg list is empty and returns
-  // an instance of some type.
-  std::unordered_map<std::string, std::vector<llvm::Function *>> _factories;
+  // Symbol table.
+  CAFSymbolTable _symbols;
 
   std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> _cases;
   int api_counter = 0;
@@ -532,46 +531,38 @@ private:
    * @param module The LLVM module to extract functions from.
    */
   void extractModuleFunctions(llvm::Module& module) {
-    // TDOO: This function need to be refactored to allow end users to define
-    // custom filters for top-level APIs.
+    // TODO: This function need to be refactored to allow end users to define
+    // TODO: custom filters for top-level APIs.
     for (auto& func : module) {
       auto funcName = symbol::demangle(func.getName().str());
       // funcName = removeParentheses(funcName);
 
       if (isConstructor(func)) {
+        // This function is a constructor.
         auto typeName = getConstructedTypeName(func);
-
-        // Insert (typeName, &func) into _ctors.
-        utils::insertOrUpdate(_ctors, std::move(typeName),
-            [&func] () -> auto { 
-              return std::vector<llvm::Function *> { &func };
-            },
-            [&func] (std::vector<llvm::Function *>& old) {
-              old.push_back(&func);
-            });
+        _symbols.addConstructor(typeName, &func);
       } else if (isFactoryFunction(func)) {
-        // Add the function to factory function table.
+        // This function is a factory function.
         auto structName = getProducingTypeName(func);
-
-        // Insert (structName, func) into _factories.
-        utils::insertOrUpdate(_factories, std::move(structName),
-            [&func] () -> auto {
-              return std::vector<llvm::Function *> { &func };
-            },
-            [&func] (std::vector<llvm::Function *>& old) {
-              old.push_back(&func);
-            });
+        _symbols.addFactoryFunction(structName, &func);
       } else if (isTopLevelApi(func)) {
-        _apis.push_back(&func);
+        // This function is a top-level API.
+        _symbols.addApi(&func);
       }
     }
   }
 
-  void init() {
-    _apis.clear();
-    _ctors.clear();
-    _factories.clear();
+  void saveCAFStore() {
+    auto store = _symbols.getCAFStore();
+    auto json = store->toJson();
 
+    // TODO: Refactor here to allow user specify the path to save CAF store.
+    std::fstream storeFile { "caf.json" };
+    storeFile << json;
+  }
+
+  void init() {
+    _symbols.clear();
     _cases.clear();
   }
 
@@ -594,13 +585,14 @@ private:
         auto found = tname.find("."); //class.basename / struct.basename
         std::string basename = tname.substr(found + 1);
 
-        if (_ctors.find(basename) != _ctors.end()) {
-          const std::vector<llvm::Function *>& ctors = _ctors[basename];
-          llvm::Function* ctor = ctors[0];
+        if (_symbols.getConstructor(basename)) {
+        // if (_ctors.find(basename) != _ctors.end()) {
+          const auto& ctors = *_symbols.getConstructor(basename);
+          auto ctor = ctors[0];
           ctor->dump();
           std::vector<llvm::Value *> ctor_params { };
           llvm::Value* this_alloca = nullptr;
-          for (llvm::Argument& arg: ctor->args()) {
+          for (const auto& arg: ctor->args()) {
             if (!this_alloca) {
               this_alloca = arg_alloca;
               ctor_params.push_back(this_alloca);
@@ -613,9 +605,9 @@ private:
           }
           builder.CreateCall(ctor, ctor_params);
 
-        } else if(_factories.find(basename) != _factories.end()) {
-          std::vector<llvm::Function *>& funcList = _factories[basename];
-          llvm::Function* func = funcList[0];
+        } else if (_symbols.getFactoryFunction(basename)) {
+          const auto& funcList = *_symbols.getFactoryFunction(basename);
+          auto func = funcList[0];
           func->dump();
           llvm::Type* rettype = func->getReturnType();
           llvm::Value* arg_alloca = builder.CreateCall(func);
@@ -713,7 +705,7 @@ private:
     builder.CreateCall(printf_declare, printf_params);
 
     std::vector<llvm::Value *> callee_args { };
-    for (llvm::Argument& arg: callee->args()) {
+    for (const auto& arg: callee->args()) {
       // Value *arg_value = Constant::getNullValue(arg.getType()); // 语法上没问题，但是没啥用，传空指针进去干啥
       
       // Value * args_alloca = builder.CreateAlloca(type);
@@ -757,7 +749,7 @@ private:
 
 #ifdef _CAF_INSERT_SWITCH_CASE_
     _cases.clear();
-    for (auto& func: _apis) {
+    for (const auto& func: _symbols.apis()) {
       _cases.push_back(call_this_api(func, call_me_to_invoke_api));
     }
     
@@ -778,8 +770,8 @@ private:
         call_me_to_invoke_api);
 
 #ifdef _CAF_INSERT_SWITCH_CASE_
-    for (auto & api_case: _cases) {
-      llvm::BasicBlock* bb = api_case.second;
+    for (auto& api_case: _cases) {
+      auto bb = api_case.second;
       // builder.SetInsertPoint(&*bb->end());
       builder.SetInsertPoint(bb);
       builder.CreateBr(invoke_api_end);

@@ -11,14 +11,20 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include <json/json.hpp>
+#include "json/json.hpp"
+
+#ifdef CAF_LLVM
+// We're in LLVM's source code tree. Use LLVM's RTTI mechanisms instead of the
+// built-in ones.
+#include "llvm/Support/Casting.h"
+#endif
 
 
-namespace caf {
-
-#ifdef CAF_NO_EXPORTED_SYMBOL
+#ifndef CAF_ENABLE_LINK_SYMBOL
 namespace {
 #endif
+
+namespace caf {
 
 
 class FunctionSignature;
@@ -35,6 +41,121 @@ class Constructor;
 class Factory;
 class Function;
 class CAFStore;
+
+
+/**
+ * @brief Provide a smart pointer whose pointee is owned and managed by a
+ * CAFStore instance.
+ * 
+ * @tparam T the type of the pointee.
+ */
+template <typename T>
+class CAFStoreRef {
+public:
+  /**
+   * @brief Construct a new CAFStoreRef object that represents an empty pointer.
+   * 
+   */
+  explicit CAFStoreRef() noexcept
+    : _store(nullptr),
+      _slot(0)
+  { }
+
+  /**
+   * @brief Construct a new CAFStoreRef object.
+   * 
+   * @param store the CAFStore object that owns the pointee.
+   * @param slot the index of the slot.
+   */
+  explicit CAFStoreRef(CAFStore* store, size_t slot) noexcept
+    : _store(store),
+      _slot(slot)
+  { }
+
+  /**
+   * @brief Apply type conversion on the template type arguments.
+   * 
+   * @tparam U the original type.
+   * @param another CAFStoreRef that points to an instance of the original type.
+   */
+  template <typename U>
+  CAFStoreRef(const CAFStoreRef<U>& another) noexcept
+    : _store(another.store()),
+      _slot(another.slot())
+  { }
+
+  /**
+   * @brief Test whether the CAFStoreRef object represents an empty reference.
+   * 
+   * @return true if the CAFStoreRef object represents an empty reference.
+   * @return false otherwise.
+   */
+  bool empty() const noexcept {
+    return !_store;
+  }
+
+  /**
+   * @brief Get the store that owns the pointee.
+   * 
+   * @return CAFStore* the store that owns the pointee.
+   */
+  CAFStore* store() const noexcept {
+    return _store;
+  }
+
+  /**
+   * @brief Get the index of the slot the pointer points to.
+   * 
+   * @return size_t the index of the slot the pointer points to.
+   */
+  size_t slot() const noexcept {
+    return _slot;
+  }
+
+  /**
+   * @brief Dereference the pointer and returns a reference to the pointee.
+   * 
+   * @return T& reference to the pointee.
+   */
+  inline T& operator*() const;
+
+  /**
+   * @brief Dereference the smart pointer and returns a raw pointer to the 
+   * pointee.
+   * 
+   * @return T* raw pointer to the pointee.
+   */
+  inline T* operator->() const;
+
+  /**
+   * @brief Get the JSON representation of this CAFStoreRef instance.
+   * 
+   * @tparam T the type of the pointee.
+   * @return nlohmann::json JSON representation of this object.
+   */
+  nlohmann::json toJson() const noexcept {
+    return nlohmann::json(_slot);
+  }
+
+private:
+  CAFStore* _store;
+  size_t _slot;
+
+#ifndef CAF_LLVM
+public:
+  /**
+   * @brief Deserialize a CAFStoreRef instance from the given JSON snippet.
+   * 
+   * @param context pointer to the store object owning the pointee.
+   * @param json the JSON snippet.
+   * @return CAFStoreRef<T> the deserialized object.
+   */
+  static CAFStoreRef<T> fromJson(CAFStore* context, const nlohmann::json& json) {
+    auto slot = json.get<size_t>();
+    return CAFStoreRef<T> { context, slot };
+  }
+#endif
+};
 
 
 /**
@@ -95,6 +216,7 @@ private:
   CAFStoreRef<Type> _returnType;
   std::vector<CAFStoreRef<Type>> _args;
 
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize a FunctionSignature instance from the given JSON 
@@ -106,6 +228,7 @@ public:
    */
   inline static FunctionSignature fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 };
 
 /**
@@ -160,6 +283,7 @@ protected:
     json["signature"] = object._signature.toJson();
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of FunctionLike from the given JSON container
    * and populate them onto the given FunctionLike object.
@@ -173,6 +297,7 @@ protected:
       noexcept {
     object._signature = FunctionSignature::fromJson(context, json);
   }
+#endif
 };
 
 
@@ -204,119 +329,6 @@ protected:
 
 private:
   CAFStore* _store;
-};
-
-
-/**
- * @brief Provide a smart pointer whose pointee is owned and managed by a
- * CAFStore instance.
- * 
- * @tparam T the type of the pointee.
- */
-template <typename T>
-class CAFStoreRef {
-public:
-  /**
-   * @brief Construct a new CAFStoreRef object that represents an empty pointer.
-   * 
-   */
-  explicit CAFStoreRef() noexcept
-    : _store(nullptr),
-      _slot(0)
-  { }
-
-  /**
-   * @brief Construct a new CAFStoreRef object.
-   * 
-   * @param store the CAFStore object that owns the pointee.
-   * @param slot the index of the slot.
-   */
-  explicit CAFStoreRef(CAFStore* store, size_t slot) noexcept
-    : _store(store),
-      _slot(slot)
-  { }
-
-  /**
-   * @brief Apply type conversion on the template type arguments.
-   * 
-   * @tparam U the original type.
-   * @param another CAFStoreRef that points to an instance of the original type.
-   */
-  template <typename U>
-  CAFStoreRef(const CAFStoreRef<U>& another) noexcept
-    : _store(another._store),
-      _slot(another._slot)
-  { }
-
-  /**
-   * @brief Test whether the CAFStoreRef object represents an empty reference.
-   * 
-   * @return true if the CAFStoreRef object represents an empty reference.
-   * @return false otherwise.
-   */
-  bool empty() const noexcept {
-    return !_store;
-  }
-
-  /**
-   * @brief Get the store that owns the pointee.
-   * 
-   * @return CAFStore* the store that owns the pointee.
-   */
-  CAFStore* store() const noexcept {
-    return _store;
-  }
-
-  /**
-   * @brief Get the index of the slot the pointer points to.
-   * 
-   * @return size_t the index of the slot the pointer points to.
-   */
-  size_t slot() const noexcept {
-    return _slot;
-  }
-
-  /**
-   * @brief Dereference the pointer and returns a reference to the pointee.
-   * 
-   * @return T& reference to the pointee.
-   */
-  inline T& operator*() const;
-
-  /**
-   * @brief Dereference the smart pointer and returns a raw pointer to the 
-   * pointee.
-   * 
-   * @return T* raw pointer to the pointee.
-   */
-  inline T* operator->() const;
-
-  /**
-   * @brief Get the JSON representation of this CAFStoreRef instance.
-   * 
-   * @tparam T the type of the pointee.
-   * @return nlohmann::json JSON representation of this object.
-   */
-  nlohmann::json toJson() const noexcept {
-    return nlohmann::json(_slot);
-  }
-
-private:
-  CAFStore* _store;
-  size_t _slot;
-
-public:
-  /**
-   * @brief Deserialize a CAFStoreRef instance from the given JSON snippet.
-   * 
-   * @param context pointer to the store object owning the pointee.
-   * @param json the JSON snippet.
-   * @return CAFStoreRef<T> the deserialized object.
-   */
-  static CAFStoreRef<T> fromJson(CAFStore* context, const nlohmann::json& json) {
-    auto slot = json.get<size_t>();
-    return CAFStoreRef<T> { context, slot };
-  }
 };
 
 
@@ -413,9 +425,10 @@ protected:
   static void populateJson(
       const Identity<Concrete, Id, IdAllocator>& object, 
       nlohmann::json& json) noexcept {
-    json["id"] = _id;
+    json["id"] = object._id;
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize object ID from the given JSON snippet and populate it
    * onto the given object.
@@ -428,6 +441,7 @@ protected:
       noexcept {
     object._id = json.get<Id>();
   }
+#endif
 };
 
 template <typename Concrete, typename Id, typename IdAllocator>
@@ -485,6 +499,7 @@ inline std::string toString(TypeKind typeKind) noexcept {
   }
 }
 
+#ifndef CAF_LLVM
 /**
  * @brief Parse the given string into corresponding TypeKind value.
  * 
@@ -506,6 +521,7 @@ inline TypeKind parseTypeKind(const std::string& s) {
     throw std::invalid_argument { "Invalid string representation of TypeKind." };
   }
 }
+#endif
 
 /**
  * @brief Abstract base class of a type.
@@ -551,6 +567,7 @@ protected:
 private:
   TypeKind _kind;
 
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize a polymorphic Type instance from the given JSON snippet.
@@ -563,6 +580,7 @@ public:
    */
   inline static CAFStoreRef<Type> fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 
 protected:
   /**
@@ -577,6 +595,7 @@ protected:
     json["kind"] = toString(object._kind);
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize the members of the given Type object from the given JSON
    * snippet and populate them onto the object.
@@ -589,6 +608,7 @@ protected:
     Identity<Type, uint64_t>::populateFromJson(object, json);
     object._kind = parseTypeKind(json["kind"].get<std::string>());
   }
+#endif
 };
 
 
@@ -624,6 +644,23 @@ protected:
 private:
   std::string _name;
 
+#ifdef CAF_LLVM
+public:
+  /**
+   * @brief Test whether the given Type object is an instance of NamedType.
+   * 
+   * This function is used by LLVM's RTTI implementation.
+   * 
+   * @param object the object to be tested.
+   * @return true if the object is an instance of NamedType.
+   * @return false if the object is not an instance of NamedType.
+   */
+  static bool classof(const Type* object) noexcept {
+    return object->kind() == TypeKind::Bits ||
+        object->kind() == TypeKind::Struct;
+  }
+#endif
+
 protected:
   /**
    * @brief Serialize the fields of the given object into JSON representation
@@ -638,6 +675,7 @@ protected:
     json["name"] = object._name;
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of NamedType instance from the given JSON 
    * container and populate them onto the given object.
@@ -650,6 +688,7 @@ protected:
     Type::populateFromJson(object, json);
     object._name = json["name"].get<std::string>();
   }
+#endif
 };
 
 
@@ -709,6 +748,21 @@ private:
 
   size_t _size;
 
+#ifdef CAF_LLVM
+public:
+  /**
+   * @brief Test whether the given Type object is an instance of BitsType.
+   * 
+   * @param object the object to be tested.
+   * @return true if the object is an instance of BitsType.
+   * @return false if the object is not an instance of BitsType.
+   */
+  static bool classof(const Type* object) noexcept {
+    return object->kind() == TypeKind::Bits;
+  }
+#endif
+
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of BitsType from the given JSON container.
@@ -721,6 +775,7 @@ public:
    */
   inline static CAFStoreRef<BitsType> fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 
 protected:
   /**
@@ -736,6 +791,7 @@ protected:
     json["size"] = object._size;
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of BitsType from the given JSON container and 
    * populate them onto the given BitsType object.
@@ -748,6 +804,7 @@ protected:
     NamedType::populateFromJson(object, json);
     object._size = json["size"].get<size_t>();
   }
+#endif
 };
 
 
@@ -805,6 +862,21 @@ private:
 
   CAFStoreRef<Type> _pointeeType;
 
+#ifdef CAF_LLVM
+public:
+  /**
+   * @brief Test whether the given object is an instance of PointerType.
+   * 
+   * @param object the object to be tested.
+   * @return true if the given object is an instance of PointerType.
+   * @return false if the given object is not an instance of PointerType.
+   */
+  static bool classof(const Type* object) noexcept {
+    return object->kind() == TypeKind::Pointer;
+  }
+#endif
+
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of PointerType from the given JSON 
@@ -818,6 +890,7 @@ public:
    */
   inline static CAFStoreRef<PointerType> fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 
 protected:
   /**
@@ -833,6 +906,7 @@ protected:
     json["pointee"] = object._pointeeType.toJson();
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize the fields of PointerType from the given JSON container
    * and populate them onto the given object.
@@ -846,6 +920,7 @@ protected:
     object._pointeeType = CAFStoreRef<PointerType>::fromJson(
         object.store(), json);
   }
+#endif
 };
 
 
@@ -914,6 +989,21 @@ private:
   size_t _size;
   CAFStoreRef<Type> _elementType;
 
+#ifdef CAF_LLVM
+public:
+  /**
+   * @brief Test whether the given object is an instance of ArrayType.
+   * 
+   * @param object the object to be tested.
+   * @return true if the object is an instance of ArrayType.
+   * @return false if the object is not an instance of ArrayType.
+   */
+  static bool classof(const Type* object) noexcept {
+    return object->kind() == TypeKind::Array;
+  }
+#endif
+
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of ArrayType from the given JSON container.
@@ -926,6 +1016,7 @@ public:
    */
   inline static CAFStoreRef<ArrayType> fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 
 protected:
   /**
@@ -942,6 +1033,7 @@ protected:
     json["elementType"] = object._elementType.toJson();
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of ArrayType from the given JSON container and
    * populate them onto the given object.
@@ -956,6 +1048,7 @@ protected:
     object._elementType = CAFStoreRef<Type>::fromJson(
         object.store(), json["elementType"]);
   }
+#endif
 };
 
 
@@ -1042,6 +1135,21 @@ private:
   std::vector<std::unique_ptr<Activator>> _activators;
   std::vector<CAFStoreRef<Type>> _fieldTypes;
 
+#ifdef CAF_LLVM
+public:
+  /**
+   * @brief Test whether the given object is an instance of StructType.
+   * 
+   * @param object the object to be tested.
+   * @return true if the given object is an instance of StructType.
+   * @return false if the given object is not an instance of StructType.
+   */
+  static bool classof(const Type* object) noexcept {
+    return object->kind() == TypeKind::Struct;
+  }
+#endif
+
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of StructType from the given JSON container.
@@ -1054,6 +1162,7 @@ public:
    */
   inline static CAFStoreRef<StructType> fromJson(
       CAFStore* context, const nlohmann::json& json) noexcept;
+#endif
 
 protected:
   /**
@@ -1063,24 +1172,10 @@ protected:
    * @param object the StructType object to be serialized.
    * @param json the JSON container.
    */
-  static void populateJson(
-      const StructType& object, nlohmann::json& json) noexcept {
-    NamedType::populateJson(object, json);
-    
-    auto activators = nlohmann::json::array();
-    for (const auto& act : object._activators) {
-      activators.push_back(act->toJson());
-    }
+  inline static void populateJson(
+      const StructType& object, nlohmann::json& json) noexcept;
 
-    auto fields = nlohmann::json::array();
-    for (const auto& fie : object._fieldTypes) {
-      fields.push_back(fie->toJson());
-    }
-
-    json["activators"] = std::move(activators);
-    json["fields"] = std::move(fields);
-  }
-
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of StructType from the given JSON container and
    * populate them onto the given object.
@@ -1090,6 +1185,7 @@ protected:
    */
   inline static void populateFromJson(
       StructType& object, const nlohmann::json& json) noexcept;
+#endif
 };
 
 
@@ -1120,6 +1216,7 @@ inline std::string toString(ActivatorKind activatorKind) noexcept {
   }
 }
 
+#ifndef CAF_LLVM
 /**
  * @brief Parse an ActivatorKind value from its string representation.
  * 
@@ -1137,6 +1234,7 @@ inline ActivatorKind parseActivatorKind(const std::string& s) {
         "Invalid string representation of ActivatorKind." };
   }
 }
+#endif
 
 /**
  * @brief Abstract base class of activators. 
@@ -1167,8 +1265,8 @@ public:
       FunctionSignature signature) noexcept
     : FunctionLike { signature },
       CAFStoreManaged { store },
-      _constructingType(constructingType),
       _kind(kind),
+      _constructingType(constructingType),
       _name(std::move(name))
   { }
 
@@ -1229,6 +1327,7 @@ private:
   CAFStoreRef<Type> _constructingType;
   std::string _name;
 
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of Activator from the given JSON container.
@@ -1244,6 +1343,7 @@ public:
 
     return object;
   }
+#endif
 
 private:
   /**
@@ -1262,6 +1362,7 @@ private:
     json["constructingType"] = object._constructingType.toJson();
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of an Activator instance from the given JSON
    * container and populate them onto the given object.s
@@ -1278,6 +1379,7 @@ private:
     object._constructingType = CAFStoreRef<Type>::fromJson(object.store(),
         json["constructingType"]);
   }
+#endif
 };
 
 
@@ -1338,6 +1440,7 @@ private:
 
   std::string _name;
 
+#ifndef CAF_LLVM
 public:
   /**
    * @brief Deserialize an instance of Function from the given JSON container.
@@ -1355,6 +1458,7 @@ public:
 
     return store->addApi(std::move(object));
   }
+#endif
 
 protected:
   /**
@@ -1371,6 +1475,7 @@ protected:
     json["name"] = object._name;
   }
 
+#ifndef CAF_LLVM
   /**
    * @brief Deserialize fields of Function from the given JSON container and
    * populate them onto the given object.
@@ -1384,6 +1489,7 @@ protected:
     Identity<Function, uint64_t>::populateFromJson(object, json);
     object._name = json["name"].get<std::string>();
   }
+#endif
 };
 
 
@@ -1423,7 +1529,7 @@ public:
       return CAFStoreRef<T> { this, _typeNames[typeName] };
     }
 
-    auto slot = static_cast<int>(_types.size());
+    auto slot = static_cast<size_t>(_types.size());
     _types.push_back(std::move(type));
     _typeIds.emplace(typeId, slot);
     _typeNames.emplace(std::move(typeName), slot);
@@ -1454,7 +1560,7 @@ public:
       return CAFStoreRef<T> { this, _typeIds[typeId] };
     }
 
-    auto slot = static_cast<int>(_types.size());
+    auto slot = static_cast<size_t>(_types.size());
     _types.push_back(std::move(type));
     _typeIds.emplace(typeId, slot);
 
@@ -1471,8 +1577,6 @@ public:
    * @return CAFStoreRef<Function> pointer to the added object.
    */
   CAFStoreRef<Function> addApi(std::unique_ptr<Function> api) {
-    auto raw = api.get();
-    
     auto apiId = api->id();
     if (_apiIds.find(apiId) != _apiIds.end()) {
       return CAFStoreRef<Function> { this, _apiIds[apiId] };
@@ -1483,7 +1587,7 @@ public:
       return CAFStoreRef<Function> { this, _apiNames[apiName] };
     }
 
-    auto slot = static_cast<int>(_apis.size());
+    auto slot = static_cast<size_t>(_apis.size());
     _apis.push_back(std::move(api));
     _apiIds.emplace(apiId, slot);
     _apiNames.emplace(std::move(apiName), slot);
@@ -1497,7 +1601,7 @@ public:
    * @return const std::vector<std::unique_ptr<Type>> list of type definitions 
    * stored and managed in this store.
    */
-  const std::vector<std::unique_ptr<Type>> types() const noexcept {
+  const std::vector<std::unique_ptr<Type>>& types() const noexcept {
     return _types;
   }
 
@@ -1507,7 +1611,7 @@ public:
    * @return const std::vector<std::unique_ptr<Function>> list of API
    * definitions stored and managed in this store.
    */
-  const std::vector<std::unique_ptr<Function>> apis() const noexcept {
+  const std::vector<std::unique_ptr<Function>>& apis() const noexcept {
     return _apis;
   }
 
@@ -1662,10 +1766,10 @@ public:
 private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _apis;
-  std::unordered_map<int, int> _typeIds;
-  std::unordered_map<std::string, int> _typeNames;
-  std::unordered_map<int, int> _apiIds;
-  std::unordered_map<std::string, int> _apiNames;
+  std::unordered_map<int, size_t> _typeIds;
+  std::unordered_map<std::string, size_t> _typeNames;
+  std::unordered_map<int, size_t> _apiIds;
+  std::unordered_map<std::string, size_t> _apiNames;
 
   /**
    * @brief Dereference the given pointer on this store.
@@ -1674,40 +1778,37 @@ private:
    * the type param T is derived from Type.
    * 
    * @tparam T the type of the dereferenced object.
-   * @tparam SFINAE for SFINAE use.
    * @param ref the pointer to dereference.
    * @return T* raw pointer to the dereferenced object.
    */
   template <typename T,
-            typename SFINAE = typename std::enable_if<
+            typename std::enable_if<
                 std::is_base_of<Type, T>::value,
-                void
-              >::type
+                int
+              >::type = 0
             >
   T* deref(const CAFStoreRef<T>& ref) {
+#ifdef CAF_LLVM
+    // We're in LLVM context and we're forced to use LLVM's RTTI implementation.
+    return llvm::dyn_cast<T>(_types[ref.slot()].get());
+#else
+    // We're not in LLVM context and we're free to use C++'s built-in RTTI
+    // mechanisms.
     return dynamic_cast<T *>(_types[ref.slot()].get());
+#endif
   }
 
   /**
    * @brief Dereference the given pointer on this store.
    * 
-   * This overload is considered as a overload resolution candidate only when 
-   * the type param T is derived from Function.
-   * 
-   * @tparam T the type of the dereferenced object.
-   * @tparam SFINAE for SFINAE use.
    * @param ref the pointer to dereference.
-   * @return T* raw pointer to the dereferenced object.
+   * @return Function* raw pointer to the dereferenced Function object.
    */
-  template <typename T,
-            typename SFINAE = typename std::enable_if<
-                std::is_base_of<Function, T>::value,
-                void
-              >::type
-            >
-  T* deref(const CAFStoreRef<T>& ref) {
-    return dynamic_cast<T *>(_apis[ref.slot()].get());
+  Function* deref(const CAFStoreRef<Function>& ref) {
+    return _apis[ref.slot()].get();
   }
+
+  // TODO: Implement deserialization logic of CAFStore.
 };
 
 
@@ -1735,6 +1836,7 @@ nlohmann::json FunctionSignature::toJson() const noexcept {
   return json;
 }
 
+#ifndef CAF_LLVM
 FunctionSignature FunctionSignature::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   FunctionSignature signature { };
@@ -1746,7 +1848,9 @@ FunctionSignature FunctionSignature::fromJson(
 
   return signature;
 }
+#endif
 
+#ifndef CAF_LLVM
 CAFStoreRef<Type> Type::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   auto kind = parseTypeKind(json["kind"].get<std::string>());
@@ -1763,7 +1867,9 @@ CAFStoreRef<Type> Type::fromJson(
       return CAFStoreRef<Type> { };
   }
 }
+#endif
 
+#ifndef CAF_LLVM
 CAFStoreRef<BitsType> BitsType::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   // We cannot use std::make_unique here because the constructor used here
@@ -1773,7 +1879,9 @@ CAFStoreRef<BitsType> BitsType::fromJson(
 
   return context->addType(std::move(object));
 }
+#endif
 
+#ifndef CAF_LLVM
 CAFStoreRef<PointerType> PointerType::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   auto object = std::unique_ptr<PointerType> { new PointerType(context) };
@@ -1781,7 +1889,9 @@ CAFStoreRef<PointerType> PointerType::fromJson(
 
   return context->addType(std::move(object));
 }
+#endif
 
+#ifndef CAF_LLVM
 CAFStoreRef<ArrayType> ArrayType::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   auto object = std::unique_ptr<ArrayType> { new ArrayType(context) };
@@ -1789,7 +1899,9 @@ CAFStoreRef<ArrayType> ArrayType::fromJson(
 
   return context->addType(std::move(object));
 }
+#endif
 
+#ifndef CAF_LLVM
 CAFStoreRef<StructType> StructType::fromJson(
     CAFStore* context, const nlohmann::json& json) noexcept {
   auto object = std::unique_ptr<StructType> { new StructType(context) };
@@ -1797,7 +1909,27 @@ CAFStoreRef<StructType> StructType::fromJson(
 
   return context->addType(std::move(object));
 }
+#endif
 
+void StructType::populateJson(
+    const StructType& object, nlohmann::json& json) noexcept {
+  NamedType::populateJson(object, json);
+  
+  auto activators = nlohmann::json::array();
+  for (const auto& act : object._activators) {
+    activators.push_back(act->toJson());
+  }
+
+  auto fields = nlohmann::json::array();
+  for (const auto& fie : object._fieldTypes) {
+    fields.push_back(fie->toJson());
+  }
+
+  json["activators"] = std::move(activators);
+  json["fields"] = std::move(fields);
+}
+
+#ifndef CAF_LLVM
 void StructType::populateFromJson(
     StructType& object, const nlohmann::json& json) noexcept {
   NamedType::populateFromJson(object, json);
@@ -1812,12 +1944,13 @@ void StructType::populateFromJson(
     object._fieldTypes.push_back(std::move(field));
   }
 }
-
-
-#ifdef CAF_NO_EXPORTED_SYMBOL
-} // namespace <anonymous>
 #endif
 
+
 } // namespace caf
+
+#ifndef CAF_ENABLE_LINK_SYMBOL
+}
+#endif
 
 #endif

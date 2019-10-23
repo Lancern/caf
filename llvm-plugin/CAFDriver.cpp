@@ -1,3 +1,12 @@
+#include <utility>
+#include <iterator>
+#include <fstream>
+#include <string>
+#include <unordered_map>
+#include <algorithm>
+
+#include <cxxabi.h>
+
 #include "llvm/Pass.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/BasicBlock.h"
@@ -13,15 +22,9 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/IRBuilder.h"
 
-#include "CAFSymbolTable.hpp"
+#define CAF_LLVM
 
-#include <cxxabi.h>
-#include <utility>
-#include <iterator>
-#include <fstream>
-#include <string>
-#include <unordered_map>
-#include <algorithm>
+#include "CAFSymbolTable.hpp"
 
 
 namespace {

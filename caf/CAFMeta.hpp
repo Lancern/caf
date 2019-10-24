@@ -1914,7 +1914,7 @@ CAFStoreRef<StructType> StructType::fromJson(
 void StructType::populateJson(
     const StructType& object, nlohmann::json& json) noexcept {
   NamedType::populateJson(object, json);
-  
+
   auto activators = nlohmann::json::array();
   for (const auto& act : object._activators) {
     activators.push_back(act->toJson());
@@ -1922,7 +1922,7 @@ void StructType::populateJson(
 
   auto fields = nlohmann::json::array();
   for (const auto& fie : object._fieldTypes) {
-    fields.push_back(fie->toJson());
+    fields.push_back(fie.toJson());
   }
 
   json["activators"] = std::move(activators);

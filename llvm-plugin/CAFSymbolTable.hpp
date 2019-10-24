@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Function.h"
 
 #include "CAFMeta.hpp"
@@ -291,6 +292,10 @@ private:
     } else {
       // Unrecognizable type. Returns an empty CAFStoreRef instance to
       // represent it.
+      llvm::errs() 
+          << "CAF: warning: trying to add unrecognized LLVM type to CAF store:"
+          << type->getTypeID()
+          << "\n";
       return caf::CAFStoreRef<caf::Type> { };
     }
   }

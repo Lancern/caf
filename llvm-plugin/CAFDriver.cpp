@@ -1,6 +1,6 @@
 #include <utility>
 #include <iterator>
-#include <fstream>
+#include <system_error>
 #include <string>
 #include <unordered_map>
 #include <algorithm>
@@ -316,7 +316,7 @@ bool isTopLevelApi(const llvm::Function& fn) {
     return false;
   }
 
-  return onlyArgStructType->getName().str() == "v8::FunctionCallbackInfo";
+  return onlyArgStructType->getName().str() == "class.v8::FunctionCallbackInfo";
 }
 
 /**
@@ -544,13 +544,20 @@ private:
         // This function is a constructor.
         auto typeName = getConstructedTypeName(func);
         _symbols.addConstructor(typeName, &func);
+        llvm::errs() << "CAF: found constructor: " << func.getName().str() 
+            << " for type: " << typeName
+            << "\n";
       } else if (isFactoryFunction(func)) {
         // This function is a factory function.
         auto structName = getProducingTypeName(func);
         _symbols.addFactoryFunction(structName, &func);
+        llvm::errs() << "CAF: found factory: " << func.getName().str() 
+            << " for type: " << structName
+            << "\n";
       } else if (isTopLevelApi(func)) {
         // This function is a top-level API.
         _symbols.addApi(&func);
+        llvm::errs() << "CAF: found top-level API: " << func.getName().str() << "\n";
       }
     }
   }
@@ -560,8 +567,23 @@ private:
     auto json = store->toJson();
 
     // TODO: Refactor here to allow user specify the path to save CAF store.
-    std::fstream storeFile { "caf.json" };
-    storeFile << json;
+    auto jsonText = json.dump();
+    std::error_code openDumpFileError { };
+    llvm::raw_fd_ostream dumpFile { 
+        "/home/msr/Temp/caf.json", openDumpFileError };
+    
+    if (openDumpFileError) {
+      llvm::errs() << "CAFDriver: failed to dump metadata to file: "
+          << openDumpFileError.value() << ": "
+          << openDumpFileError.message() << "\n";
+      return;
+    }
+
+    dumpFile << jsonText;
+    dumpFile.flush();
+    dumpFile.close();
+
+    // llvm::errs() << json.dump();
   }
 
   void init() {

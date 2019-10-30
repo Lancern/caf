@@ -25,6 +25,7 @@
 #define CAF_LLVM
 
 #include "CAFSymbolTable.hpp"
+#include "CAFCodeGen.hpp"
 
 
 namespace {
@@ -320,6 +321,40 @@ bool isTopLevelApi(const llvm::Function& fn) {
 }
 
 /**
+ * @brief Get a list of functions that are directly called by the given 
+ * function.
+ * 
+ * @param fn the caller function.
+ * @return std::vector<const llvm::Function *> a list of functions that are
+ * directly called by the given function.
+ */
+std::vector<llvm::Function *> getFunctionCallees(llvm::Function& fn) {
+  std::vector<llvm::Function *> callees { };
+  
+  for (const auto& basicBlock : fn)
+  for (const auto& instruction : basicBlock) {
+    auto callInstruction = llvm::dyn_cast<llvm::CallBase>(&instruction);
+    if (!callInstruction) {
+      // Current instruction is not a call instruction.
+      continue;
+    }
+
+    if (llvm::dyn_cast<llvm::IntrinsicInst>(callInstruction)) {
+      // Current instruction is a call instruction to an intrinsic function.
+      // We're not interested in such functions.
+      continue;
+    }
+
+    auto callee = callInstruction->getCalledFunction();
+    if (callee) {
+      callees.push_back(callee);
+    }
+  }
+
+  return callees;
+}
+
+/**
  * @brief Implement an LLVM module pass that extracts API and type information 
  * of the target.
  * 
@@ -351,160 +386,11 @@ public:
 
     // Extract interesting module functions and populates them into the private
     // fields of this class.
-    extractModuleFunctions(module);
-
+    populateSymbolTable(module);
     saveCAFStore();
 
-    llvm::Function* call_me_to_invoke_api = gen_call_me_to_invoke_api(module);
-
-    //
-    // ================ lib function declaration. ==================
-    //
-    //zys: declare the lib function: strcmp
-
-    /*
-    Global variables, functions and aliases may have an optional runtime 
-    preemption specifier. If a preemption specifier isn’t given explicitly, 
-    then a symbol is assumed to be dso_preemptable.
-
-    dso_preemptable
-    Indicates that the function or variable may be replaced by a symbol from 
-    outside the linkage unit at runtime.
-    dso_local
-    The compiler may assume that a function or variable marked as dso_local will 
-    resolve to a symbol within the same linkage unit. Direct access will be 
-    generated even if the definition is not within this compilation unit.    
-    */
-    llvm::Function* scanf_declare = llvm::cast<llvm::Function>(
-        module.getOrInsertFunction(
-            "scanf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(module.getContext()), 
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(module.getContext())), 
-                true
-            )
-        ).getCallee()
-    );
-    scanf_declare->setDSOLocal(true);
-
-    llvm::Function* printf_declare = llvm::cast<llvm::Function>(
-        module.getOrInsertFunction(
-            "printf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(module.getContext()),
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(module.getContext())
-                ),
-                true
-            )
-        ).getCallee()
-    );
-    printf_declare->setDSOLocal(true);
-
-    //
-    // =========== define call_me_to_invoke_api: the callee function for fuzzer. =============
-    // 
-
-    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
-        module.getContext()), 0);
-
-    
-    //
-    // ============= insert my new main function. =======================
-    //
-
-    // delete the old main function.
-    llvm::Function* old_main = module.getFunction("main");
-    if (old_main) {
-      old_main->eraseFromParent();
-    }
-
-    llvm::Function* new_main = llvm::cast<llvm::Function>(
-        module.getOrInsertFunction(
-            "main", 
-            llvm::IntegerType::getInt32Ty(module.getContext()),
-            llvm::IntegerType::getInt32Ty(module.getContext()),
-            llvm::PointerType::getUnqual(
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(module.getContext())
-                )
-            )
-        ).getCallee()
-    );
-
-    {
-      new_main->setCallingConv(llvm::CallingConv::C);
-      auto args = new_main->arg_begin();
-      llvm::Value* arg_0 = &*args++;
-      arg_0->setName("argc");
-      llvm::Value* arg_1 = &*args++;
-      arg_1->setName("argv");
-    }
-
-    llvm::BasicBlock* main_entry = llvm::BasicBlock::Create(
-        new_main->getContext(), "main.entry", new_main);
-    llvm::BasicBlock* main_while_cond = llvm::BasicBlock::Create(
-      new_main->getContext(), "main.while.cond", new_main);
-    llvm::BasicBlock* main_while_body = llvm::BasicBlock::Create(
-      new_main->getContext(), "main.while.body", new_main);
-    llvm::BasicBlock* main_end = llvm::BasicBlock::Create(
-      new_main->getContext(), "main.end", new_main);
-
-    llvm::IRBuilder<> builder { new_main->getContext() };
-    builder.SetInsertPoint(main_entry);
-    llvm::Value* buffer_size = llvm::ConstantInt::get(
-        llvm::Type::getInt32Ty(module.getContext()), 128);
-    llvm::Value* input_buffer = builder.CreateAlloca(
-        llvm::IntegerType::getInt8Ty(module.getContext()), 
-        buffer_size, 
-        "input_name");
-
-    llvm::Value* int32_size = llvm::ConstantInt::get(
-        llvm::Type::getInt32Ty(module.getContext()), 1);
-    llvm::AllocaInst* input_int32 = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(module.getContext()), 
-        int32_size, 
-        "input_id");
-    builder.CreateBr(main_while_cond);
-
-    builder.SetInsertPoint(main_while_cond);
-    {
-      std::string scanf_format { "%d" };
-      llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
-          new_main->getContext(), scanf_format);
-      llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
-      builder.CreateStore(stringConstant, stringVar);
-      llvm::Value* format_str = builder.CreatePointerCast(
-          stringVar, builder.getInt8PtrTy());
-      llvm::Value* scanf_params[] = { format_str, input_int32 };
-      llvm::CallInst * scanf_res = builder.CreateCall(
-          scanf_declare, scanf_params);
-      llvm::Value* scanf_cond = builder.CreateICmpNE(scanf_res, zero);
-      builder.CreateCondBr(scanf_cond, main_while_body, main_end);
-    }
-
-
-    builder.SetInsertPoint(main_while_body);
-    {
-      std::string printf_format { "%d\n" };
-      llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
-          new_main->getContext(), printf_format);
-      llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
-      builder.CreateStore(stringConstant, stringVar);
-      llvm::Value* format_str = builder.CreatePointerCast(
-          stringVar, builder.getInt8PtrTy());
-      llvm::Value* load_idvalue = builder.CreateLoad(input_int32);
-      llvm::Value* printf_params[] = { format_str, load_idvalue };
-      llvm::CallInst* printf_res = builder.CreateCall(
-          printf_declare, printf_params);
-
-      builder.CreateCall(call_me_to_invoke_api, load_idvalue);
-    }
-    builder.CreateBr(main_while_cond);
-
-    builder.SetInsertPoint(main_end);
-    builder.CreateRet(zero);
+    _codeGen.setContext(module, _symbols);
+    _codeGen.generateStub();
 
     return false;
   }
@@ -512,12 +398,11 @@ public:
 private:
   // Symbol table.
   CAFSymbolTable _symbols;
-
-  std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> _cases;
-  int api_counter = 0;
+  CAFCodeGenerator _codeGen;
 
   /**
-   * @brief Extracts all `interesting` functions from the given LLVM module.
+   * @brief Extracts all `interesting` functions from the given LLVM module and
+   * add them to the symbol table.
    * 
    * A function is considered `interesting` if any of the following holds:
    * 
@@ -533,7 +418,7 @@ private:
    * 
    * @param module The LLVM module to extract functions from.
    */
-  void extractModuleFunctions(llvm::Module& module) {
+  void populateSymbolTable(llvm::Module& module) {
     // TODO: This function need to be refactored to allow end users to define
     // TODO: custom filters for top-level APIs.
     for (auto& func : module) {
@@ -556,8 +441,14 @@ private:
             << "\n";
       } else if (isTopLevelApi(func)) {
         // This function is a top-level API.
-        _symbols.addApi(&func);
-        llvm::errs() << "CAF: found top-level API: " << func.getName().str() << "\n";
+        // _symbols.addApi(&func);
+        llvm::errs() << "CAF: found top-level API: " << func.getName().str() 
+            << "\n";
+        for (auto targetApi : getFunctionCallees(func)) {
+          llvm::errs() << "CAF: found fuzz-target API: " 
+              << targetApi->getName().str() << "\n";
+          _symbols.addApi(targetApi);
+        }
       }
     }
   }
@@ -583,242 +474,12 @@ private:
     dumpFile.flush();
     dumpFile.close();
 
-    // llvm::errs() << json.dump();
+    llvm::errs() << "CAF metadata saved to " << "/home/msr/Temp/caf.json" << "."
+        << "\n";
   }
 
   void init() {
     _symbols.clear();
-    _cases.clear();
-  }
-
-/*
-
-%"class.v8::FunctionCallbackInfo" = type <{ %"class.v8::internal::Object"**, %"class.v8::internal::Object"**, i32, [4 x i8] }>
-
-
-*/ // return a pointer of memory of 'type'.
-  llvm::Value * alloca_param_with_type(
-      llvm::Type * type, llvm::IRBuilder<> builder, int depth = 0) {
-
-    llvm::Value* arg_alloca;
-    if (type->isStructTy()) {
-      // 先分配内存
-      arg_alloca = builder.CreateAlloca(type);
-      llvm::StructType* stype = llvm::dyn_cast<llvm::StructType>(type);
-      if (stype->isLiteral()) {
-        std::string tname = type->getStructName().str();
-        auto found = tname.find("."); //class.basename / struct.basename
-        std::string basename = tname.substr(found + 1);
-
-        if (_symbols.getConstructor(basename)) {
-        // if (_ctors.find(basename) != _ctors.end()) {
-          const auto& ctors = *_symbols.getConstructor(basename);
-          auto ctor = ctors[0];
-          ctor->dump();
-          std::vector<llvm::Value *> ctor_params { };
-          llvm::Value* this_alloca = nullptr;
-          for (const auto& arg: ctor->args()) {
-            if (!this_alloca) {
-              this_alloca = arg_alloca;
-              ctor_params.push_back(this_alloca);
-              continue;
-            }
-            llvm::Type* arg_type = arg.getType();
-            llvm::Value* arg_type_alloca = alloca_param_with_type(
-                arg_type, builder, depth+1);
-            ctor_params.push_back(builder.CreateLoad(arg_type_alloca));
-          }
-          builder.CreateCall(ctor, ctor_params);
-
-        } else if (_symbols.getFactoryFunction(basename)) {
-          const auto& funcList = *_symbols.getFactoryFunction(basename);
-          auto func = funcList[0];
-          func->dump();
-          llvm::Type* rettype = func->getReturnType();
-          llvm::Value* arg_alloca = builder.CreateCall(func);
-          if (rettype->isStructTy()) {
-            arg_alloca = builder.CreateIntToPtr(
-                arg_alloca, rettype->getPointerTo(0));
-          }
-        } else {
-          // No ctor found for the type.
-          // 对每个element，分别初始化，然后赋值给父元素
-          auto argtype_tot = static_cast<int>(stype->getNumElements());
-          for (auto id = 0; id < argtype_tot; id++) {
-            llvm::Type* element_type = stype->getElementType(id);
-            llvm::Value* element_alloca = alloca_param_with_type(
-                element_type, builder, depth + 1);
-            llvm::Value* element_value = builder.CreateLoad(element_alloca);
-
-            llvm::Value* vid = llvm::ConstantInt::get(
-                llvm::Type::getInt32Ty(builder.getContext()), id);
-            llvm::Value* elementptr = builder.CreateStructGEP(arg_alloca, id);
-            builder.CreateStore(element_value, elementptr);
-          }
-        }
-      }
-    } else if (type->isPointerTy()) {
-      arg_alloca = builder.CreateAlloca(type); // 按类型分配地址空间
-      llvm::Type * p2type = type->getPointerElementType();
-
-      if (depth >= 16) {
-        llvm::Value* nlptr = llvm::ConstantPointerNull::get(
-            llvm::dyn_cast<llvm::PointerType>(type));
-        builder.CreateStore(nlptr, arg_alloca);
-      } else {
-        llvm::Value* p2type_alloca = alloca_param_with_type(
-            p2type, builder, depth + 1);
-        builder.CreateStore(p2type_alloca, arg_alloca);
-      }
-    } else if (type->isArrayTy()) {
-      llvm::ArrayType* atype = llvm::dyn_cast<llvm::ArrayType>(type);
-      auto array_size = atype->getNumElements();
-      llvm::Value* varray_size = llvm::ConstantInt::get(
-          llvm::Type::getInt32Ty(builder.getContext()), array_size);
-      llvm::Type* element_type = atype->getElementType();
-      arg_alloca = builder.CreateAlloca(type);
-    } else if (type->isFunctionTy()) {
-      // TODO 
-      llvm::FunctionType* ftype = llvm::dyn_cast<llvm::FunctionType>(type);
-      ftype->getPointerTo();
-      llvm::PointerType* ptype = ftype->getPointerTo();
-      ptype->dump();
-      arg_alloca = builder.CreateLoad(builder.CreateAlloca(ptype));
-    } else {
-      arg_alloca = builder.CreateAlloca(type);
-    }
-    return arg_alloca;
-  }
-
-  std::pair<llvm::ConstantInt *, llvm::BasicBlock *> call_this_api(
-      llvm::Function* callee, llvm::Function* caller) {
-    llvm::IRBuilder<> builder(caller->getContext());
-    llvm::Module* module = caller->getParent();
-    llvm::LLVMContext& context = module->getContext();
-    const llvm::DataLayout& DL = module->getDataLayout();
-
-    llvm::Function* printf_declare = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(
-            "printf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(context), 
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(context)
-                ),
-                true
-            )
-        ).getCallee()
-    );
-    printf_declare->setDSOLocal(true);
-
-    std::string block_name("invoke.api.case.");
-    block_name.append(std::to_string(api_counter));
-    llvm::BasicBlock* invoke_api_case = llvm::BasicBlock::Create(
-        caller->getContext(), block_name, caller);
-    
-    builder.SetInsertPoint(invoke_api_case);
-    std::string printf_format = callee->getName().str();
-    printf_format.push_back('\n');
-    llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
-        caller->getContext(), printf_format);
-    llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
-    builder.CreateStore(stringConstant, stringVar);
-    llvm::Value* format_str = builder.CreatePointerCast(
-        stringVar, builder.getInt8PtrTy());
-
-    llvm::Value* printf_params[] = { format_str };
-    builder.CreateCall(printf_declare, printf_params);
-
-    std::vector<llvm::Value *> callee_args { };
-    for (const auto& arg: callee->args()) {
-      // Value *arg_value = Constant::getNullValue(arg.getType()); // 语法上没问题，但是没啥用，传空指针进去干啥
-      
-      // Value * args_alloca = builder.CreateAlloca(type);
-      // Value * arg_value = builder.CreateLoad(args_alloca);
-
-      llvm::Value* arg_alloca = alloca_param_with_type(arg.getType(), builder);
-      llvm::Value* arg_value = builder.CreateLoad(arg_alloca);
-
-      callee_args.push_back(arg_value);
-
-    }
-    builder.CreateCall(callee, callee_args);
-
-    llvm::ConstantInt* case_id = llvm::ConstantInt::get(
-        llvm::Type::getInt32Ty(context), api_counter);
-    api_counter++;
-    return std::make_pair(case_id, invoke_api_case);
-  }
-
-#define _CAF_INSERT_SWITCH_CASE_
-
-  llvm::Function* gen_call_me_to_invoke_api(llvm::Module& module) {
-    llvm::Function* call_me_to_invoke_api = llvm::cast<llvm::Function>(
-        module.getOrInsertFunction(
-            "call_me_to_invoke_api",
-            llvm::Type::getVoidTy(module.getContext()),
-            llvm::Type::getInt32Ty(module.getContext())
-        ).getCallee()
-    );
-    call_me_to_invoke_api->setCallingConv(llvm::CallingConv::C);
-
-    auto args = call_me_to_invoke_api->arg_begin();
-    llvm::Value* api_id = &*args++;
-    api_id->setName("api_id");
-
-    llvm::IRBuilder<> builder(call_me_to_invoke_api->getContext());
-    llvm::BasicBlock* invoke_api_entry = llvm::BasicBlock::Create(
-        call_me_to_invoke_api->getContext(), 
-        "invoke.api.entry", 
-        call_me_to_invoke_api);
-
-#ifdef _CAF_INSERT_SWITCH_CASE_
-    _cases.clear();
-    for (const auto& func: _symbols.apis()) {
-      _cases.push_back(call_this_api(func, call_me_to_invoke_api));
-    }
-    
-    if (_cases.size() == 0) {
-      builder.SetInsertPoint(invoke_api_entry);
-      builder.CreateRetVoid();
-      return call_me_to_invoke_api;
-    }
-    
-    llvm::BasicBlock* invoke_api_defualt = llvm::BasicBlock::Create(
-        call_me_to_invoke_api->getContext(), 
-        "invoke.api.defualt", 
-        call_me_to_invoke_api);
-#endif
-    llvm::BasicBlock* invoke_api_end = llvm::BasicBlock::Create(
-        call_me_to_invoke_api->getContext(), 
-        "invoke.api.end", 
-        call_me_to_invoke_api);
-
-#ifdef _CAF_INSERT_SWITCH_CASE_
-    for (auto& api_case: _cases) {
-      auto bb = api_case.second;
-      // builder.SetInsertPoint(&*bb->end());
-      builder.SetInsertPoint(bb);
-      builder.CreateBr(invoke_api_end);
-    }
-#endif
-
-    builder.SetInsertPoint(invoke_api_entry);
-#ifdef _CAF_INSERT_SWITCH_CASE_
-    llvm::SwitchInst* invoke_api_SI = builder.CreateSwitch(
-        api_id, _cases.front().second, _cases.size());
-    for (auto& c: _cases) {
-      invoke_api_SI->addCase(c.first, c.second);
-    }
-    invoke_api_SI->setDefaultDest(invoke_api_defualt);
-    builder.SetInsertPoint(invoke_api_defualt);
-#endif
-    builder.CreateBr(invoke_api_end);
-    builder.SetInsertPoint(invoke_api_end);
-    builder.CreateRetVoid();
-
-    call_me_to_invoke_api->getType()->dump();
-    return call_me_to_invoke_api;
   }
 }; // class CAFDriver
 

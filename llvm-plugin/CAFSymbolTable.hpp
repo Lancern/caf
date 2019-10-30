@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Function.h"
@@ -93,15 +94,26 @@ public:
   /**
    * @brief Add the given function to the symbol table as an API definition.
    * 
+   * If the given function already exists in this symbol table, then the given
+   * function will be not added again into the symbol table.
+   * 
    * @param func the function to be added.
    */
   void addApi(llvm::Function* func) noexcept {
+    auto funcName = func->getName().str();
+    if (_apiNames.find(funcName) != _apiNames.end()) {
+      return;
+    }
+
     _apis.push_back(func);
+    _apiNames.insert(std::move(funcName));
   }
 
   /**
    * @brief Add the given function to the symbol table as a constructor of the
    * given type.
+   * 
+   * The duplication of the given function is not checked.
    * 
    * @param typeName the identifier of the type.
    * @param func the function to be added.
@@ -114,6 +126,8 @@ public:
   /**
    * @brief Add the given function to the symbol table as a factory function of
    * the given type.
+   * 
+   * The duplication of the given function is not checked.
    * 
    * @param typeName the identifier of the type.
    * @param func the function to be added.
@@ -186,8 +200,9 @@ public:
   }
 
 private:
-  // Top-level APIs.
+  // Fuzz-target APIs.
   std::vector<llvm::Function *> _apis;
+  std::unordered_set<std::string> _apiNames;
 
   // List of constructors.
   std::unordered_map<std::string, std::vector<llvm::Function *>> _ctors;
@@ -247,6 +262,10 @@ private:
       // Add a PointerType instance to the store.
       auto pointee = addLLVMTypeToStore(type->getPointerElementType(), store);
       return store.createPointerType(pointee);
+    } else if (type->isArrayTy()) {
+      // Add an ArrayType instance to the store.
+      auto element = addLLVMTypeToStore(type->getArrayElementType(), store);
+      return store.createArrayType(type->getArrayNumElements(), element);
     } else if (type->isStructTy()) {
       // Add a StructType instance to the store.
       // Is there already a struct with the same name in the store? If so, we

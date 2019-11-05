@@ -15,13 +15,13 @@ namespace {
 
 /**
  * @brief Provide logic for generate CAF code stub.
- * 
+ *
  */
 class CAFCodeGenerator {
 public:
   /**
    * @brief Construct a new CAFCodeGenerator object.
-   * 
+   *
    */
   explicit CAFCodeGenerator()
     : _module(nullptr),
@@ -30,7 +30,7 @@ public:
 
   /**
    * @brief Set the context of the code generator.
-   * 
+   *
    * @param module the module into which the code stub will be generated.
    * @param symbols the symbol table containing target APIs.
    */
@@ -43,7 +43,7 @@ public:
 
   /**
    * @brief Generate CAF code stub into the context.
-   * 
+   *
    */
   void generateStub() {
     auto dispatchFunc = generateFunctionDispatcher();
@@ -54,28 +54,28 @@ public:
     // zys: declare the lib function: strcmp
 
     /*
-    Global variables, functions and aliases may have an optional runtime 
-    preemption specifier. If a preemption specifier isn’t given explicitly, 
+    Global variables, functions and aliases may have an optional runtime
+    preemption specifier. If a preemption specifier isn’t given explicitly,
     then a symbol is assumed to be dso_preemptable.
 
     dso_preemptable
-    Indicates that the function or variable may be replaced by a symbol from 
+    Indicates that the function or variable may be replaced by a symbol from
     outside the linkage unit at runtime.
     dso_local
-    The compiler may assume that a function or variable marked as dso_local will 
-    resolve to a symbol within the same linkage unit. Direct access will be 
-    generated even if the definition is not within this compilation unit.    
+    The compiler may assume that a function or variable marked as dso_local will
+    resolve to a symbol within the same linkage unit. Direct access will be
+    generated even if the definition is not within this compilation unit.
     */
     auto scanfDecl = llvm::cast<llvm::Function>(
         _module->getOrInsertFunction(
             "scanf",
             llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(_module->getContext()), 
+                llvm::IntegerType::getInt32Ty(_module->getContext()),
                 llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(_module->getContext())), 
+                    llvm::IntegerType::getInt8Ty(_module->getContext())),
                 true
             )
-        ).getCallee()
+        )
     );
     scanfDecl->setDSOLocal(true);
 
@@ -89,18 +89,18 @@ public:
                 ),
                 true
             )
-        ).getCallee()
+        )
     );
     printfDecl->setDSOLocal(true);
 
     //
     // =========== define dispatchFunc: the callee function for fuzzer. =============
-    // 
+    //
 
     llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
         _module->getContext()), 0);
 
-    
+
     //
     // ============= insert my new main function. =======================
     //
@@ -113,7 +113,7 @@ public:
 
     auto newMain = llvm::cast<llvm::Function>(
         _module->getOrInsertFunction(
-            "main", 
+            "main",
             llvm::IntegerType::getInt32Ty(_module->getContext()),
             llvm::IntegerType::getInt32Ty(_module->getContext()),
             llvm::PointerType::getUnqual(
@@ -121,7 +121,7 @@ public:
                     llvm::IntegerType::getInt8Ty(_module->getContext())
                 )
             )
-        ).getCallee()
+        )
     );
 
     {
@@ -145,15 +145,15 @@ public:
     // llvm::Value* bufferSize = llvm::ConstantInt::get(
     //     llvm::Type::getInt32Ty(_module->getContext()), 128);
     // llvm::Value* inputBuffer = builder.CreateAlloca(
-    //     llvm::IntegerType::getInt8Ty(_module->getContext()), 
-    //     bufferSize, 
+    //     llvm::IntegerType::getInt8Ty(_module->getContext()),
+    //     bufferSize,
     //     "input_name");
 
     llvm::Value* int32Size = llvm::ConstantInt::get(
         llvm::Type::getInt32Ty(_module->getContext()), 1);
     auto inputInt32 = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()), 
-        int32Size, 
+        llvm::IntegerType::getInt32Ty(_module->getContext()),
+        int32Size,
         "input_id");
     builder.CreateBr(mainWhileCond);
 
@@ -200,7 +200,7 @@ private:
 
   /**
    * @brief Generate the dispatch function in the module.
-   * 
+   *
    * @return llvm::Function* the function generated.
    */
   llvm::Function* generateFunctionDispatcher() noexcept {
@@ -209,7 +209,7 @@ private:
             "__caf_dispatch",
             llvm::Type::getVoidTy(_module->getContext()),
             llvm::Type::getInt32Ty(_module->getContext())
-        ).getCallee()
+        )
     );
     dispatchFunc->setCallingConv(llvm::CallingConv::C);
 
@@ -218,8 +218,8 @@ private:
 
     llvm::IRBuilder<> builder { dispatchFunc->getContext() };
     auto invokeApiEntry = llvm::BasicBlock::Create(
-        dispatchFunc->getContext(), 
-        "caf.invoke.api.entry", 
+        dispatchFunc->getContext(),
+        "caf.invoke.api.entry",
         dispatchFunc);
 
     std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> cases { };
@@ -232,14 +232,14 @@ private:
       builder.CreateRetVoid();
       return dispatchFunc;
     }
-    
+
     auto invokeApiDefault = llvm::BasicBlock::Create(
-        dispatchFunc->getContext(), 
-        "invoke.api.defualt", 
+        dispatchFunc->getContext(),
+        "invoke.api.defualt",
         dispatchFunc);
     auto invokeApiEnd = llvm::BasicBlock::Create(
-        dispatchFunc->getContext(), 
-        "invoke.api.end", 
+        dispatchFunc->getContext(),
+        "invoke.api.end",
         dispatchFunc);
 
     for (auto& apiCase: cases) {
@@ -268,7 +268,7 @@ private:
   /**
    * @brief Test whether instances of the given type can be allocated on the
    * stack.
-   * 
+   *
    * @param type the type of the instance to be allocated.
    * @return true if instances of the given type can be allocated on the stack.
    * @return false if instances of the given type cannot be allocated on the
@@ -285,7 +285,7 @@ private:
 
   /**
    * @brief Allocate a value of a struct type.
-   * 
+   *
    * @param type the struct type.
    * @param builder IR builder.
    * @param depth depth of the current generator.
@@ -348,7 +348,7 @@ private:
 
   /**
    * @brief Allocate a value of a pointer type.
-   * 
+   *
    * @param type the pointer type.
    * @param builder IR builder.
    * @param depth depth of the current generator.
@@ -374,7 +374,7 @@ private:
 
   /**
    * @brief Allocate a value of an array type.
-   * 
+   *
    * @param type the type to allocate.
    * @param builder IR builder.
    * @param depth depth of the generator.
@@ -391,7 +391,7 @@ private:
 
   /**
    * @brief Allocate a value of a function type.
-   * 
+   *
    * @param type the type to allocate.
    * @param builder IR builder.
    * @param depth depth of the generator.
@@ -406,7 +406,7 @@ private:
 
   /**
    * @brief Allocate a value of the given type.
-   * 
+   *
    * @param type the type to allocate.
    * @param builder IR builder.
    * @param depth depth of the generator.
@@ -446,13 +446,13 @@ private:
         module->getOrInsertFunction(
             "printf",
             llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(context), 
+                llvm::IntegerType::getInt32Ty(context),
                 llvm::PointerType::getUnqual(
                     llvm::IntegerType::getInt8Ty(context)
                 ),
                 true
             )
-        ).getCallee()
+        )
     );
     printfDecl->setDSOLocal(true);
 
@@ -460,7 +460,7 @@ private:
     block_name.append(std::to_string(_apiCounter));
     auto invokeApiCase = llvm::BasicBlock::Create(
         caller->getContext(), block_name, caller);
-    
+
     builder.SetInsertPoint(invokeApiCase);
     std::string printfFormat = callee->getName().str();
     printfFormat.push_back('\n');

@@ -50,7 +50,7 @@ namespace symbol {
 
 /**
  * @brief Demangle symbol names.
- * 
+ *
  * @param name The mangled symbol name.
  * @return std::string The demangled symbol name. If the given symbol name cannot
  * be successfully demangled, returns the original name.
@@ -69,21 +69,21 @@ std::string demangle(const std::string& name) {
 }
 
 /**
- * @brief Removes template arguments and function arguments specified in the 
+ * @brief Removes template arguments and function arguments specified in the
  * given symbol name.
- * 
- * Formally, this function returns any contents that is surrounded by angle 
+ *
+ * Formally, this function returns any contents that is surrounded by angle
  * brackets or round brackets in some suffix of the given string.
- * 
+ *
  * @param name the original symbol name.
- * @return std::string the symbol name with template arguments and function 
+ * @return std::string the symbol name with template arguments and function
  * arguments removed.
  */
 std::string removeArgs(const std::string& name) {
   if (name.empty()) {
     return std::string { };
   }
-  
+
   if (name.back() != ')' && name.back() != '>') {
     return name;
   }
@@ -108,15 +108,15 @@ std::string removeArgs(const std::string& name) {
 
 /**
  * @brief Represent a qualified name.
- * 
+ *
  * A qualified name is a symbol name whose components are separated by "::".
- * 
+ *
  */
 class QualifiedName {
 public:
   /**
    * @brief Construct a new QualifiedName object.
-   * 
+   *
    * @param name the original qualified name.
    */
   explicit QualifiedName(const std::string& name)
@@ -137,7 +137,7 @@ public:
 
   /**
    * @brief Get the number of components contained in the fully qualified name.
-   * 
+   *
    * @return size_type the number of components.
    */
   size_type size() const {
@@ -147,7 +147,7 @@ public:
   /**
    * @brief Get the component at the given index. The index can be negative
    * in which case the index will counts from the back of the container.
-   * 
+   *
    * @param index the index.
    * @return const std::string& the component at the given index.
    */
@@ -165,7 +165,7 @@ private:
   /**
    * @brief Load the given qualified symbol name and split all components, with
    * regard to the necessary bracket structure.
-   * 
+   *
    * @param name the qualified symbol name.
    */
   void load(const std::string& name) {
@@ -198,7 +198,7 @@ private:
 
 /**
  * @brief Test whether the given function is a constructor.
- * 
+ *
  * @param fn The function to test.
  * @return true if the function given is a constructor.
  * @return false if the function given is not a constructor.
@@ -212,7 +212,7 @@ bool isConstructor(const llvm::Function& fn) {
     return false;
   }
 
-  // The function name without function arguments should equal to the class name 
+  // The function name without function arguments should equal to the class name
   // without template arguments if `fn` is a constructor.
   auto funcNameWithoutArgs = symbol::removeArgs(name[-1]);
   auto classNameWithoutArgs = symbol::removeArgs(name[-2]);
@@ -222,7 +222,7 @@ bool isConstructor(const llvm::Function& fn) {
 /**
  * @brief Get the name of the type constructed by the given constructor. If the
  * given function is not a constructor, the behavior is unspecified.
- * 
+ *
  * @param ctor reference to a llvm::Function object representing a constructor.
  * @return std::string the name of the type constructed by the given
  * constructor.
@@ -230,19 +230,19 @@ bool isConstructor(const llvm::Function& fn) {
 std::string getConstructedTypeName(const llvm::Function& ctor) {
   symbol::QualifiedName ctorName { symbol::demangle(ctor.getName().str()) };
   // The demangled name of the constructor should be something like
-  // `[<namespace>::]<className>::<funcName>`. We're interested in 
+  // `[<namespace>::]<className>::<funcName>`. We're interested in
   // `[<namespace>::]<className>`.
   return ctorName[-2];
 }
 
 /**
  * @brief Test whether the given function is a factory function.
- * 
+ *
  * Factory functions meets the following conditions:
- * 
+ *
  * * It takes no arguments;
  * * It returns a value of some struct or class type.
- * 
+ *
  * @param fn The function to test.
  * @return true if the function given is a factory function.
  * @return false if the function given is not a factory function.
@@ -269,7 +269,7 @@ bool isFactoryFunction(const llvm::Function& fn) {
 /**
  * @brief Get the type name of the given factory function. If the given function
  * is not a factory function, the behavior is unspecified.
- * 
+ *
  * @param factoryFunction the factory function.
  * @return std::string the type name of the given factory function,
  */
@@ -287,10 +287,10 @@ std::string getProducingTypeName(const llvm::Function& factoryFunction) {
 
 /**
  * @brief Test whether the given function is a top-level API function.
- * 
+ *
  * A function is called a top-level API if it takes a single argument of type
  * `v8::FunctionCallbackInfo *`.
- * 
+ *
  * @param fn the function to test.
  * @return true if the function given is a top-level API function.
  * @return false if the function given is not a top-level API function.
@@ -301,7 +301,7 @@ bool isTopLevelApi(const llvm::Function& fn) {
     return false;
   }
 
-  auto onlyArg = fn.getArg(0);
+  auto onlyArg = fn.args().begin();
   auto onlyArgType = onlyArg->getType();
   if (!onlyArgType->isPointerTy()) {
     return false;
@@ -321,16 +321,16 @@ bool isTopLevelApi(const llvm::Function& fn) {
 }
 
 /**
- * @brief Get a list of functions that are directly called by the given 
+ * @brief Get a list of functions that are directly called by the given
  * function.
- * 
+ *
  * @param fn the caller function.
  * @return std::vector<const llvm::Function *> a list of functions that are
  * directly called by the given function.
  */
 std::vector<llvm::Function *> getFunctionCallees(llvm::Function& fn) {
   std::vector<llvm::Function *> callees { };
-  
+
   for (const auto& basicBlock : fn)
   for (const auto& instruction : basicBlock) {
     auto callInstruction = llvm::dyn_cast<llvm::CallBase>(&instruction);
@@ -339,11 +339,11 @@ std::vector<llvm::Function *> getFunctionCallees(llvm::Function& fn) {
       continue;
     }
 
-    if (llvm::dyn_cast<llvm::IntrinsicInst>(callInstruction)) {
-      // Current instruction is a call instruction to an intrinsic function.
-      // We're not interested in such functions.
-      continue;
-    }
+    // if (llvm::dyn_cast<llvm::IntrinsicInst>(callInstruction)) {
+    //   // Current instruction is a call instruction to an intrinsic function.
+    //   // We're not interested in such functions.
+    //   continue;
+    // }
 
     auto callee = callInstruction->getCalledFunction();
     if (callee) {
@@ -355,15 +355,15 @@ std::vector<llvm::Function *> getFunctionCallees(llvm::Function& fn) {
 }
 
 /**
- * @brief Implement an LLVM module pass that extracts API and type information 
+ * @brief Implement an LLVM module pass that extracts API and type information
  * of the target.
- * 
+ *
  */
 class CAFDriver : public llvm::ModulePass {
 public:
   /**
    * @brief This field is used as an alternative machenism to RTTI in LLVM.
-   * 
+   *
    */
   static char ID;
 
@@ -376,10 +376,10 @@ public:
 
   /**
    * @brief This function is the entry point of the module pass.
-   * 
+   *
    * @param module The LLVM module to work on.
-   * @return true 
-   * @return false 
+   * @return true
+   * @return false
    */
   bool runOnModule(llvm::Module& module) override {
     init();
@@ -403,19 +403,19 @@ private:
   /**
    * @brief Extracts all `interesting` functions from the given LLVM module and
    * add them to the symbol table.
-   * 
+   *
    * A function is considered `interesting` if any of the following holds:
-   * 
+   *
    * * The function is the constructor of some type;
    * * The function is a factory function, a.k.a. functions whose arg list is
    * empty and returns an instance of some type;
    * * The function takes exactly one argument of type `v8::FunctionCallbackInfo`,
-   * in which case the function is called a top-level API. Top-level API 
+   * in which case the function is called a top-level API. Top-level API
    * functions are the direct target of fuzzing, like syscalls in syzkaller.
-   * 
+   *
    * The extracted constructors, factory functions and top-level APIs are
    * populated into the corresponding private fields of this class.
-   * 
+   *
    * @param module The LLVM module to extract functions from.
    */
   void populateSymbolTable(llvm::Module& module) {
@@ -429,23 +429,23 @@ private:
         // This function is a constructor.
         auto typeName = getConstructedTypeName(func);
         _symbols.addConstructor(typeName, &func);
-        llvm::errs() << "CAF: found constructor: " << func.getName().str() 
+        llvm::errs() << "CAF: found constructor: " << func.getName().str()
             << " for type: " << typeName
             << "\n";
       } else if (isFactoryFunction(func)) {
         // This function is a factory function.
         auto structName = getProducingTypeName(func);
         _symbols.addFactoryFunction(structName, &func);
-        llvm::errs() << "CAF: found factory: " << func.getName().str() 
+        llvm::errs() << "CAF: found factory: " << func.getName().str()
             << " for type: " << structName
             << "\n";
       } else if (isTopLevelApi(func)) {
         // This function is a top-level API.
         // _symbols.addApi(&func);
-        llvm::errs() << "CAF: found top-level API: " << func.getName().str() 
+        llvm::errs() << "CAF: found top-level API: " << func.getName().str()
             << "\n";
         for (auto targetApi : getFunctionCallees(func)) {
-          llvm::errs() << "CAF: found fuzz-target API: " 
+          llvm::errs() << "CAF: found fuzz-target API: "
               << targetApi->getName().str() << "\n";
           _symbols.addApi(targetApi);
         }
@@ -460,9 +460,9 @@ private:
     // TODO: Refactor here to allow user specify the path to save CAF store.
     auto jsonText = json.dump();
     std::error_code openDumpFileError { };
-    llvm::raw_fd_ostream dumpFile { 
+    llvm::raw_fd_ostream dumpFile {
         "/home/msr/Temp/caf.json", openDumpFileError };
-    
+
     if (openDumpFileError) {
       llvm::errs() << "CAFDriver: failed to dump metadata to file: "
           << openDumpFileError.value() << ": "
@@ -493,6 +493,6 @@ static llvm::RegisterPass<CAFDriver> X(
 
 static llvm::RegisterStandardPasses Y(
     llvm::PassManagerBuilder::EP_EarlyAsPossible,
-    [] (const llvm::PassManagerBuilder &, llvm::legacy::PassManagerBase &m) { 
-        m.add(new CAFDriver()); 
+    [] (const llvm::PassManagerBuilder &, llvm::legacy::PassManagerBase &m) {
+        m.add(new CAFDriver());
     });

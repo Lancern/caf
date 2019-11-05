@@ -3,7 +3,7 @@ add_llvm_library( CAFDriver MODULE
   CAFMeta.hpp
   CAFSymbolTable.hpp
   CAFCodeGen.hpp
-  json/json.hpp
+  json.hpp
 
   PLUGIN_TOOL
   opt

@@ -43,13 +43,11 @@ class FunctionLike;
 class CAFStoreManaged;
 class Type;
 class NamedType;
-class IntegerType;
+class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
 class Activator;
-class Constructor;
-class Factory;
 class Function;
 class CAFStore;
 

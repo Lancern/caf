@@ -137,6 +137,13 @@ public:
   inline T* operator->() const;
 
   /**
+   * @brief Get a raw pointer to the pointee.
+   *
+   * @return T* raw pointer to the pointee.
+   */
+  inline T* get() const;
+
+  /**
    * @brief Get the JSON representation of this CAFStoreRef instance.
    *
    * @tparam T the type of the pointee.
@@ -209,7 +216,7 @@ public:
    *
    * @return const std::vector<CAFStoreRef<Type>> type of arguments of the function.
    */
-  const std::vector<CAFStoreRef<Type>> args() const noexcept {
+  const std::vector<CAFStoreRef<Type>>& args() const noexcept {
     return _args;
   }
 
@@ -1823,11 +1830,16 @@ private:
 
 template <typename T>
 T& CAFStoreRef<T>::operator*() const {
-  return *_store->deref(*this);
+  return *get();
 }
 
 template <typename T>
 T* CAFStoreRef<T>::operator->() const {
+  return get();
+}
+
+template <typename T>
+T* CAFStoreRef<T>::get() const {
   return _store->deref(*this);
 }
 

@@ -1,6 +1,7 @@
 #include "CAFMeta.hpp"
 
 #include <cstdint>
+#include <climits>
 #include <utility>
 #include <string>
 #include <vector>
@@ -25,9 +26,64 @@
 
 namespace {
 
+namespace rng {
+
+/**
+ * @brief Get a random number in range [min, max].
+ *
+ * @tparam RNG the type of the random number generator. This type should satisfy C++ named
+ * requirement `RandomNumberEngine`.
+ * @tparam T the type of the output number.
+ * @param r reference to the random number generator.
+ * @param min the minimal value in output range.
+ * @param max the maximal value in output range.
+ * @return int the generated random number.
+ */
+template <typename RNG, typename T>
+T random(RNG& r, T min = 0, T max = std::numeric_limits<T>::max()) noexcept {
+  static_assert(std::is_integral<T>::value, "T is not an integral type.");
+  std::uniform_int_distribution<T> dist { min, max };
+  return dist(r);
+}
+
+/**
+ * @brief Generate a random integer number between 0 and the size of the given container.
+ *
+ * @tparam RNG the type of the random number generator. This type should satisfy C++ named
+ * requirement `RandomNumberEngine`.
+ * @tparam Container type of the container. The container type should satisfy C++ named
+ * requirement `Container`.
+ * @param r reference to the random number generator.
+ * @param c the container object.
+ * @return Container::size_type type of the size of the container.
+ */
+template <typename RNG, typename Container>
+typename Container::size_type random_index(RNG& r, const Container &c) noexcept {
+  return random<typename Container::size_type>(r, 0, c.size());
+}
+
+/**
+ * @brief Randomly select an element from the given container.
+ *
+ * @tparam RNG the type of the random number generator. This type should satisfy C++ named
+ * requirement `RandomNumberEngine`.
+ * @tparam Container type of the container. The container type should satisfy C++ named
+ * requirement `SequenceContainer`.
+ * @param r reference to the random number generator.
+ * @param c the container instance.
+ * @return Container::const_reference const reference to the selected element.
+ */
+template <typename RNG, typename Container>
+typename Container::const_reference select(RNG& r, const Container& c) noexcept {
+  return c[random_index(r, c)];
+}
+
+} // namespace rng
+
 namespace caf {
 
 class CAFObjectPool;
+class CAFCorpusTestCaseRef;
 class CAFCorpus;
 
 class Value;
@@ -81,18 +137,32 @@ public:
   }
 
   /**
+   * @brief Determine whether the object pool is empty.
+   *
+   * @return true if the object pool is empty.
+   * @return false if the object pool is not empty.
+   */
+  bool empty() const noexcept {
+    return size() == 0;
+  }
+
+  /**
    * @brief Create a new value in the object pool.
    *
-   * @tparam T the type of the value to be created.
+   * @tparam T the type of the value to be created. T should derive from `Value`.
    * @tparam Args the types of the arguments for constructing a new value.
    * @param args arguments for constructing a new value.
    * @return T* pointer to the created value.
    */
   template <typename T, typename ...Args>
   T* create(Args&&... args) {
+    static_assert(std::is_base_of<Value, T>::value, "T does not derive from Value.");
     _values.push_back(std::make_unique<T>(std::forward<Args>(args)...));
     return _values.back().get();
   }
+
+  template <typename T>
+  friend class CAFObjectPoolValueRef;
 
 private:
   std::vector<std::unique_ptr<Value>> _values;
@@ -106,6 +176,10 @@ private:
  */
 class CAFCorpusTestCaseRef {
 public:
+  /**
+   * @brief Type of the index.
+   *
+   */
   using index_type = typename std::vector<TestCase>::size_type;
 
   /**
@@ -119,12 +193,33 @@ public:
       _index(index)
   { }
 
+  /**
+   * @brief Get the corpus instance owning the test case.
+   *
+   * @return CAFCorpus* the corpus instance owning the test case.
+   */
   CAFCorpus* corpus() const noexcept {
     return _corpus;
   }
 
-  TestCase& operator*() const noexcept;
-  TestCase* operator->() const noexcept;
+  /**
+   * @brief Get the index of the referenced `TestCase` instance inside the corpus.
+   *
+   * @return index_type the index of the referenced `TestCase` instance.
+   */
+  index_type index() const noexcept {
+    return _index;
+  }
+
+  TestCase& operator*() const noexcept {
+    return *get();
+  }
+
+  TestCase* operator->() const noexcept {
+    return get();
+  }
+
+  inline TestCase* get() const noexcept;
 
 private:
   CAFCorpus* _corpus;
@@ -197,19 +292,48 @@ public:
     return CAFCorpusTestCaseRef { this, _testCases.size() - 1 };
   }
 
+  /**
+   * @brief Get the object pool associated with the given type ID.
+   *
+   * @param typeId the type ID of the object pool.
+   * @return CAFObjectPool* pointer to the desired object pool. If no such object pool is found,
+   * `nullptr` will be returned.
+   */
+  CAFObjectPool* getObjectPool(uint64_t typeId) const noexcept {
+    auto i = _pools.find(typeId);
+    if (i == _pools.end()) {
+      return nullptr;
+    }
+
+    return i->second.get();
+  }
+
+  /**
+   * @brief Get the object pool associated with the given type name. If the desired object pool does
+   * not exist, then create it.
+   *
+   * @param typeId the type ID of the object pool.
+   * @return CAFObjectPool* pointer to the object pool.
+   */
+  CAFObjectPool* getOrCreateObjectPool(uint64_t typeId) noexcept {
+    auto pool = getObjectPool(typeId);
+    if (pool) {
+      return pool;
+    }
+
+    auto createdPool = std::make_unique<CAFObjectPool>();
+    return _pools.emplace(typeId, std::move(createdPool)).first->second.get();
+  }
+
   friend class CAFCorpusTestCaseRef;
 
 private:
   std::unique_ptr<CAFStore> _store;
-  std::unordered_map<std::string, std::unique_ptr<CAFObjectPool>> _pools;
+  std::unordered_map<uint64_t, std::unique_ptr<CAFObjectPool>> _pools;
   std::vector<TestCase> _testCases;
 };
 
-TestCase& CAFCorpusTestCaseRef::operator*() const noexcept {
-  return _corpus->_testCases[_index];
-}
-
-TestCase* CAFCorpusTestCaseRef::operator->() const noexcept {
+TestCase* CAFCorpusTestCaseRef::get() const noexcept {
   return &_corpus->_testCases[_index];
 }
 
@@ -419,6 +543,16 @@ public:
   }
 
   /**
+   * @brief Set the element value at the given index.
+   *
+   * @param index the index of the element within the array.
+   * @param value the value to be set.
+   */
+  void setElement(typename std::vector<Value *>::size_type index, Value* value) noexcept {
+    _elements[index] = value;
+  }
+
+  /**
    * @brief Get the elements contained in this array.
    *
    * @return const std::vector<Value *>& elements contained in this array.
@@ -465,6 +599,16 @@ public:
   }
 
   /**
+   * @brief Set the argument value at the given index.
+   *
+   * @param index the index of the argument.
+   * @param value the value of the argument to set.
+   */
+  void setArg(typename std::vector<Value *>::size_type index, Value* value) noexcept {
+    _args[index] = value;
+  }
+
+  /**
    * @brief Get the arguments passed to the activator.
    *
    * @return const std::vector<Value *>& list of arguments passed to the activator.
@@ -488,20 +632,20 @@ public:
   /**
    * @brief Construct a new FunctionCall object.
    *
-   * @param funcId The ID of the function to be called.
+   * @param func the function to be called.
    */
-  explicit FunctionCall(uint64_t funcId) noexcept
-    : _funcId(funcId),
+  explicit FunctionCall(const Function* func) noexcept
+    : _func(func),
       _args { }
   { }
 
   /**
-   * @brief Get the ID of the function to be called.
+   * @brief Get the function called.
    *
-   * @return uint64_t the ID of the function to be called.
+   * @return const Function* pointer to the function definition to be called.
    */
-  uint64_t funcId() const noexcept {
-    return _funcId;
+  const Function* func() const noexcept {
+    return _func;
   }
 
   /**
@@ -511,6 +655,16 @@ public:
    */
   void addArg(Value* arg) noexcept {
     _args.push_back(arg);
+  }
+
+  /**
+   * @brief Set the argument at the given index to the specified value.
+   *
+   * @param index the index of the argument.
+   * @param value the value of the argument.
+   */
+  void setArg(typename std::vector<Value *>::size_type index, Value* value) noexcept {
+    _args[index] = value;
   }
 
   /**
@@ -524,7 +678,7 @@ public:
   }
 
 private:
-  uint64_t _funcId;
+  const Function* _func;
   std::vector<Value *> _args;
 }; // class FunctionCall
 
@@ -668,7 +822,7 @@ private:
   template <typename Output>
   void write(Output& o, const FunctionCall& funcCall) const noexcept {
     // Write function ID.
-    writeTrivial(o, funcCall.funcId());
+    writeTrivial(o, funcCall.func()->id());
 
     // Write number of arguments.
     writeTrivial(o, funcCall.args().size());
@@ -721,12 +875,12 @@ public:
       _MutationStrategyMax = Argument
     };
     auto strategy = static_cast<MutationStrategy>(
-        random<int>(0, _MutationStrategyMax));
+        rng::random<int>(_rng, 0, _MutationStrategyMax));
     switch (strategy) {
       case Sequence:
-        return mutateSequence(previous);
+        return mutateSequence(testCase);
       case Argument:
-        return mutateArgument(previous);
+        return mutateArgument(testCase);
       default:
         CAF_UNREACHABLE()
     }
@@ -736,31 +890,166 @@ private:
   CAFCorpus* _corpus;
   RNG _rng;
 
+  using sequence_index_type = typename std::vector<FunctionCall>::size_type;
+
   CAFCorpusTestCaseRef squash(CAFCorpusTestCaseRef previous) noexcept {
     // TODO: Implement TestCaseMutator::squash.
   }
 
   CAFCorpusTestCaseRef splice(CAFCorpusTestCaseRef previous) noexcept {
-    auto source = _corpus->getTestCase(random_index(_corpus->testCases()));
+    auto source = _corpus->getTestCase(rng::random_index(_rng, _corpus->testCases()));
     auto previousLen = previous->sequence().size();
     auto sourceLen = source->sequence().size();
 
-    using index = decltype(previousLen);
-    auto spliceIndex = random<index>(0, std::min(previousLen, sourceLen));
+    auto spliceIndex = rng::random<sequence_index_type>(_rng, 0, std::min(previousLen, sourceLen));
 
     auto mutated = _corpus->createTestCase();
-    for (index i = 0; i < spliceIndex; ++i) {
+    for (sequence_index_type i = 0; i < spliceIndex; ++i) {
       mutated->addFunctionCall(previous->sequence()[i]);
     }
-    for (index i = spliceIndex; i < sourceLen; ++i) {
+    for (sequence_index_type i = spliceIndex; i < sourceLen; ++i) {
       mutated->addFunctionCall(source->sequence()[i]);
     }
 
     return mutated;
   }
 
+  Value* generateNewBitsType(const BitsType* type) noexcept {
+    auto objectPool = _corpus->getObjectPool(type->id());
+    if (!objectPool) {
+      // TODO: Refactor here to reject current value generation request.
+      return nullptr;
+    }
+
+    return rng::select(_rng, objectPool->values()).get();
+  }
+
+  Value* generateNewPointerType(const PointerType* type) noexcept {
+    auto objectPool = _corpus->getOrCreateObjectPool(type->id());
+    auto pointeeValue = generateValue(type->pointeeType());
+    return objectPool->create<PointerValue>(objectPool, pointeeValue, type);
+  }
+
+  Value* generateNewArrayType(const ArrayType* type) noexcept {
+    std::vector<Value *> elements { };
+    elements.reserve(type->size());
+    for (size_t i = 0; i < type->size(); ++i) {
+      arrayValue->addElement(generateValue(type->elementType()));
+    }
+
+    auto objectPool = _corpus->getOrCreateObjectPool(type->id());
+    return objectPool->create<ArrayType>(objectPool, type, std::move(elements));
+  }
+
+  Value* generateNewStructType(const StructType* type) noexcept {
+    // Choose an activator.
+    auto activator = rng::select(_rng, type->activators()).get();
+    const auto& activatorArgs = activator->signature().args();
+
+    // Generate arguments passed to the activator. Note that the first argument to the activator
+    // is a pointer to the constructing object and thus should not be generated here.
+    std::vector<Value *> args { };
+    args.reserve(activatorArgs.size() - 1);
+    for (size_t i = 1; i < activatorArgs.size(); ++i) {
+      args.push_back(generateValue(activatorArgs[i].get()));
+    }
+
+    auto objectPool = _corpus->getOrCreateObjectPool(type->id());
+    return objectPool->create<StructValue>(objectPool, type, activator, std::move(args));
+  }
+
+  /**
+   * @brief Generate a new value of the given type.
+   *
+   * @param type type of the value to be generated.
+   * @return Value* pointer to the generated new value.
+   */
+  Value* generateNewValue(const Type* type) noexcept {
+    switch (type->kind()) {
+      case TypeKind::Bits: {
+        return generateNewBitsType(dynamic_cast<const BitsType *>(type));
+      }
+      case TypeKind::Pointer: {
+        return generateNewPointerType(dynamic_cast<const PointerType *>(type));
+      }
+      case TypeKind::Array: {
+        return generateNewArrayType(dynamic_cast<const ArrayType *>(type));
+      }
+      case TypeKind::Struct: {
+        return generateNewStructType(dynamic_cast<const StructType *>(type));
+      }
+      default: CAF_UNREACHABLE()
+    }
+  }
+
+  /**
+   * @brief Generate an argument of the given type.
+   *
+   * This function randomly applies the following strategies:
+   * * Select an exiting value from the corresponding object pool in the corpus, if any;
+   * * Create a new value and insert it into the corresponding object pool; any related values used
+   * to construct the new value will be generated recursively until `BitsValue` is required. The
+   * required `BitsValue` will be populated from the corresponding object pool directly.
+   *
+   * @param type the type of the argument.
+   * @return Value* pointer to the generated `Value` instance wrapping around the argument.
+   */
+  Value* generateValue(const Type* type) noexcept {
+    auto objectPool = _corpus->getOrCreateObjectPool(type->id());
+    if (objectPool->empty()) {
+      // Does not make sense to select existing value from the object pool since it is empty.
+      return generateNewValue(type);
+    }
+
+    enum GenerateValueStrategies : int {
+      UseExisting,
+      CreateNew,
+      _GenerateValueStrategiesMax = CreateNew
+    };
+
+    auto strategy = static_cast<GenerateValueStrategies>(
+        rng::random<int>(0, _GenerateValueStrategiesMax));
+    switch strategy {
+      case UseExisting: {
+        // Randomly choose an existing value from the object pool.
+        return rng::select(_rng, objectPool->values()).get();
+      }
+      case CreateNew: {
+        return generateNewValue(type);
+      }
+      default: CAF_UNREACHABLE()
+    }
+  }
+
+  /**
+   * @brief Generate a function call. The callee is selected randomly within the `CAFStore` instance
+   * in the corpus and the arguments are generated recursively.
+   *
+   * @return FunctionCall the generated function call.
+   */
+  FunctionCall generateCall() noexcept {
+    auto api = rng::select(_corpus->store()->apis()).get();
+
+    FunctionCall call { api };
+    for (auto arg : api->signature().args()) {
+      call.addArg(generateValue(arg.get()));
+    }
+
+    return call;
+  }
+
   CAFCorpusTestCaseRef insertCall(CAFCorpusTestCaseRef previous) noexcept {
-    // TODO: Implement TestCaseMutator::insertCall.
+    auto insertIndex = rng::random_index(_rng, previous->sequence());
+    auto mutated = _corpus->createTestCase();
+    for (sequence_index_type i = 0; i < insertIndex; ++i) {
+      mutated->addFunctionCall(previous->sequence[i]);
+    }
+    mutated->addFunctionCall(generateCall());
+    for (sequence_index_type i = insertIndex; i < previous->sequence().size(); ++i) {
+      mutated->addFunctionCall(previous->sequence[i]);
+    }
+
+    return mutated;
   }
 
   CAFCorpusTestCaseRef removeCall(CAFCorpusTestCaseRef previous) noexcept {
@@ -771,23 +1060,21 @@ private:
       return previous;
     }
 
-    using index = decltype(previousSequenceLen);
-
     // Randomly choose an index at which the function call will be dropped.
-    auto drop = random<index>(0, previousSequenceLen - 1);
+    auto drop = rng::random<sequence_index_type>(_rng, 0, previousSequenceLen - 1);
 
-    for (index i = 0; i < drop; ++i) {
+    for (sequence_index_type i = 0; i < drop; ++i) {
       mutated->addFunctionCall(previous->sequence()[i]);
     }
-    for (index i = drop + 1; i < previousSequenceLen; ++i) {
+    for (sequence_index_type i = drop + 1; i < previousSequenceLen; ++i) {
       mutated->addFunctionCall(previous->sequence()[i]);
     }
 
     return mutated;
   }
 
-  TestCase mutateSequence(const TestCase& previous) noexcept {
-    enum SequenceMutationStrategy {
+  CAFCorpusTestCaseRef mutateSequence(CAFCorpusTestCaseRef previous) noexcept {
+    enum SequenceMutationStrategy : int {
       Squash,
       Splice,
       InsertCall,
@@ -796,7 +1083,7 @@ private:
     };
 
     auto strategy = static_cast<SequenceMutationStrategy>(
-        random<int>(0, _SequenceMutationStrategyMax));
+        rng::random<int>(_rng, 0, _SequenceMutationStrategyMax));
     switch (strategy) {
       case Squash:
         return squash(previous);
@@ -811,35 +1098,216 @@ private:
     }
   }
 
+  void flipBits(uint8_t* buffer, size_t size, size_t width) noexcept {
+    auto offset = rng::random<size_t>(0, size * CHAR_BIT - width);
+    buffer[offset / CHAR_BIT] ^= ((1 << width) - 1) << (offset % CHAR_BIT);
+  }
+
+  void flipBytes(uint8_t* buffer, size_t size, size_t width) noexcept {
+    auto offset = rng::random<size_t>(0, size - width);
+    switch (width) {
+      case 1:
+        buffer[offset] ^= 0xff;
+        break;
+      case 2:
+        *reinterpret_cast<uint16_t>(buffer + offset) ^= 0xffff;
+        break;
+      case 4:
+        *reinterpret_cast<uint32_t>(buffer + offset) ^= 0xffffffff;
+        break;
+      default:
+        CAF_UNREACHABLE()
+    }
+  }
+
+  void arith(uint8_t* buffer, size_t size, size_t width) noexcept {
+    auto offset = rng::random<size_t>(0, size - width);
+    // TODO: Add code here to allow user modify the maximal absolute value of arithmetic delta.
+    auto delta = rng::random<int32_t>(-35, 35);
+    switch (width) {
+      case 1:
+        *reinterpret_cast<int8_t>(buffer + offset) += static_cast<int8_t>(delta);
+        break;
+      case 2:
+        *reinterpret_cast<int16_t>(buffer + offset) += static_cast<int16_t>(delta);
+        break;
+      case 4:
+        *reinterpret_cast<int32_t>(buffer + offset) += static_cast<int32_t>(delta);
+        break;
+      default:
+        CAF_UNREACHABLE()
+    }
+  }
+
+  Value* mutateBitsValue(const BitsValue* value) noexcept {
+    auto objectPool = value->pool();
+    auto mutated = objectPool->create<BitsValue>(*value);
+
+    enum BitsValueMutationStrategy : int {
+      BitFlip1,
+      BitFlip2,
+      BitFlip4,
+      ByteFlip1,
+      ByteFlip2,
+      ByteFlip4,
+      ByteArith,
+      WordArith,
+      DWordArith,
+      _MutationStrategyMax = DWordArith
+    };
+
+    std::vector<BitsValueMutationStrategy> valid {
+      BitFlip1,
+      BitFlip2,
+      BitFlip4,
+      ByteFlip1,
+      ByteArith
+    };
+    if (value->size() >= 2) {
+      valid.push_back(ByteFlip2);
+      valid.push_back(WordArith);
+    }
+    if (value->size() >= 4) {
+      valid.push_back(ByteFlip4);
+      valid.push_back(DWordArith);
+    }
+
+    auto strategy = rng::select(_rng, valid);
+    switch (strategy) {
+      case BitFlip1: {
+        flipBits(value->data(), value->size(), 1);
+        break;
+      }
+      case BitFlip2: {
+        flipBits(value->data(), value->size(), 2);
+        break;
+      }
+      case BitFlip4: {
+        flipBits(value->data(), value->size(), 4);
+        break;
+      }
+      case ByteFlip1: {
+        flipBytes(value->data(), value->size(), 1);
+        break;
+      }
+      case ByteFlip2: {
+        flipBytes(value->data(), value->size(), 2);
+        break;
+      }
+      case ByteFlip4: {
+        flipBytes(value->data(), value->size(), 4);
+        break;
+      }
+      case ByteArith: {
+        arith(value->data(), value->size(), 1);
+        break;
+      }
+      case WordArith: {
+        arith(value->data(), value->size(), 2);
+        break;
+      }
+      case DWordArith: {
+        arith(value->data(), value->size(), 4);
+        break;
+      }
+      default: CAF_UNREACHABLE()
+    }
+
+    return mutated;
+  }
+
+  Value* mutatePointerValue(const PointerValue* value) noexcept {
+    auto objectPool = value->pool();
+    auto mutatedPointee = mutateValue(value->pointee());
+    return objectPool->create<PointerValue>(objectPool, mutatedPointee, value->type());
+  }
+
+  Value* mutateArrayValue(const ArrayValue* value) noexcept {
+    auto elementIndex = rng::random_index(_rng, value->elements());
+    auto mutatedElement = mutateValue(value->elements()[elementIndex]);
+
+    auto objectPool = value->pool();
+    auto mutated = objectPool->create<ArrayValue>(*value);
+    mutated->setElement(elementIndex, mutatedElement);
+
+    return mutated;
+  }
+
+  Value* mutateStructValue(const StructValue* value) noexcept {
+    enum StructValueMutationStrategy : int {
+      MutateActivator,
+      MutateArgument,
+      _StrategyMax = MutateArgument
+    };
+
+    auto strategy = MutateActivator;
+    if (!value->args().empty()) {
+      strategy = static_cast<StructValueMutationStrategy>(rng::random<int>(0, _StrategyMax));
+    }
+
+    switch strategy {
+      case MutateActivator: {
+        return generateNewStructType(dynamic_cast<const StructType *>(value->type()));
+      }
+      case MutateArgument: {
+        auto argIndex = rng::random_index(value->args());
+        auto mutatedArg = mutateValue(value->args()[argIndex]);
+        auto objectPool = value->pool();
+        auto mutated = objectPool->create<StructValue>(*value);
+        mutated->setArg(argIndex, mutated);
+        return mutated;
+      }
+      default: CAF_UNREACHABLE()
+    }
+  }
+
+  /**
+   * @brief Mutate the given value.
+   *
+   * @param value the value to be mutated.
+   * @return Value* pointer to the mutated value.
+   */
+  Value* mutateValue(const Value* value) noexcept {
+    switch (value->kind()) {
+      case ValueKind::BitsValue: {
+        return mutateBitsValue(dynamic_cast<const BitsValue *>(value));
+      }
+      case ValueKind::PointerValue: {
+        return mutatePointerValue(dynamic_cast<const PointerValue *>(value));
+      }
+      case ValueKind::ArrayValue: {
+        return mutateArrayValue(dynamic_cast<const ArrayValue *>(value));
+      }
+      case ValueKind::StructValue: {
+        return mutateStructValue(dynamic_cast<const StructValue *>(value));
+      }
+      default: CAF_UNREACHABLE()
+    }
+  }
+
   CAFCorpusTestCaseRef mutateArgument(CAFCorpusTestCaseRef previous) noexcept {
-    // TODO: Implement TestCaseMutator::mutateArgument.
-  }
+    auto functionCallIndex = rng::random_index(_rng, previous->sequence());
+    auto mutated = _corpus->createTestCase();
+    for (sequence_index_type i = 0; i < functionCallIndex; ++i) {
+      mutated->addFunctionCall(previous->sequence()[i]);
+    }
 
-  /**
-   * @brief Get a random number in range [min, max].
-   *
-   * @tparam T the type of the output number.
-   * @param min the minimal value in output range.
-   * @param max the maximal value in output range.
-   * @return int the generated random number.
-   */
-  template <typename T>
-  T random(T min = 0, T max = std::numeric_limits<T>::max()) noexcept {
-    static_assert(std::is_integral<T>::value, "T is not an integral type.");
-    std::uniform_int_distribution<T> dist { min, max };
-    return dist(_rng);
-  }
+    auto targetCall = previous->sequence()[i];
+    if (targetCall.args().empty()) {
+      // TODO: Handle this case when the selected function call does not have any arguments.
+      return previous;
+    } else {
+      auto argIndex = rng::random_index(_rng, targetCall.args());
+      auto value = targetCall.args()[argIndex];
+      value = mutateValue(value);
+      targetCall.setArg(argIndex, value);
+    }
 
-  /**
-   * @brief Generate a random integer number between 0 and the size of the given container.
-   *
-   * @tparam Container type of the container.
-   * @param c the container object.
-   * @return Container::size_type type of the size of the container.
-   */
-  template <typename Container>
-  typename Container::size_type random_index(const Container &c) noexcept {
-    return random<typename Container::size_type>(0, c.size());
+    for (sequence_index_type i = functionCallIndex + 1; i < previous->sequence().size(); ++i) {
+      mutated->addFunctionCall(previous->sequence()[i]);
+    }
+
+    return mutated;
   }
 }; // class TestCaseMutator
 

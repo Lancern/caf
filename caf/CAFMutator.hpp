@@ -848,9 +848,9 @@ public:
    * @param store the type info metadata store.
    * @param corpus test corpus.
    */
-  explicit TestCaseMutator(CAFCorpus* corpus) noexcept
+  explicit TestCaseMutator(CAFCorpus* corpus, RNG rng = RNG()) noexcept
     : _corpus(corpus),
-      _rng { }
+      _rng { std::move(rng) }
   { }
 
   /**

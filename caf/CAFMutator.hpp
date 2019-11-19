@@ -16,7 +16,7 @@
 #define CAF_UNREACHABLE()               \
   while (1) {                           \
     std::cerr << "Unreachable code: "   \
-        << __FUNC__                     \
+        << __func__                     \
         << "@" << __FILE__              \
         << ":" << __LINE__              \
         << std::endl;                   \
@@ -31,15 +31,15 @@ namespace rng {
 /**
  * @brief Get a random number in range [min, max].
  *
+ * @tparam T the type of the output number.
  * @tparam RNG the type of the random number generator. This type should satisfy C++ named
  * requirement `RandomNumberEngine`.
- * @tparam T the type of the output number.
  * @param r reference to the random number generator.
  * @param min the minimal value in output range.
  * @param max the maximal value in output range.
  * @return int the generated random number.
  */
-template <typename RNG, typename T>
+template <typename T, typename RNG>
 T random(RNG& r, T min = 0, T max = std::numeric_limits<T>::max()) noexcept {
   static_assert(std::is_integral<T>::value, "T is not an integral type.");
   std::uniform_int_distribution<T> dist { min, max };
@@ -158,7 +158,7 @@ public:
   T* create(Args&&... args) {
     static_assert(std::is_base_of<Value, T>::value, "T does not derive from Value.");
     _values.push_back(std::make_unique<T>(std::forward<Args>(args)...));
-    return _values.back().get();
+    return dynamic_cast<T *>(_values.back().get());
   }
 
   template <typename T>
@@ -829,7 +829,7 @@ private:
 
     // Write arguments.
     for (const auto& arg : funcCall.args()) {
-      write(o, arg);
+      write(o, *arg);
     }
   }
 }; // class TestCaseSerializer
@@ -869,13 +869,13 @@ public:
    * @return TestCase the mutated test case.
    */
   CAFCorpusTestCaseRef mutate(CAFCorpusTestCaseRef testCase) noexcept {
-    enum MutationStrategy {
+    enum MutationStrategy : int {
       Sequence,
       Argument,
       _MutationStrategyMax = Argument
     };
     auto strategy = static_cast<MutationStrategy>(
-        rng::random<int>(_rng, 0, _MutationStrategyMax));
+        rng::random<int>(_rng, 0, static_cast<int>(_MutationStrategyMax)));
     switch (strategy) {
       case Sequence:
         return mutateSequence(testCase);
@@ -894,6 +894,7 @@ private:
 
   CAFCorpusTestCaseRef squash(CAFCorpusTestCaseRef previous) noexcept {
     // TODO: Implement TestCaseMutator::squash.
+    CAF_UNREACHABLE()
   }
 
   CAFCorpusTestCaseRef splice(CAFCorpusTestCaseRef previous) noexcept {
@@ -926,7 +927,7 @@ private:
 
   Value* generateNewPointerType(const PointerType* type) noexcept {
     auto objectPool = _corpus->getOrCreateObjectPool(type->id());
-    auto pointeeValue = generateValue(type->pointeeType());
+    auto pointeeValue = generateValue(type->pointeeType().get());
     return objectPool->create<PointerValue>(objectPool, pointeeValue, type);
   }
 
@@ -934,11 +935,11 @@ private:
     std::vector<Value *> elements { };
     elements.reserve(type->size());
     for (size_t i = 0; i < type->size(); ++i) {
-      arrayValue->addElement(generateValue(type->elementType()));
+      elements.push_back(generateValue(type->elementType().get()));
     }
 
     auto objectPool = _corpus->getOrCreateObjectPool(type->id());
-    return objectPool->create<ArrayType>(objectPool, type, std::move(elements));
+    return objectPool->create<ArrayValue>(objectPool, type, std::move(elements));
   }
 
   Value* generateNewStructType(const StructType* type) noexcept {
@@ -1008,8 +1009,8 @@ private:
     };
 
     auto strategy = static_cast<GenerateValueStrategies>(
-        rng::random<int>(0, _GenerateValueStrategiesMax));
-    switch strategy {
+        rng::random<int>(_rng, 0, static_cast<int>(_GenerateValueStrategiesMax)));
+    switch (strategy) {
       case UseExisting: {
         // Randomly choose an existing value from the object pool.
         return rng::select(_rng, objectPool->values()).get();
@@ -1028,7 +1029,7 @@ private:
    * @return FunctionCall the generated function call.
    */
   FunctionCall generateCall() noexcept {
-    auto api = rng::select(_corpus->store()->apis()).get();
+    auto api = rng::select(_rng, _corpus->store()->apis()).get();
 
     FunctionCall call { api };
     for (auto arg : api->signature().args()) {
@@ -1042,11 +1043,11 @@ private:
     auto insertIndex = rng::random_index(_rng, previous->sequence());
     auto mutated = _corpus->createTestCase();
     for (sequence_index_type i = 0; i < insertIndex; ++i) {
-      mutated->addFunctionCall(previous->sequence[i]);
+      mutated->addFunctionCall(previous->sequence()[i]);
     }
     mutated->addFunctionCall(generateCall());
     for (sequence_index_type i = insertIndex; i < previous->sequence().size(); ++i) {
-      mutated->addFunctionCall(previous->sequence[i]);
+      mutated->addFunctionCall(previous->sequence()[i]);
     }
 
     return mutated;
@@ -1083,7 +1084,7 @@ private:
     };
 
     auto strategy = static_cast<SequenceMutationStrategy>(
-        rng::random<int>(_rng, 0, _SequenceMutationStrategyMax));
+        rng::random<int>(_rng, 0, static_cast<int>(_SequenceMutationStrategyMax)));
     switch (strategy) {
       case Squash:
         return squash(previous);
@@ -1099,21 +1100,21 @@ private:
   }
 
   void flipBits(uint8_t* buffer, size_t size, size_t width) noexcept {
-    auto offset = rng::random<size_t>(0, size * CHAR_BIT - width);
+    auto offset = rng::random<size_t>(_rng, 0, size * CHAR_BIT - width);
     buffer[offset / CHAR_BIT] ^= ((1 << width) - 1) << (offset % CHAR_BIT);
   }
 
   void flipBytes(uint8_t* buffer, size_t size, size_t width) noexcept {
-    auto offset = rng::random<size_t>(0, size - width);
+    auto offset = rng::random<size_t>(_rng, 0, size - width);
     switch (width) {
       case 1:
         buffer[offset] ^= 0xff;
         break;
       case 2:
-        *reinterpret_cast<uint16_t>(buffer + offset) ^= 0xffff;
+        *reinterpret_cast<uint16_t *>(buffer + offset) ^= 0xffff;
         break;
       case 4:
-        *reinterpret_cast<uint32_t>(buffer + offset) ^= 0xffffffff;
+        *reinterpret_cast<uint32_t *>(buffer + offset) ^= 0xffffffff;
         break;
       default:
         CAF_UNREACHABLE()
@@ -1121,18 +1122,18 @@ private:
   }
 
   void arith(uint8_t* buffer, size_t size, size_t width) noexcept {
-    auto offset = rng::random<size_t>(0, size - width);
+    auto offset = rng::random<size_t>(_rng, 0, size - width);
     // TODO: Add code here to allow user modify the maximal absolute value of arithmetic delta.
-    auto delta = rng::random<int32_t>(-35, 35);
+    auto delta = rng::random<int32_t>(_rng, -35, 35);
     switch (width) {
       case 1:
-        *reinterpret_cast<int8_t>(buffer + offset) += static_cast<int8_t>(delta);
+        *reinterpret_cast<int8_t *>(buffer + offset) += static_cast<int8_t>(delta);
         break;
       case 2:
-        *reinterpret_cast<int16_t>(buffer + offset) += static_cast<int16_t>(delta);
+        *reinterpret_cast<int16_t *>(buffer + offset) += static_cast<int16_t>(delta);
         break;
       case 4:
-        *reinterpret_cast<int32_t>(buffer + offset) += static_cast<int32_t>(delta);
+        *reinterpret_cast<int32_t *>(buffer + offset) += static_cast<int32_t>(delta);
         break;
       default:
         CAF_UNREACHABLE()
@@ -1175,39 +1176,39 @@ private:
     auto strategy = rng::select(_rng, valid);
     switch (strategy) {
       case BitFlip1: {
-        flipBits(value->data(), value->size(), 1);
+        flipBits(mutated->data(), mutated->size(), 1);
         break;
       }
       case BitFlip2: {
-        flipBits(value->data(), value->size(), 2);
+        flipBits(mutated->data(), mutated->size(), 2);
         break;
       }
       case BitFlip4: {
-        flipBits(value->data(), value->size(), 4);
+        flipBits(mutated->data(), mutated->size(), 4);
         break;
       }
       case ByteFlip1: {
-        flipBytes(value->data(), value->size(), 1);
+        flipBytes(mutated->data(), mutated->size(), 1);
         break;
       }
       case ByteFlip2: {
-        flipBytes(value->data(), value->size(), 2);
+        flipBytes(mutated->data(), mutated->size(), 2);
         break;
       }
       case ByteFlip4: {
-        flipBytes(value->data(), value->size(), 4);
+        flipBytes(mutated->data(), mutated->size(), 4);
         break;
       }
       case ByteArith: {
-        arith(value->data(), value->size(), 1);
+        arith(mutated->data(), mutated->size(), 1);
         break;
       }
       case WordArith: {
-        arith(value->data(), value->size(), 2);
+        arith(mutated->data(), mutated->size(), 2);
         break;
       }
       case DWordArith: {
-        arith(value->data(), value->size(), 4);
+        arith(mutated->data(), mutated->size(), 4);
         break;
       }
       default: CAF_UNREACHABLE()
@@ -1219,7 +1220,8 @@ private:
   Value* mutatePointerValue(const PointerValue* value) noexcept {
     auto objectPool = value->pool();
     auto mutatedPointee = mutateValue(value->pointee());
-    return objectPool->create<PointerValue>(objectPool, mutatedPointee, value->type());
+    return objectPool->create<PointerValue>(objectPool, mutatedPointee,
+        dynamic_cast<const PointerType *>(value->type()));
   }
 
   Value* mutateArrayValue(const ArrayValue* value) noexcept {
@@ -1242,19 +1244,19 @@ private:
 
     auto strategy = MutateActivator;
     if (!value->args().empty()) {
-      strategy = static_cast<StructValueMutationStrategy>(rng::random<int>(0, _StrategyMax));
+      strategy = static_cast<StructValueMutationStrategy>(rng::random<int>(_rng, 0, _StrategyMax));
     }
 
-    switch strategy {
+    switch (strategy) {
       case MutateActivator: {
         return generateNewStructType(dynamic_cast<const StructType *>(value->type()));
       }
       case MutateArgument: {
-        auto argIndex = rng::random_index(value->args());
+        auto argIndex = rng::random_index(_rng, value->args());
         auto mutatedArg = mutateValue(value->args()[argIndex]);
         auto objectPool = value->pool();
         auto mutated = objectPool->create<StructValue>(*value);
-        mutated->setArg(argIndex, mutated);
+        mutated->setArg(argIndex, mutatedArg);
         return mutated;
       }
       default: CAF_UNREACHABLE()
@@ -1292,8 +1294,8 @@ private:
       mutated->addFunctionCall(previous->sequence()[i]);
     }
 
-    auto targetCall = previous->sequence()[i];
-    if (targetCall.args().empty()) {
+    auto targetCall = previous->sequence()[functionCallIndex];
+  if (targetCall.args().empty()) {
       // TODO: Handle this case when the selected function call does not have any arguments.
       return previous;
     } else {

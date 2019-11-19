@@ -1468,12 +1468,7 @@ public:
    * @return CAFStoreRef<Function> pointer to the deserialized object.s
    */
   static CAFStoreRef<Function> fromJson(
-      CAFStore* store, const nlohmann::json& json) noexcept {
-    auto object = std::unique_ptr<Function> { new Function(store) };
-    populateFromJson(*object, json);
-
-    return store->addApi(std::move(object));
-  }
+      CAFStore* store, const nlohmann::json& json) noexcept;
 #endif
 
 protected:
@@ -1485,11 +1480,7 @@ protected:
    * @param json the JSON container.
    */
   static void populateJson(
-      const Function& object, nlohmann::json& json) noexcept {
-    FunctionLike::populateJson(object, json);
-    Identity<Function, uint64_t>::populateJson(object, json);
-    json["name"] = object._name;
-  }
+      const Function& object, nlohmann::json& json) noexcept;
 
 #ifndef CAF_LLVM
   /**
@@ -1500,11 +1491,7 @@ protected:
    * @param json the JSON container.
    */
   static void populateFromJson(
-      Function& object, const nlohmann::json& json) noexcept {
-    FunctionLike::populateFromJson(object.store(), object, json);
-    Identity<Function, uint64_t>::populateFromJson(object, json);
-    object._name = json["name"].get<std::string>();
-  }
+      Function& object, const nlohmann::json& json) noexcept;
 #endif
 };
 
@@ -1932,6 +1919,15 @@ CAFStoreRef<StructType> StructType::fromJson(
 }
 #endif
 
+#ifndef CAF_LLVM
+CAFStoreRef<Function> Function::fromJson(CAFStore* store, const nlohmann::json& json) noexcept {
+  auto object = std::unique_ptr<Function> { new Function(store) };
+  populateFromJson(*object, json);
+
+  return store->addApi(std::move(object));
+}
+#endif
+
 void StructType::populateJson(
     const StructType& object, nlohmann::json& json) noexcept {
   NamedType::populateJson(object, json);
@@ -1950,6 +1946,12 @@ void StructType::populateJson(
   json["fields"] = std::move(fields);
 }
 
+void Function::populateJson(const Function& object, nlohmann::json& json) noexcept {
+  FunctionLike::populateJson(object, json);
+  Identity<Function, uint64_t>::populateJson(object, json);
+  json["name"] = object._name;
+}
+
 #ifndef CAF_LLVM
 void StructType::populateFromJson(
     StructType& object, const nlohmann::json& json) noexcept {
@@ -1964,6 +1966,14 @@ void StructType::populateFromJson(
     auto field = Type::fromJson(object.store(), fie);
     object._fieldTypes.push_back(std::move(field));
   }
+}
+#endif
+
+#ifndef CAF_LLVM
+void Function::populateFromJson(Function& object, const nlohmann::json& json) noexcept {
+  FunctionLike::populateFromJson(object.store(), object, json);
+  Identity<Function, uint64_t>::populateFromJson(object, json);
+  object._name = json["name"].get<std::string>();
 }
 #endif
 

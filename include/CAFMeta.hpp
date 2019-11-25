@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <stdexcept>
 
-#include "json.hpp"
+#include <json/json.hpp>
 
 #ifdef CAF_LLVM
 // We're in LLVM's source code tree. Use LLVM's RTTI mechanisms instead of the

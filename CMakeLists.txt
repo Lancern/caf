@@ -3,10 +3,15 @@ project(caf)
 
 include_directories(include dep)
 
+set(CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+
 # Find LLVM installation.
-include(FindLLVM.cmake)
+include(FindLLVM)
 
 # Find AFL++ installation.
-include(FindAFLPlusPlus.cmake)
+include(FindAFLPlusPlus)
 
 add_subdirectory(src)

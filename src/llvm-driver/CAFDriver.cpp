@@ -333,19 +333,13 @@ std::vector<llvm::Function *> getFunctionCallees(llvm::Function& fn) {
 
   for (const auto& basicBlock : fn)
   for (const auto& instruction : basicBlock) {
-    auto callInstruction = llvm::dyn_cast<llvm::CallBase>(&instruction);
-    if (!callInstruction) {
-      // Current instruction is not a call instruction.
-      continue;
+    llvm::Function* callee = nullptr;
+    if (llvm::isa<llvm::CallInst>(instruction)) {
+      callee = llvm::dyn_cast<llvm::CallInst>(&instruction)->getCalledFunction();
+    } else if (llvm::isa<llvm::InvokeInst>(instruction)) {
+      callee = llvm::dyn_cast<llvm::InvokeInst>(&instruction)->getCalledFunction();
     }
 
-    // if (llvm::dyn_cast<llvm::IntrinsicInst>(callInstruction)) {
-    //   // Current instruction is a call instruction to an intrinsic function.
-    //   // We're not interested in such functions.
-    //   continue;
-    // }
-
-    auto callee = callInstruction->getCalledFunction();
     if (callee) {
       callees.push_back(callee);
     }

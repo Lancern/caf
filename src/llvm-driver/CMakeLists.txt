@@ -13,7 +13,12 @@ add_library(CAFDriver MODULE
   CAFDriver.cpp
   CAFCodeGen.hpp
   CAFSymbolTable.hpp
-  ../lib/json/json.hpp)
+  ../../dep/json/json.hpp)
+
+target_include_directories(CAFDriver
+  PRIVATE ${LLVM_INCLUDE_DIR}
+  PRIVATE ${LLVM_GEN_INCLUDE_DIR})
+
 target_link_libraries(CAFDriver
   ${LLVM_LDFLAGS}
   ${LLVM_LIBS})

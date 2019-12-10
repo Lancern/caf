@@ -3,3 +3,5 @@
 docs/doxygen/
 
 build/
+tests/*.bc
+tests/*.ll

@@ -42,6 +42,7 @@ public:
     }
 
     createConstructorWrapperFunction(decl);
+    return true;
   } // bool VisitCXXConstructorDecl
 
 private:
@@ -64,31 +65,33 @@ private:
    * constructor.
    */
   clang::FunctionDecl* createConstructorWrapperFunction(clang::CXXConstructorDecl* ctor) {
+    llvm::errs() << "CAFWrapper: handling constructor: " << *ctor << "\n";
+
     auto& astContext = ctor->getASTContext();
-    auto wrapperDeclContext = findWrapperContext(ctor);
-    auto wrapperName = getWrapperFunctionName(ctor);
-    auto wrapperType = getWrapperFunctionType(ctor);
+
+    auto declaringRecord = ctor->getParent();
+    auto wrapperContext = declaringRecord->getParent();
+    auto wrapperFunctionType = getWrapperFunctionType(ctor);
     auto wrapperFunc = clang::FunctionDecl::Create(
-        astContext,
-        wrapperDeclContext,
-        clang::SourceLocation { },
-        clang::SourceLocation { },
-        wrapperName,
-        wrapperType,
-        nullptr,
-        // Set storage class to SC_None allows clang to mark the function as exported when emitting
-        // LLVM code.
-        clang::StorageClass::SC_None);
+        /* ASTContext& C: */ astContext,
+        /* DeclContext* DC: :*/ wrapperContext,
+        /* SourceLocation StartLoc: */ clang::SourceLocation { },
+        /* SourceLocation NLoc: */ clang::SourceLocation { },
+        /* DeclarationName N: */ getWrapperFunctionName(ctor),
+        /* QualType T: */ wrapperFunctionType,
+        /* TypeSourceInfo* TInfo: */ astContext.getTrivialTypeSourceInfo(wrapperFunctionType),
+        /* StorageClass SC: */ clang::StorageClass::SC_None);
 
     // Add weak symbol attribute to the created wrapper function.
-    // auto weakAttr = new (astContext) clang::Attr(
-    //     clang::attr::Kind::Weak,
-    //     clang::SourceRange { },
-    //     /* SpellingListIndex: */ 0,
-    //     /* IsLateParsed: */ false);
-    // wrapperFunc->addAttr(weakAttr);
+    // TODO: Add weak symbol attribute to the created wrapper function.
 
-    return populateWrapperFunctionBody(wrapperFunc, ctor);
+    populateWrapperFunctionBody(wrapperFunc, ctor);
+    wrapperContext->addDecl(wrapperFunc);
+    llvm::errs() << "Wrapper function added to declaration context.\n";
+
+    wrapperContext->dumpDeclContext();
+
+    return wrapperFunc;
   }
 
   /**
@@ -98,12 +101,12 @@ private:
    * @param ctor the constructor being wrapped by the wrapper function.
    * @return clang::DeclarationName the name of the wrapper function.
    */
-  clang::DeclarationName getWrapperFunctionName(const clang::CXXConstructorDecl* ctor) {
+  clang::DeclarationName getWrapperFunctionName(clang::CXXConstructorDecl* ctor) {
     auto& identifierTable = _compiler.getPreprocessor().getIdentifierTable();
 
     std::string name { };
-    name.append("CAFCallCtor");
-    name.append(ctor->getDeclName().getAsIdentifierInfo()->getNameStart());
+    name.append("CAFCallCtor_");
+    name.append(ctor->getParent()->getNameAsString());
 
     return clang::DeclarationName { &identifierTable.get(name) };
   }
@@ -131,25 +134,6 @@ private:
   }
 
   /**
-   * @brief Find the declaration context into which the wrapper function for the given constructor
-   * can be inserted.
-   *
-   * The returned declaration context will be the declaring context of the class declaraing the
-   * given constructor.
-   *
-   * @param wrappedCtor the wrapped constructor of the wrapping function to be inserted.
-   * @return clang::DeclContext* the declaration context into which the wrapping function can be
-   * inserted.
-   */
-  clang::DeclContext* findWrapperContext(clang::CXXConstructorDecl* wrappedCtor) {
-    auto context = static_cast<clang::DeclContext *>(wrappedCtor->getParent());
-    while (!llvm::isa<clang::CXXRecordDecl>(context)) {
-      context = context->getParent();
-    }
-    return context->getParent();
-  }
-
-  /**
    * @brief Populate the body of the given wrapper function that wraps around the given
    * constructor.
    *
@@ -160,10 +144,34 @@ private:
   clang::FunctionDecl* populateWrapperFunctionBody(
       clang::FunctionDecl* wrapperFunc, clang::CXXConstructorDecl* ctor) {
     auto& astContext = ctor->getASTContext();
+    auto& identifierTable = _compiler.getPreprocessor().getIdentifierTable();
 
     // The function body of the wrapper function is a simple return new T(...) statement where T is
     // the type declaring the constructor given.
     auto ctorParent = ctor->getParent();
+
+    // Populate ParamVarDecl values to the wrapper function for each of the arguments specified.
+    std::vector<clang::ParmVarDecl *> paramVars;
+    auto wrapperFuncProtoType =
+        llvm::dyn_cast<clang::FunctionProtoType>(wrapperFunc->getFunctionType());
+    auto argIndex = 0;
+    for (auto arg : wrapperFuncProtoType->getParamTypes()) {
+      std::string argIdentifier { };
+      argIdentifier.push_back('_');
+      argIdentifier.append(std::to_string(argIndex++));
+
+      paramVars.push_back(clang::ParmVarDecl::Create(
+          /* ASTContext& C: */ astContext,
+          /* DeclContext* DC: */ wrapperFunc,
+          /* SourceLocation StartLoc: */ clang::SourceLocation { },
+          /* SourceLocation IdLoc: */ clang::SourceLocation { },
+          /* IdentifierInfo* Id: */ &identifierTable.get(argIdentifier),
+          /* QualType T: */ arg,
+          /* TypeSourceInfo* TInfo: */ astContext.getTrivialTypeSourceInfo(arg),
+          /* StorageClass S: */ clang::StorageClass::SC_Auto,
+          /* Expr* DefArg: */ nullptr));
+    }
+    wrapperFunc->setParams(paramVars);
 
     // Make an array of clang::DeclRefExpr * denoting the arguments list that will be passed to the
     // constructor. Each entry in this vector is a reference to the wrapper function's argument.
@@ -171,24 +179,24 @@ private:
     declRefs.reserve(wrapperFunc->getNumParams());
     for (auto paramDecl : wrapperFunc->parameters()) {
       declRefs.push_back(clang::DeclRefExpr::Create(
-          astContext,
-          clang::NestedNameSpecifierLoc { },
-          clang::SourceLocation { },
-          paramDecl,
-          false,
-          clang::SourceLocation { },
-          paramDecl->getType(),
-          clang::ExprValueKind::VK_LValue));
+          /* const ASTContext& Context: */ astContext,
+          /* NestedNameSpecifierLoc QualifierLoc: */ clang::NestedNameSpecifierLoc { },
+          /* SourceLocation TemplateKWLoc: */ clang::SourceLocation { },
+          /* ValueDecl* D: */ paramDecl,
+          /* bool RefersToEnclosingVariableOrCapture: */ false,
+          /* SourceLocation NameLoc: */ clang::SourceLocation { },
+          /* QualType T: */ paramDecl->getType(),
+          /* ExprValueKind VK: */ clang::ExprValueKind::VK_LValue));
     }
 
     auto constructingType = astContext.getRecordType(ctorParent);
     auto constructExpr = clang::CXXConstructExpr::Create(
-        astContext,
-        constructingType,
-        clang::SourceLocation { },
-        ctor,
+        /* const ASTContext& C: */ astContext,
+        /* QualType T: */ constructingType,
+        /* SourceLocation Loc: */ clang::SourceLocation { },
+        /* CXXConstructorDecl* Ctor: */ ctor,
         /* Elidable: */ true,
-        declRefs,
+        /* ArrayRef<Expr *> Args: */ declRefs,
         /* HadMultipleCandidates: */ false,
         /* ListInitialization: */ false,
         /* StdListInitialization: */ false,
@@ -198,33 +206,35 @@ private:
     auto operatorNew = lookupNewOperator(astContext, ctorParent);
     auto operatorDelete = lookupDeleteOperator(astContext, ctorParent);
 
+    auto newExprType = astContext.getPointerType(constructingType);
     auto newExpr = new (astContext) clang::CXXNewExpr(
-        astContext,
-        /* GlobalNew: */ false,
-        operatorNew,
-        operatorDelete,
-        /* PassAlignment: */ false,
-        /* UsualArrayDeleteWantsArraySize: */ false,
-        llvm::ArrayRef<clang::Expr *> { },
-        clang::SourceRange { },
-        /* arraySize: */ nullptr,
-        clang::CXXNewExpr::InitializationStyle::CallInit,
-        constructExpr,
-        constructingType,
-        /* AllocatedTypeInfo: */ nullptr,
-        clang::SourceRange { },
-        clang::SourceRange { });
+        /* const ASTContext& C: */ astContext,
+        /* bool globalNew: */ false,
+        /* FunctionDecl* operatorNew: */ operatorNew,
+        /* FunctionDecl* operatorDelete: */ operatorDelete,
+        /* bool PassAlignment: */ false,
+        /* bool usualArrayDeleteWantsArraySize: */ false,
+        /* ArrayRef<Expr *> placementArgs: */ llvm::ArrayRef<clang::Expr *> { },
+        /* SourceRange typeIdParens: */ clang::SourceRange { },
+        /* Expr* arraySize: */ nullptr,
+        /* InitializationStyle: */ clang::CXXNewExpr::InitializationStyle::CallInit,
+        /* Expr* initializer: */ constructExpr,
+        /* QualType ty: */ newExprType,
+        /* TypeSourceInfo* AllocatedTypeInfo: */
+        astContext.getTrivialTypeSourceInfo(newExprType),
+        /* SourceRange Range: */ clang::SourceRange { },
+        /* SourceRange directInitRange: */ clang::SourceRange { });
     auto returnStmt = new (astContext) clang::ReturnStmt(
-        clang::SourceLocation { },
-        newExpr,
-        /* NRVOCandidate: */ nullptr);
+        /* SourceLocation RL: */ clang::SourceLocation { },
+        /* Expr* E: */ newExpr,
+        /* const VarDecl* NRVOCandidate: */ nullptr);
 
     std::vector<clang::Stmt *> bodyStatements { returnStmt };
     auto body = clang::CompoundStmt::Create(
-        astContext,
-        bodyStatements,
-        clang::SourceLocation { },
-        clang::SourceLocation { });
+        /* const ASTContext& C: */ astContext,
+        /* ArrayRef<Stmt *> Stmts: */ bodyStatements,
+        /* SourceLocation LB: */ clang::SourceLocation { },
+        /* SourceLocation RB: */ clang::SourceLocation { });
 
     wrapperFunc->setBody(body);
     return wrapperFunc;
@@ -329,7 +339,7 @@ private:
       return false;
     }
 
-    if (!funcDecl->getNumParams() != 1) {
+    if (funcDecl->getNumParams() != 1) {
       return false;
     }
 

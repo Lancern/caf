@@ -15,6 +15,9 @@ add_library(CAFDriver MODULE
   CAFSymbolTable.hpp
   ../../dep/json/json.hpp)
 
+target_compile_options(CAFDriver
+  PRIVATE ${LLVM_CXXFLAGS})
+
 target_include_directories(CAFDriver
   PRIVATE ${LLVM_INCLUDE_DIR}
   PRIVATE ${LLVM_GEN_INCLUDE_DIR})
@@ -22,3 +25,9 @@ target_include_directories(CAFDriver
 target_link_libraries(CAFDriver
   ${LLVM_LDFLAGS}
   ${LLVM_LIBS})
+
+set_target_properties(CAFDriver
+  PROPERTIES
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

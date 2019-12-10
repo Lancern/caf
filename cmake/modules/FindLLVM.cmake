@@ -8,7 +8,7 @@
 #       LLVM_CXXFLAGS
 #       LLVM_LDFLAGS
 #       LLVM_LIBS
-#       LLVM_LIBDIR
+#       LLVM_LIB_DIR
 #       LLVM_INCLUDE_DIR
 #       LLVM_SYSTEM_LIBS
 #

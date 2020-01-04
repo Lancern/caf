@@ -803,6 +803,7 @@ private:
         // Write the ID of the activator and arguments to the activator to the output stream.
         auto structValue = dynamic_cast<const StructValue &>(value);
         writeTrivial(o, structValue.activator()->id());
+        writeTrivial(o, structValue.args().size());
         for (auto arg : structValue.args()) {
           write(o, *arg);
         }

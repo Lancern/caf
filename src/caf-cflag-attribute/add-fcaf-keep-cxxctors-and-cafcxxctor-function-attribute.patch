@@ -1,0 +1,491 @@
+From 7fbf3efdd08b1ba3f02ef69ac804c01f65bf9bd2 Mon Sep 17 00:00:00 2001
+From: zyscoder <zyscoder@gmail.com>
+Date: Sat, 21 Dec 2019 08:06:47 +0000
+Subject: [PATCH] add -fcaf-keep-cxxctor cflag and cafcxxctor function
+ attribute.
+
+---
+ docs/BitCodeFormat.rst                        |  2 ++
+ include/llvm/Bitcode/LLVMBitCodes.h           |  1 +
+ include/llvm/IR/Attributes.td                 |  5 ++++
+ lib/AsmParser/LLLexer.cpp                     |  1 +
+ lib/AsmParser/LLParser.cpp                    |  3 ++
+ lib/AsmParser/LLToken.h                       |  1 +
+ lib/Bitcode/Reader/BitcodeReader.cpp          |  7 +++++
+ lib/Bitcode/Writer/BitcodeWriter.cpp          |  4 +++
+ lib/IR/Attributes.cpp                         |  4 +++
+ lib/IR/Verifier.cpp                           |  4 +++
+ lib/Transforms/IPO/ForceFunctionAttrs.cpp     |  1 +
+ lib/Transforms/Utils/CodeExtractor.cpp        |  1 +
+ tools/clang/include/clang/Basic/Attr.td       |  6 ++++
+ tools/clang/include/clang/Basic/AttrDocs.td   |  7 +++++
+ .../clang/include/clang/Basic/LangOptions.def |  2 ++
+ tools/clang/include/clang/Driver/Options.td   |  6 ++++
+ tools/clang/include/clang/Sema/Sema.h         |  3 ++
+ tools/clang/lib/CodeGen/CodeGenModule.cpp     | 30 +++++++++++++++++++
+ tools/clang/lib/CodeGen/CodeGenModule.h       |  2 ++
+ tools/clang/lib/Driver/ToolChains/Clang.cpp   |  3 ++
+ .../clang/lib/Frontend/CompilerInvocation.cpp |  4 +++
+ tools/clang/lib/Sema/SemaAttr.cpp             |  6 ++++
+ tools/clang/lib/Sema/SemaDeclAttr.cpp         | 16 ++++++++++
+ 23 files changed, 119 insertions(+)
+
+diff --git a/docs/BitCodeFormat.rst b/docs/BitCodeFormat.rst
+index 5e1c5cac..4ce5be2c 100644
+--- a/docs/BitCodeFormat.rst
++++ b/docs/BitCodeFormat.rst
+@@ -1057,6 +1057,8 @@ The integer codes are mapped to well-known attributes as follows.
+ * code 56: ``nocf_check``
+ * code 57: ``optforfuzzing``
+ * code 58: ``shadowcallstack``
++* code 59: ``cafcxxctor``
++
+ 
+ .. note::
+   The ``allocsize`` attribute has a special encoding for its arguments. Its two
+diff --git a/include/llvm/Bitcode/LLVMBitCodes.h b/include/llvm/Bitcode/LLVMBitCodes.h
+index 6723cf42..c776776f 100644
+--- a/include/llvm/Bitcode/LLVMBitCodes.h
++++ b/include/llvm/Bitcode/LLVMBitCodes.h
+@@ -591,6 +591,7 @@ enum AttributeKindCodes {
+   ATTR_KIND_NOCF_CHECK = 56,
+   ATTR_KIND_OPT_FOR_FUZZING = 57,
+   ATTR_KIND_SHADOWCALLSTACK = 58,
++  ATTR_KIND_CAF_CXXCTOR = 59,
+ };
+ 
+ enum ComdatSelectionKindCodes {
+diff --git a/include/llvm/IR/Attributes.td b/include/llvm/IR/Attributes.td
+index 39978c41..657fa615 100644
+--- a/include/llvm/IR/Attributes.td
++++ b/include/llvm/IR/Attributes.td
+@@ -121,6 +121,11 @@ def OptimizeForSize : EnumAttr<"optsize">;
+ /// Function must not be optimized.
+ def OptimizeNone : EnumAttr<"optnone">;
+ 
++// zys
++/// Funcions is a CAF keeped CxxCtor.
++def CafCxxCtor : EnumAttr<"cafcxxctor">;
++// zys end.
++
+ /// Function does not access memory.
+ def ReadNone : EnumAttr<"readnone">;
+ 
+diff --git a/lib/AsmParser/LLLexer.cpp b/lib/AsmParser/LLLexer.cpp
+index da9855ff..4b3e4aa7 100644
+--- a/lib/AsmParser/LLLexer.cpp
++++ b/lib/AsmParser/LLLexer.cpp
+@@ -660,6 +660,7 @@ lltok::Kind LLLexer::LexIdentifier() {
+   KEYWORD(nounwind);
+   KEYWORD(optforfuzzing);
+   KEYWORD(optnone);
++  KEYWORD(cafcxxctor);
+   KEYWORD(optsize);
+   KEYWORD(readnone);
+   KEYWORD(readonly);
+diff --git a/lib/AsmParser/LLParser.cpp b/lib/AsmParser/LLParser.cpp
+index 7cf74dd1..3c6f17b1 100644
+--- a/lib/AsmParser/LLParser.cpp
++++ b/lib/AsmParser/LLParser.cpp
+@@ -1255,6 +1255,7 @@ bool LLParser::ParseFnAttributeValuePairs(AttrBuilder &B,
+     case lltok::kw_optforfuzzing:
+       B.addAttribute(Attribute::OptForFuzzing); break;
+     case lltok::kw_optnone: B.addAttribute(Attribute::OptimizeNone); break;
++    case lltok::kw_cafcxxctor: B.addAttribute(Attribute::CafCxxCtor); break;
+     case lltok::kw_optsize: B.addAttribute(Attribute::OptimizeForSize); break;
+     case lltok::kw_readnone: B.addAttribute(Attribute::ReadNone); break;
+     case lltok::kw_readonly: B.addAttribute(Attribute::ReadOnly); break;
+@@ -1595,6 +1596,7 @@ bool LLParser::ParseOptionalParamAttrs(AttrBuilder &B) {
+     case lltok::kw_nounwind:
+     case lltok::kw_optforfuzzing:
+     case lltok::kw_optnone:
++    case lltok::kw_cafcxxctor:
+     case lltok::kw_optsize:
+     case lltok::kw_returns_twice:
+     case lltok::kw_sanitize_address:
+@@ -1691,6 +1693,7 @@ bool LLParser::ParseOptionalReturnAttrs(AttrBuilder &B) {
+     case lltok::kw_nounwind:
+     case lltok::kw_optforfuzzing:
+     case lltok::kw_optnone:
++    case lltok::kw_cafcxxctor:
+     case lltok::kw_optsize:
+     case lltok::kw_returns_twice:
+     case lltok::kw_sanitize_address:
+diff --git a/lib/AsmParser/LLToken.h b/lib/AsmParser/LLToken.h
+index 8d8c7e99..af05fe9b 100644
+--- a/lib/AsmParser/LLToken.h
++++ b/lib/AsmParser/LLToken.h
+@@ -204,6 +204,7 @@ enum Kind {
+   kw_nounwind,
+   kw_optforfuzzing,
+   kw_optnone,
++  kw_cafcxxctor,//zys !!!
+   kw_optsize,
+   kw_readnone,
+   kw_readonly,
+diff --git a/lib/Bitcode/Reader/BitcodeReader.cpp b/lib/Bitcode/Reader/BitcodeReader.cpp
+index c45b4412..2fa7d585 100644
+--- a/lib/Bitcode/Reader/BitcodeReader.cpp
++++ b/lib/Bitcode/Reader/BitcodeReader.cpp
+@@ -1165,6 +1165,9 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
+   case Attribute::NoCfCheck:       return 1ULL << 57;
+   case Attribute::OptForFuzzing:   return 1ULL << 58;
+   case Attribute::ShadowCallStack: return 1ULL << 59;
++  // zys
++  case Attribute::CafCxxCtor:    return 1ULL << 60;
++  // zys end.
+   case Attribute::Dereferenceable:
+     llvm_unreachable("dereferenceable attribute not supported in raw format");
+     break;
+@@ -1353,6 +1356,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
+     return Attribute::OptimizeForSize;
+   case bitc::ATTR_KIND_OPTIMIZE_NONE:
+     return Attribute::OptimizeNone;
++  // zys : CafCxxCtor
++  case bitc::ATTR_KIND_CAF_CXXCTOR:
++    return Attribute::CafCxxCtor;
++  // zys end.
+   case bitc::ATTR_KIND_READ_NONE:
+     return Attribute::ReadNone;
+   case bitc::ATTR_KIND_READ_ONLY:
+diff --git a/lib/Bitcode/Writer/BitcodeWriter.cpp b/lib/Bitcode/Writer/BitcodeWriter.cpp
+index 87b47dc3..fe84d841 100644
+--- a/lib/Bitcode/Writer/BitcodeWriter.cpp
++++ b/lib/Bitcode/Writer/BitcodeWriter.cpp
+@@ -654,6 +654,10 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
+     return bitc::ATTR_KIND_OPTIMIZE_FOR_SIZE;
+   case Attribute::OptimizeNone:
+     return bitc::ATTR_KIND_OPTIMIZE_NONE;
++  // zys : CafCxxCtor
++  case Attribute::CafCxxCtor:
++    return bitc::ATTR_KIND_CAF_CXXCTOR;
++  // zys end.
+   case Attribute::ReadNone:
+     return bitc::ATTR_KIND_READ_NONE;
+   case Attribute::ReadOnly:
+diff --git a/lib/IR/Attributes.cpp b/lib/IR/Attributes.cpp
+index d8718748..28e1985e 100644
+--- a/lib/IR/Attributes.cpp
++++ b/lib/IR/Attributes.cpp
+@@ -309,6 +309,10 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
+     return "optforfuzzing";
+   if (hasAttribute(Attribute::OptimizeNone))
+     return "optnone";
++  // zys : CafCxxCtor
++  if (hasAttribute(Attribute::CafCxxCtor))
++    return "cafcxxctor";
++  // zys end.
+   if (hasAttribute(Attribute::OptimizeForSize))
+     return "optsize";
+   if (hasAttribute(Attribute::ReadNone))
+diff --git a/lib/IR/Verifier.cpp b/lib/IR/Verifier.cpp
+index e5231bb7..3afad071 100644
+--- a/lib/IR/Verifier.cpp
++++ b/lib/IR/Verifier.cpp
+@@ -1469,6 +1469,8 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
+   case Attribute::Cold:
+   case Attribute::OptForFuzzing:
+   case Attribute::OptimizeNone:
++  // zys CafCxxCtor
++  case Attribute::CafCxxCtor:
+   case Attribute::JumpTable:
+   case Attribute::Convergent:
+   case Attribute::ArgMemOnly:
+@@ -1721,6 +1723,8 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
+   if (Attrs.hasFnAttribute(Attribute::OptimizeNone)) {
+     Assert(Attrs.hasFnAttribute(Attribute::NoInline),
+            "Attribute 'optnone' requires 'noinline'!", V);
++  
++  // zys verify function attributes is correct or not.
+ 
+     Assert(!Attrs.hasFnAttribute(Attribute::OptimizeForSize),
+            "Attributes 'optsize and optnone' are incompatible!", V);
+diff --git a/lib/Transforms/IPO/ForceFunctionAttrs.cpp b/lib/Transforms/IPO/ForceFunctionAttrs.cpp
+index 37273f97..411281c2 100644
+--- a/lib/Transforms/IPO/ForceFunctionAttrs.cpp
++++ b/lib/Transforms/IPO/ForceFunctionAttrs.cpp
+@@ -47,6 +47,7 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
+       .Case("nounwind", Attribute::NoUnwind)
+       .Case("optforfuzzing", Attribute::OptForFuzzing)
+       .Case("optnone", Attribute::OptimizeNone)
++      .Case("cafcxxctor", Attribute::CafCxxCtor)
+       .Case("optsize", Attribute::OptimizeForSize)
+       .Case("readnone", Attribute::ReadNone)
+       .Case("readonly", Attribute::ReadOnly)
+diff --git a/lib/Transforms/Utils/CodeExtractor.cpp b/lib/Transforms/Utils/CodeExtractor.cpp
+index cb349e34..1e4203fe 100644
+--- a/lib/Transforms/Utils/CodeExtractor.cpp
++++ b/lib/Transforms/Utils/CodeExtractor.cpp
+@@ -747,6 +747,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
+       case Attribute::NoUnwind:
+       case Attribute::OptForFuzzing:
+       case Attribute::OptimizeNone:
++      case Attribute::CafCxxCtor:
+       case Attribute::OptimizeForSize:
+       case Attribute::SafeStack:
+       case Attribute::ShadowCallStack:
+diff --git a/tools/clang/include/clang/Basic/Attr.td b/tools/clang/include/clang/Basic/Attr.td
+index dc9edace..681eb350 100644
+--- a/tools/clang/include/clang/Basic/Attr.td
++++ b/tools/clang/include/clang/Basic/Attr.td
+@@ -1711,6 +1711,12 @@ def OptimizeNone : InheritableAttr {
+   let Documentation = [OptnoneDocs];
+ }
+ 
++def CafCxxCtor : InheritableAttr {
++  let Spellings = [Clang<"cafcxxctor">];
++  let Subjects = SubjectList<[Function, ObjCMethod]>;
++  let Documentation = [CafCxxCtorDocs];
++}
++
+ def Overloadable : Attr {
+   let Spellings = [Clang<"overloadable">];
+   let Subjects = SubjectList<[Function], ErrorDiag>;
+diff --git a/tools/clang/include/clang/Basic/AttrDocs.td b/tools/clang/include/clang/Basic/AttrDocs.td
+index 5a937b15..058e1769 100644
+--- a/tools/clang/include/clang/Basic/AttrDocs.td
++++ b/tools/clang/include/clang/Basic/AttrDocs.td
+@@ -2492,6 +2492,13 @@ attributes.
+   }];
+ }
+ 
++def CafCxxCtorDocs : Documentation {
++  let Category = DocCatFunction;
++  let Content = [{
++This is a flag for CAF to mark all cxx constructors keeped by -fcaf-keep-cxxctors.
++  }];
++}
++
+ def LoopHintDocs : Documentation {
+   let Category = DocCatStmt;
+   let Heading = "#pragma clang loop";
+diff --git a/tools/clang/include/clang/Basic/LangOptions.def b/tools/clang/include/clang/Basic/LangOptions.def
+index fc38af5b..a83ee1fb 100644
+--- a/tools/clang/include/clang/Basic/LangOptions.def
++++ b/tools/clang/include/clang/Basic/LangOptions.def
+@@ -147,6 +147,8 @@ BENIGN_LANGOPT(ThreadsafeStatics , 1, 1, "thread-safe static initializers")
+ LANGOPT(POSIXThreads      , 1, 0, "POSIX thread support")
+ LANGOPT(Blocks            , 1, 0, "blocks extension to C")
+ BENIGN_LANGOPT(EmitAllDecls      , 1, 0, "emitting all declarations")
++BENIGN_LANGOPT(CafKeepCxxCtors      , 1, 0, "keep cxx constructors")
++
+ LANGOPT(MathErrno         , 1, 1, "errno in math functions")
+ BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like and may be ripped out at any time")
+ LANGOPT(Modules           , 1, 0, "modules extension to C")
+diff --git a/tools/clang/include/clang/Driver/Options.td b/tools/clang/include/clang/Driver/Options.td
+index 601aa874..c2bff963 100644
+--- a/tools/clang/include/clang/Driver/Options.td
++++ b/tools/clang/include/clang/Driver/Options.td
+@@ -851,6 +851,12 @@ def fno_elide_type : Flag<["-"], "fno-elide-type">, Group<f_Group>,
+ def feliminate_unused_debug_symbols : Flag<["-"], "feliminate-unused-debug-symbols">, Group<f_Group>;
+ def femit_all_decls : Flag<["-"], "femit-all-decls">, Group<f_Group>, Flags<[CC1Option]>,
+   HelpText<"Emit all declarations, even if unused">;
++
++// zys : add fcaf_keep_cxxctors flag
++def fcaf_keep_cxxctors : Flag<["-"], "fcaf-keep-cxxctors">, Group<f_Group>, Flags<[CC1Option]>,
++  HelpText<"Keep all cxxconstructors for caf, even if unused">;
++// zys end.
++
+ def femulated_tls : Flag<["-"], "femulated-tls">, Group<f_Group>, Flags<[CC1Option]>,
+   HelpText<"Use emutls functions to access thread_local variables">;
+ def fno_emulated_tls : Flag<["-"], "fno-emulated-tls">, Group<f_Group>, Flags<[CC1Option]>;
+diff --git a/tools/clang/include/clang/Sema/Sema.h b/tools/clang/include/clang/Sema/Sema.h
+index 2365b596..3e455451 100644
+--- a/tools/clang/include/clang/Sema/Sema.h
++++ b/tools/clang/include/clang/Sema/Sema.h
+@@ -2458,6 +2458,8 @@ public:
+                                 unsigned AttrSpellingListIndex);
+   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D, SourceRange Range,
+                                           unsigned AttrSpellingListIndex);
++  CafCxxCtorAttr *mergeCafCxxCtorAttr(Decl *D, SourceRange Range,
++                                          unsigned AttrSpellingListIndex);
+   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, SourceRange Range,
+                                                 IdentifierInfo *Ident,
+                                                 unsigned AttrSpellingListIndex);
+@@ -8498,6 +8500,7 @@ public:
+   /// are no conflicts; Loc represents the location causing the 'optnone'
+   /// attribute to be added (usually because of a pragma).
+   void AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD, SourceLocation Loc);
++  void AddCafCxxCtorAttribute(FunctionDecl *FD, SourceLocation Loc);
+ 
+   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
+   void AddAlignedAttr(SourceRange AttrRange, Decl *D, Expr *E,
+diff --git a/tools/clang/lib/CodeGen/CodeGenModule.cpp b/tools/clang/lib/CodeGen/CodeGenModule.cpp
+index 3e33735c..123826b9 100644
+--- a/tools/clang/lib/CodeGen/CodeGenModule.cpp
++++ b/tools/clang/lib/CodeGen/CodeGenModule.cpp
+@@ -56,6 +56,7 @@
+ #include "llvm/Support/ConvertUTF.h"
+ #include "llvm/Support/ErrorHandling.h"
+ #include "llvm/Support/MD5.h"
++#include "llvm/Support/raw_os_ostream.h"
+ 
+ using namespace clang;
+ using namespace CodeGen;
+@@ -1202,6 +1203,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
+                                                            llvm::Function *F) {
+   llvm::AttrBuilder B;
+ 
++  if(LangOpts.CafKeepCxxCtors)
++    if(D && D->hasAttr<CafCxxCtorAttr>())
++      B.addAttribute(llvm::Attribute::CafCxxCtor);
++    
++
+   if (CodeGenOpts.UnwindTables)
+     B.addAttribute(llvm::Attribute::UWTable);
+ 
+@@ -1979,6 +1985,28 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
+   if (LangOpts.EmitAllDecls)
+     return true;
+ 
++  // zys
++  if(LangOpts.CafKeepCxxCtors) 
++    if(auto const_ctor = dyn_cast<CXXConstructorDecl>(Global)){
++      CXXConstructorDecl * ctor = const_cast<CXXConstructorDecl *>(const_ctor);
++      if (!ctor->hasAttr<OptimizeNoneAttr>())
++        ctor->addAttr(OptimizeNoneAttr::CreateImplicit(Context, ctor->getLocation()));
++      if (!ctor->hasAttr<NoInlineAttr>())
++        ctor->addAttr(NoInlineAttr::CreateImplicit(Context, ctor->getLocation()));
++      if (!ctor->hasAttr<WeakImportAttr>())
++        ctor->addAttr(WeakImportAttr::CreateImplicit(Context, ctor->getLocation()));
++      if(!ctor->hasAttr<CafCxxCtorAttr>())
++        ctor->addAttr(CafCxxCtorAttr::CreateImplicit(Context, ctor->getLocation()));
++    
++    // if(ctor->hasAttrs()){
++    //   llvm::errs() << "!!!!!!!!!\n";
++    //   // llvm::errs() << "CXXConstructor: " << ctor->getQualifiedNameAsString() << "\n";
++    //   for(Attr* attr: ctor->getAttrs())
++    //     llvm::errs() << attr->getSpelling() << "\n";
++    // }
++      return true;
++    }
++
+   return getContext().DeclMustBeEmitted(Global);
+ }
+ 
+@@ -2162,6 +2190,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
+   // function. If the global must always be emitted, do it eagerly if possible
+   // to benefit from cache locality.
+   if (MustBeEmitted(Global) && MayBeEmittedEagerly(Global)) {
++
+     // Emit the definition if it can't be deferred.
+     EmitGlobalDefinition(GD);
+     return;
+@@ -2176,6 +2205,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
+   }
+ 
+   StringRef MangledName = getMangledName(GD);
++
+   if (GetGlobalValue(MangledName) != nullptr) {
+     // The value has already been used and should therefore be emitted.
+     addDeferredDeclToEmit(GD);
+diff --git a/tools/clang/lib/CodeGen/CodeGenModule.h b/tools/clang/lib/CodeGen/CodeGenModule.h
+index 91f3d943..75074716 100644
+--- a/tools/clang/lib/CodeGen/CodeGenModule.h
++++ b/tools/clang/lib/CodeGen/CodeGenModule.h
+@@ -36,6 +36,7 @@
+ #include "llvm/IR/Module.h"
+ #include "llvm/IR/ValueHandle.h"
+ #include "llvm/Transforms/Utils/SanitizerStats.h"
++#include "llvm/Support/raw_os_ostream.h"
+ 
+ namespace llvm {
+ class Module;
+@@ -1130,6 +1131,7 @@ public:
+   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
+ 
+   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
++
+     F->setLinkage(getFunctionLinkage(GD));
+   }
+ 
+diff --git a/tools/clang/lib/Driver/ToolChains/Clang.cpp b/tools/clang/lib/Driver/ToolChains/Clang.cpp
+index 8e9c4c6a..fc2278a9 100644
+--- a/tools/clang/lib/Driver/ToolChains/Clang.cpp
++++ b/tools/clang/lib/Driver/ToolChains/Clang.cpp
+@@ -3988,6 +3988,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
+ 
+   // Forward -f (flag) options which we can pass directly.
+   Args.AddLastArg(CmdArgs, options::OPT_femit_all_decls);
++  // zys
++  Args.AddLastArg(CmdArgs, options::OPT_fcaf_keep_cxxctors);
++  // zys end.
+   Args.AddLastArg(CmdArgs, options::OPT_fheinous_gnu_extensions);
+   Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
+   Args.AddLastArg(CmdArgs, options::OPT_fno_operator_names);
+diff --git a/tools/clang/lib/Frontend/CompilerInvocation.cpp b/tools/clang/lib/Frontend/CompilerInvocation.cpp
+index 78e6babd..fdfe2b7d 100644
+--- a/tools/clang/lib/Frontend/CompilerInvocation.cpp
++++ b/tools/clang/lib/Frontend/CompilerInvocation.cpp
+@@ -2453,6 +2453,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
+   Opts.EncodeExtendedBlockSig =
+     Args.hasArg(OPT_fencode_extended_block_signature);
+   Opts.EmitAllDecls = Args.hasArg(OPT_femit_all_decls);
++  // zys
++  if(Args.hasArg(OPT_fcaf_keep_cxxctors)) llvm::errs() << "confirm fcaf_keep_cxxctors flag.\n";
++  Opts.CafKeepCxxCtors = Args.hasArg(OPT_fcaf_keep_cxxctors);
++  // zys end.
+   Opts.PackStruct = getLastArgIntValue(Args, OPT_fpack_struct_EQ, 0, Diags);
+   Opts.MaxTypeAlign = getLastArgIntValue(Args, OPT_fmax_type_align_EQ, 0, Diags);
+   Opts.AlignDouble = Args.hasArg(OPT_malign_double);
+diff --git a/tools/clang/lib/Sema/SemaAttr.cpp b/tools/clang/lib/Sema/SemaAttr.cpp
+index 1a8a0007..033fb45c 100644
+--- a/tools/clang/lib/Sema/SemaAttr.cpp
++++ b/tools/clang/lib/Sema/SemaAttr.cpp
+@@ -707,6 +707,12 @@ void Sema::AddOptnoneAttributeIfNoConflicts(FunctionDecl *FD,
+     FD->addAttr(NoInlineAttr::CreateImplicit(Context, Loc));
+ }
+ 
++void Sema::AddCafCxxCtorAttribute(FunctionDecl *FD,
++                                            SourceLocation Loc) {
++  if (!FD->hasAttr<CafCxxCtorAttr>())
++    FD->addAttr(CafCxxCtorAttr::CreateImplicit(Context, Loc));
++}
++
+ typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;
+ enum : unsigned { NoVisibility = ~0U };
+ 
+diff --git a/tools/clang/lib/Sema/SemaDeclAttr.cpp b/tools/clang/lib/Sema/SemaDeclAttr.cpp
+index 77deed60..4a6232ca 100644
+--- a/tools/clang/lib/Sema/SemaDeclAttr.cpp
++++ b/tools/clang/lib/Sema/SemaDeclAttr.cpp
+@@ -3968,6 +3968,13 @@ AlwaysInlineAttr *Sema::mergeAlwaysInlineAttr(Decl *D, SourceRange Range,
+                                           AttrSpellingListIndex);
+ }
+ 
++CafCxxCtorAttr *Sema::mergeCafCxxCtorAttr(Decl *D, SourceRange Range,
++                                              unsigned AttrSpellingListIndex) {
++
++  return ::new (Context) CafCxxCtorAttr(Range, Context,
++                                          AttrSpellingListIndex);
++}
++
+ CommonAttr *Sema::mergeCommonAttr(Decl *D, SourceRange Range,
+                                   IdentifierInfo *Ident,
+                                   unsigned AttrSpellingListIndex) {
+@@ -4061,6 +4068,12 @@ static void handleOptimizeNoneAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+     D->addAttr(Optnone);
+ }
+ 
++static void handleCafCxxCtorAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
++  if (CafCxxCtorAttr *cafcxxctor = S.mergeCafCxxCtorAttr(
++          D, AL.getRange(), AL.getAttributeSpellingListIndex()))
++    D->addAttr(cafcxxctor);
++}
++
+ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+   if (checkAttrMutualExclusion<CUDASharedAttr>(S, D, AL.getRange(),
+                                                AL.getName()))
+@@ -6116,6 +6129,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
+   case ParsedAttr::AT_OptimizeNone:
+     handleOptimizeNoneAttr(S, D, AL);
+     break;
++  case ParsedAttr::AT_CafCxxCtor:
++    handleCafCxxCtorAttr(S, D, AL);
++    break;
+   case ParsedAttr::AT_FlagEnum:
+     handleSimpleAttribute<FlagEnumAttr>(S, D, AL);
+     break;
+-- 
+2.17.1
+

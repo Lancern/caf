@@ -297,6 +297,12 @@ std::string getProducingTypeName(const llvm::Function& factoryFunction) {
  */
 bool isTopLevelApi(const llvm::Function& fn) {
   // TODO: Refactor to let end users customize top-level API filter logic.
+  if(fn.hasFnAttribute(llvm::Attribute::CafApi)) {
+    fn.dump();
+    return true;
+  }
+
+
   if (fn.arg_size() != 1) {
     return false;
   }
@@ -443,6 +449,7 @@ private:
               << targetApi->getName().str() << "\n";
           _symbols.addApi(targetApi);
         }
+        _symbols.addApi(&func);
       }
     }
   }
@@ -455,7 +462,7 @@ private:
     auto jsonText = json.dump();
     std::error_code openDumpFileError { };
     llvm::raw_fd_ostream dumpFile {
-        "/home/msr/Temp/caf.json", openDumpFileError };
+        "/home/zys/Temp/caf.json", openDumpFileError };
 
     if (openDumpFileError) {
       llvm::errs() << "CAFDriver: failed to dump metadata to file: "
@@ -468,7 +475,7 @@ private:
     dumpFile.flush();
     dumpFile.close();
 
-    llvm::errs() << "CAF metadata saved to " << "/home/msr/Temp/caf.json" << "."
+    llvm::errs() << "CAF metadata saved to " << "/home/zys/Temp/caf.json" << "."
         << "\n";
   }
 

@@ -7,11 +7,26 @@
 
 #include "CAFSymbolTable.hpp"
 
+#include <cxxabi.h>
+
 #ifndef CAF_RECURSIVE_MAX_DEPTH
 #define CAF_RECURSIVE_MAX_DEPTH 16
 #endif
 
 namespace {
+
+std::string demangle(const std::string& name) {
+  auto demangled = abi::__cxa_demangle(name.c_str(), nullptr, nullptr, nullptr);
+  if (!demangled) {
+    // Demangling failed. Return the original name.
+    return name;
+  }
+
+  std::string ret(demangled);
+  free(demangled);
+
+  return ret;
+}
 
 /**
  * @brief Provide logic for generate CAF code stub.
@@ -49,57 +64,16 @@ public:
     auto dispatchFunc = generateFunctionDispatcher();
 
     //
-    // ================ lib function declaration. ==================
-    //
-    // zys: declare the lib function: strcmp
-
-    /*
-    Global variables, functions and aliases may have an optional runtime
-    preemption specifier. If a preemption specifier isn’t given explicitly,
-    then a symbol is assumed to be dso_preemptable.
-
-    dso_preemptable
-    Indicates that the function or variable may be replaced by a symbol from
-    outside the linkage unit at runtime.
-    dso_local
-    The compiler may assume that a function or variable marked as dso_local will
-    resolve to a symbol within the same linkage unit. Direct access will be
-    generated even if the definition is not within this compilation unit.
-    */
-    auto scanfDecl = llvm::cast<llvm::Function>(
-        _module->getOrInsertFunction(
-            "scanf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(_module->getContext()),
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(_module->getContext())),
-                true
-            )
-        )
-    );
-    scanfDecl->setDSOLocal(true);
-
-    auto printfDecl = llvm::cast<llvm::Function>(
-        _module->getOrInsertFunction(
-            "printf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(_module->getContext()),
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(_module->getContext())
-                ),
-                true
-            )
-        )
-    );
-    printfDecl->setDSOLocal(true);
-
-    //
     // =========== define dispatchFunc: the callee function for fuzzer. =============
     //
 
-    llvm::Value* zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
+    llvm::Value* value_zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
         _module->getContext()), 0);
+    llvm::Value* value_one = llvm::ConstantInt::get(llvm::Type::getInt32Ty(
+        _module->getContext()), 1);
 
+    llvm::Value* int32Size = llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(_module->getContext()), 1);
 
     //
     // ============= insert my new main function. =======================
@@ -142,61 +116,153 @@ public:
 
     llvm::IRBuilder<> builder { newMain->getContext() };
     builder.SetInsertPoint(mainEntry);
-    // llvm::Value* bufferSize = llvm::ConstantInt::get(
-    //     llvm::Type::getInt32Ty(_module->getContext()), 128);
-    // llvm::Value* inputBuffer = builder.CreateAlloca(
-    //     llvm::IntegerType::getInt8Ty(_module->getContext()),
-    //     bufferSize,
-    //     "input_name");
 
-    llvm::Value* int32Size = llvm::ConstantInt::get(
-        llvm::Type::getInt32Ty(_module->getContext()), 1);
-    auto inputInt32 = builder.CreateAlloca(
+    // input testcase size
+    auto testCaseSize = builder.CreateAlloca(
         llvm::IntegerType::getInt32Ty(_module->getContext()),
         int32Size,
-        "input_id");
+        "testcase_size");
+    std::string scanfFormat("%d");
+    scanftoValue(scanfFormat, testCaseSize, builder);
+  
     builder.CreateBr(mainWhileCond);
-
     builder.SetInsertPoint(mainWhileCond);
     {
-      std::string scanfFormat("%d");
-      auto stringConstant = llvm::ConstantDataArray::getString(
-          newMain->getContext(), scanfFormat);
-      llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
-      builder.CreateStore(stringConstant, stringVar);
-      llvm::Value* formatStr = builder.CreatePointerCast(
-          stringVar, builder.getInt8PtrTy());
-      llvm::Value* scanfParams[] = { formatStr, inputInt32 };
-      auto scanfRes = builder.CreateCall(scanfDecl, scanfParams);
-      llvm::Value* scanfCond = builder.CreateICmpNE(scanfRes, zero);
+      llvm::Value* loadTestCaseSize = builder.CreateLoad(testCaseSize);
+      llvm::Value* scanfCond = builder.CreateICmpSGT(loadTestCaseSize, value_zero);
+      // llvm::Value* scanfCond = builder.CreateICmpNE(scanfRes, zero);
       builder.CreateCondBr(scanfCond, mainWhileBody, mainEnd);
     }
 
-
     builder.SetInsertPoint(mainWhileBody);
     {
+      // testcase size -=1 
+      llvm::Value* loadTestCaseSize = builder.CreateLoad(testCaseSize);
+
       std::string printfFormat("%d\n");
-      llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
-          newMain->getContext(), printfFormat);
-      llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
-      builder.CreateStore(stringConstant, stringVar);
-      llvm::Value* formatStr = builder.CreatePointerCast(
-          stringVar, builder.getInt8PtrTy());
-      llvm::Value* loadIdValue = builder.CreateLoad(inputInt32);
-      llvm::Value* printfParams[] = { formatStr, loadIdValue };
-      builder.CreateCall(printfDecl, printfParams);
-      builder.CreateCall(dispatchFunc, loadIdValue);
+      printfValue(printfFormat, loadTestCaseSize, builder);
+
+      auto testcaseSubone = builder.CreateSub(loadTestCaseSize, value_one);
+      builder.CreateStore(testcaseSubone, testCaseSize);
+
+      auto apiId = builder.CreateAlloca(
+      llvm::IntegerType::getInt32Ty(_module->getContext()),
+        int32Size,
+        "api_id");
+      std::string scanfFormat("%d");
+      scanftoValue(scanfFormat, apiId, builder);
+
+      auto loadApiId = builder.CreateLoad(apiId);
+      printfValue(printfFormat, loadApiId, builder);
+      auto apiRetObj = builder.CreateCall(dispatchFunc, loadApiId);
     }
     builder.CreateBr(mainWhileCond);
 
     builder.SetInsertPoint(mainEnd);
-    builder.CreateRet(zero);
+    builder.CreateRet(value_zero);
   }
 
 private:
   llvm::Module* _module;
   const CAFSymbolTable* _symbols;
   int _apiCounter;
+
+  /**
+   * @brief printf value with format.
+   * 
+   * @param printfFormat 
+   * @param value 
+   * @param builder 
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* printfValue(std::string printfFormat, llvm::Value* value, llvm::IRBuilder<> builder)
+  {
+    auto printfDecl = llvm::cast<llvm::Function>(
+        _module->getOrInsertFunction(
+            "printf",
+            llvm::FunctionType::get(
+                llvm::IntegerType::getInt32Ty(_module->getContext()),
+                llvm::PointerType::getUnqual(
+                    llvm::IntegerType::getInt8Ty(_module->getContext())
+                ),
+                true
+            )
+        )
+    );
+    printfDecl->setDSOLocal(true);
+
+    llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
+        builder.getContext(), printfFormat);
+    llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
+    builder.CreateStore(stringConstant, stringVar);
+    llvm::Value* formatStr = builder.CreatePointerCast(
+        stringVar, builder.getInt8PtrTy());
+    llvm::Value* printfParams[] = { formatStr, value };
+    auto printfRes = builder.CreateCall(printfDecl, printfParams);
+    return printfRes;
+  }
+
+  llvm::CallInst* printfStr(std::string str, llvm::IRBuilder<> builder)
+  {
+    auto printfDecl = llvm::cast<llvm::Function>(
+        _module->getOrInsertFunction(
+            "printf",
+            llvm::FunctionType::get(
+                llvm::IntegerType::getInt32Ty(_module->getContext()),
+                llvm::PointerType::getUnqual(
+                    llvm::IntegerType::getInt8Ty(_module->getContext())
+                ),
+                true
+            )
+        )
+    );
+    printfDecl->setDSOLocal(true);
+
+    llvm::Constant* stringConstant = llvm::ConstantDataArray::getString(
+        builder.getContext(), str);
+    llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
+    builder.CreateStore(stringConstant, stringVar);
+    llvm::Value* formatStr = builder.CreatePointerCast(
+        stringVar, builder.getInt8PtrTy());
+    llvm::Value* printfParams[] = { formatStr };
+    auto printfRes = builder.CreateCall(printfDecl, printfParams);
+    return printfRes;
+  }
+
+  /**
+   * @brief scanf to value with format.
+   * 
+   * @param scanfFormat 
+   * @param scanfto 
+   * @param builder 
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* scanftoValue(std::string scanfFormat, llvm::Value* scanfto, llvm::IRBuilder<> builder)
+  {
+    auto scanfDecl = llvm::cast<llvm::Function>(
+        _module->getOrInsertFunction(
+            "scanf",
+            llvm::FunctionType::get(
+                llvm::IntegerType::getInt32Ty(_module->getContext()),
+                llvm::PointerType::getUnqual(
+                    llvm::IntegerType::getInt8Ty(_module->getContext())),
+                true
+            )
+        )
+    );
+    scanfDecl->setDSOLocal(true);
+
+    auto stringConstant = llvm::ConstantDataArray::getString(
+        builder.getContext(), scanfFormat);
+    llvm::Value* stringVar = builder.CreateAlloca(stringConstant->getType());
+    builder.CreateStore(stringConstant, stringVar);
+    llvm::Value* formatStr = builder.CreatePointerCast(
+        stringVar, builder.getInt8PtrTy());
+    llvm::Value* scanfParams[] = { formatStr, scanfto };
+    auto scanfRes = builder.CreateCall(scanfDecl, scanfParams);
+    return scanfRes;
+  } 
+  
 
   /**
    * @brief Generate the dispatch function in the module.
@@ -207,6 +273,7 @@ private:
     auto dispatchFunc = llvm::cast<llvm::Function>(
         _module->getOrInsertFunction(
             "__caf_dispatch",
+            // llvm::Type::getInt64PtrTy(_module->getContext()),
             llvm::Type::getVoidTy(_module->getContext()),
             llvm::Type::getInt32Ty(_module->getContext())
         )
@@ -223,9 +290,12 @@ private:
         dispatchFunc);
 
     std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> cases { };
+    llvm::errs() << "apis num: " << _symbols->apis().size() << "\n";
     for (const auto& func: _symbols->apis()) {
       cases.push_back(generateCallApi(func, dispatchFunc));
     }
+
+    llvm::errs() << cases.size() << "\n";
 
     if (cases.size() == 0) {
       builder.SetInsertPoint(invokeApiEntry);
@@ -440,21 +510,6 @@ private:
     llvm::IRBuilder<> builder { caller->getContext() };
     auto module = caller->getParent();
     auto& context = module->getContext();
-    // const auto& DL = module->getDataLayout();
-
-    auto printfDecl = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(
-            "printf",
-            llvm::FunctionType::get(
-                llvm::IntegerType::getInt32Ty(context),
-                llvm::PointerType::getUnqual(
-                    llvm::IntegerType::getInt8Ty(context)
-                ),
-                true
-            )
-        )
-    );
-    printfDecl->setDSOLocal(true);
 
     std::string block_name("invoke.api.case.");
     block_name.append(std::to_string(_apiCounter));
@@ -462,17 +517,9 @@ private:
         caller->getContext(), block_name, caller);
 
     builder.SetInsertPoint(invokeApiCase);
-    std::string printfFormat = callee->getName().str();
+    std::string printfFormat = demangle(callee->getName().str());
     printfFormat.push_back('\n');
-    auto stringConstant = llvm::ConstantDataArray::getString(
-        caller->getContext(), printfFormat);
-    auto stringVar = builder.CreateAlloca(stringConstant->getType());
-    builder.CreateStore(stringConstant, stringVar);
-    auto formatStr = builder.CreatePointerCast(
-        stringVar, builder.getInt8PtrTy());
-
-    llvm::Value* printf_params[] = { formatStr };
-    builder.CreateCall(printfDecl, printf_params);
+    printfStr(printfFormat, builder);
 
     std::vector<llvm::Value *> calleeArgs { };
     for (const auto& arg: callee->args()) {

@@ -7,13 +7,13 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# Find LLVM installation.
-include(FindLLVM)
+# Configure LLVM related environments.
+include(ConfigureLLVM)
 
 # Find Clang installation.
-include(FindClang)
+# include(FindClang)
 
-# Find AFL++ installation.
-include(FindAFLPlusPlus)
+# Configure AFL++ related environments.
+# include(ConfigureAFLpp)
 
 add_subdirectory(src)

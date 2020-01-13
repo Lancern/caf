@@ -1,14 +1,13 @@
+#include "Fuzzer/TestCaseMutator.h"
+#include "Fuzzer/TestCaseSerializer.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
-#include "CAFMutator.hpp"
-
-
 std::unique_ptr<caf::CAFCorpus> _corpus;
 
 std::vector<uint8_t> testcaseBuffer;
-
 
 class MemoryStream {
 public:
@@ -40,7 +39,6 @@ private:
   std::vector<uint8_t>& _mem;
 };
 
-
 extern "C" {
 
 void caf_corpus_init() {
@@ -50,12 +48,12 @@ void caf_corpus_init() {
 size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
                           size_t max_size, unsigned int seed) {
   auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = _corpus->getTestCase(index);
+  auto testCase = _corpus->GetTestCase(index);
 
-  std::mt19937 rng { seed };
-  caf::TestCaseMutator mutator { _corpus.get() };
+  caf::Random<> rnd { };
+  caf::TestCaseMutator mutator { _corpus.get(), rnd };
 
-  auto mutatedTestCase = mutator.mutate(testCase);
+  auto mutatedTestCase = mutator.Mutate(testCase);
   *reinterpret_cast<size_t *>(mutated_out) = mutatedTestCase.index();
 
   return sizeof(size_t);
@@ -63,13 +61,13 @@ size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
 
 size_t afl_pre_save_handler(uint8_t *data, size_t size, uint8_t **new_data) {
   auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = _corpus->getTestCase(index);
+  auto testCase = _corpus->GetTestCase(index);
 
   caf::TestCaseSerializer serializer { };
   testcaseBuffer.clear();
   MemoryStream s { testcaseBuffer };
 
-  serializer.write(s, *testCase);
+  serializer.Write(s, *testCase);
 
   *new_data = testcaseBuffer.data();
   return static_cast<size_t>(testcaseBuffer.size());

@@ -5,7 +5,7 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/Constructor.h"
-#include "Serialization/JsonDeserializer.h"
+#include "Basic/JsonDeserializer.h"
 
 namespace caf {
 

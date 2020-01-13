@@ -55,7 +55,7 @@ public:
   /**
    * @brief Get the types of arguments of the function.
    *
-   * @return const std::vector<CAFStoreRef<Type>> type of arguments of the function.
+   * @return const std::vector<CAFStoreRef<Type>> & type of arguments of the function.
    */
   const std::vector<CAFStoreRef<Type>>& args() const { return _args; }
 

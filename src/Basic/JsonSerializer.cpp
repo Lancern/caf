@@ -9,7 +9,7 @@
 #include "Basic/StructType.h"
 #include "Basic/Function.h"
 #include "Basic/Constructor.h"
-#include "Serialization/JsonSerializer.h"
+#include "Basic/JsonSerializer.h"
 
 namespace caf {
 

@@ -38,7 +38,7 @@ public:
   /**
    * @brief Get constructors of this struct.
    *
-   * @return const std::vector<Constructor>& list of constructors of this struct.
+   * @return const std::vector<Constructor>& list of all constructors of this struct.
    */
   const std::vector<Constructor>& ctors() const { return _ctors; }
 

@@ -129,70 +129,24 @@ public:
   friend class CAFStoreRef;
 
   /**
-   * @brief Provide a range adapter for accessing the entities owned by a @see CAFStore object.
-   *
-   */
-  template <typename T>
-  class EntityRange {
-  public:
-    /**
-     * @brief Iterator of the @see EntityRange adapter.
-     *
-     */
-    class Iterator {
-    public:
-      explicit Iterator(
-          typename std::vector<std::unique_ptr<T>>::const_iterator inner)
-        : _inner(std::move(inner))
-      { }
-
-      Iterator& operator++() {
-        ++_inner;
-        return *this;
-      }
-
-      const T* operator*() const { return _inner->get(); }
-
-      bool operator==(const Iterator& another) const {
-        return _inner == another._inner;
-      }
-
-      bool operator!=(const Iterator& another) const {
-        return _inner != another._inner;
-      }
-
-    private:
-      typename std::vector<std::unique_ptr<T>>::const_iterator _inner;
-    }; // class Iterator
-
-    explicit EntityRange(const std::vector<std::unique_ptr<T>>& entities)
-      : _begin(entities.begin()),
-        _end(entities.end())
-    { }
-
-    Iterator begin() const { return _begin; }
-
-    Iterator end() const { return _end; }
-
-  private:
-    Iterator _begin;
-    Iterator _end;
-  }; // class EntityRange
-
-  /**
    * @brief Get all types owned by this @see CAFStore object.
    *
-   * @return EntityRange<Type> a range containing all types owned by this @see CAFStore object.
+   * @return const std::vector<std::unique_ptr<Type>> & a list of all types owned by this
+   * @see CAFStore object.
    */
-  EntityRange<Type> types() const { return EntityRange<Type> { _types }; }
+  const std::vector<std::unique_ptr<Type>>& types() const {
+    return _types;
+  }
 
   /**
    * @brief Get all API functions owned by this @see CAFStore object.
    *
-   * @return EntityRange<Type> a range containing all API functions owned by this @see CAFStore
-   * object.
+   * @return const std::vector<std::unique_ptr<Function>> & a list of all API functions owned by
+   * this @see CAFStore object.
    */
-  EntityRange<Function> funcs() const { return EntityRange<Function> { _funcs }; }
+  const std::vector<std::unique_ptr<Function>>& funcs() {
+    return _funcs;
+  }
 
   /**
    * @brief Create a BitsType object managed by this store. If the name of the BitsType object given

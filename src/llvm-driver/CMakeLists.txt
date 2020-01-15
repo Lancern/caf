@@ -1,8 +1,13 @@
 add_llvm_loadable_module(CAFDriver
   CAFDriver.cpp
-  CAFCodeGen.hpp
+  CAFMeta.hpp
   CAFSymbolTable.hpp
-  ../../dep/json/json.hpp)
+  CAFCodeGen.hpp
+  json/json.hpp
+
+  PLUGIN_TOOL
+  opt
+  )
 
 set_target_properties(CAFDriver
   PROPERTIES

@@ -5,8 +5,6 @@
 #include <unordered_map>
 #include <algorithm>
 
-#include <cxxabi.h>
-
 #include "llvm/Pass.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/BasicBlock.h"
@@ -24,9 +22,11 @@
 
 #define CAF_LLVM
 
-#include "CAFSymbolTable.hpp"
-#include "CAFCodeGen.hpp"
-
+#include "Basic/CAFStore.h"
+#include "Basic/JsonSerializer.h"
+#include "SymbolTable.h"
+#include "CodeGen.h"
+#include "ABI.h"
 
 namespace {
 
@@ -49,35 +49,13 @@ void insertOrUpdate(std::unordered_map<K, V>& um, K&& key,
 namespace symbol {
 
 /**
- * @brief Demangle symbol names.
+ * @brief Removes template arguments and function arguments specified in the given symbol name.
  *
- * @param name The mangled symbol name.
- * @return std::string The demangled symbol name. If the given symbol name cannot
- * be successfully demangled, returns the original name.
- */
-std::string demangle(const std::string& name) {
-  auto demangled = abi::__cxa_demangle(name.c_str(), nullptr, nullptr, nullptr);
-  if (!demangled) {
-    // Demangling failed. Return the original name.
-    return name;
-  }
-
-  std::string ret(demangled);
-  free(demangled);
-
-  return ret;
-}
-
-/**
- * @brief Removes template arguments and function arguments specified in the
- * given symbol name.
- *
- * Formally, this function returns any contents that is surrounded by angle
- * brackets or round brackets in some suffix of the given string.
+ * Formally, this function returns any contents that is surrounded by angle brackets or round
+ * brackets in some suffix of the given string.
  *
  * @param name the original symbol name.
- * @return std::string the symbol name with template arguments and function
- * arguments removed.
+ * @return std::string the symbol name with template arguments and function arguments removed.
  */
 std::string removeArgs(const std::string& name) {
   if (name.empty()) {
@@ -145,13 +123,13 @@ public:
   }
 
   /**
-   * @brief Get the component at the given index. The index can be negative
-   * in which case the index will counts from the back of the container.
+   * @brief Get the component at the given index. The index can be negative in which case the index
+   * will counts from the back of the container.
    *
    * @param index the index.
    * @return const std::string& the component at the given index.
    */
-  const std::string& operator[](int index) {
+  const std::string& operator[](int index) const {
     if (index >= 0) {
       return _components[index];
     } else {
@@ -163,8 +141,8 @@ private:
   std::vector<std::string> _components;
 
   /**
-   * @brief Load the given qualified symbol name and split all components, with
-   * regard to the necessary bracket structure.
+   * @brief Load the given qualified symbol name and split all components, with regard to the
+   * necessary bracket structure.
    *
    * @param name the qualified symbol name.
    */
@@ -204,7 +182,7 @@ private:
  * @return false if the function given is not a constructor.
  */
 bool isConstructor(const llvm::Function& fn) {
-  symbol::QualifiedName name { symbol::demangle(fn.getName().str()) };
+  symbol::QualifiedName name { caf::demangle(fn.getName().str()) };
   // The demangled name of a constructor should be something like
   // `[<namespace>::]<className>::<funcName>`. So to be a constructor,
   // there should be at least 2 components in the fully qualified name.
@@ -220,15 +198,14 @@ bool isConstructor(const llvm::Function& fn) {
 }
 
 /**
- * @brief Get the name of the type constructed by the given constructor. If the
- * given function is not a constructor, the behavior is unspecified.
+ * @brief Get the name of the type constructed by the given constructor. If the given function is
+ * not a constructor, the behavior is unspecified.
  *
  * @param ctor reference to a llvm::Function object representing a constructor.
- * @return std::string the name of the type constructed by the given
- * constructor.
+ * @return std::string the name of the type constructed by the given constructor.
  */
 std::string getConstructedTypeName(const llvm::Function& ctor) {
-  symbol::QualifiedName ctorName { symbol::demangle(ctor.getName().str()) };
+  symbol::QualifiedName ctorName { caf::demangle(ctor.getName().str()) };
   // The demangled name of the constructor should be something like
   // `[<namespace>::]<className>::<funcName>`. We're interested in
   // `[<namespace>::]<className>`.
@@ -236,39 +213,8 @@ std::string getConstructedTypeName(const llvm::Function& ctor) {
 }
 
 /**
- * @brief Test whether the given function is a factory function.
- *
- * Factory functions meets the following conditions:
- *
- * * It takes no arguments;
- * * It returns a value of some struct or class type.
- *
- * @param fn The function to test.
- * @return true if the function given is a factory function.
- * @return false if the function given is not a factory function.
- */
-bool isFactoryFunction(const llvm::Function& fn) {
-  if (fn.arg_size()) {
-    return false;
-  }
-
-  auto retType = fn.getReturnType();
-  // If the return type is a pointer type, decay it to the pointee's type.
-  if (retType->isPointerTy()) {
-    retType = retType->getPointerElementType();
-  }
-
-  if (retType->isStructTy()) {
-    auto structType = llvm::dyn_cast<llvm::StructType>(retType);
-    return !structType->isLiteral();
-  }
-
-  return false;
-}
-
-/**
- * @brief Get the type name of the given factory function. If the given function
- * is not a factory function, the behavior is unspecified.
+ * @brief Get the type name of the given factory function. If the given function is not a factory
+ * function, the behavior is unspecified.
  *
  * @param factoryFunction the factory function.
  * @return std::string the type name of the given factory function,
@@ -296,12 +242,11 @@ std::string getProducingTypeName(const llvm::Function& factoryFunction) {
  * @return false if the function given is not a top-level API function.
  */
 bool isTopLevelApi(const llvm::Function& fn) {
-  // TODO: Refactor to let end users customize top-level API filter logic.
-  if(fn.hasFnAttribute(llvm::Attribute::CafApi)) {
-    fn.dump();
-    return true;
-  }
-
+  // TODO: Uncomment the following if statement after the CafApi attribute patch has been applied.
+  // if(fn.hasFnAttribute(llvm::Attribute::CafApi)) {
+  //   fn.dump();
+  //   return true;
+  // }
 
   if (fn.arg_size() != 1) {
     return false;
@@ -389,32 +334,32 @@ public:
     populateSymbolTable(module);
     saveCAFStore();
 
-    _codeGen.setContext(module, _symbols);
-    _codeGen.generateStub();
+    _codeGen.SetContext(module, _symbols);
+    _codeGen.GenerateStub();
 
     return false;
   }
 
 private:
   // Symbol table.
-  CAFSymbolTable _symbols;
-  CAFCodeGenerator _codeGen;
+  caf::CAFSymbolTable _symbols;
+  caf::CAFCodeGenerator _codeGen;
 
   /**
-   * @brief Extracts all `interesting` functions from the given LLVM module and
-   * add them to the symbol table.
+   * @brief Extracts all `interesting` functions from the given LLVM module and add them to the
+   * symbol table.
    *
    * A function is considered `interesting` if any of the following holds:
    *
    * * The function is the constructor of some type;
-   * * The function is a factory function, a.k.a. functions whose arg list is
-   * empty and returns an instance of some type;
-   * * The function takes exactly one argument of type `v8::FunctionCallbackInfo`,
-   * in which case the function is called a top-level API. Top-level API
-   * functions are the direct target of fuzzing, like syscalls in syzkaller.
+   * * The function is a factory function, a.k.a. functions whose arg list is empty and returns an
+   * instance of some type;
+   * * The function takes exactly one argument of type `v8::FunctionCallbackInfo`, in which case the
+   * function is called a top-level API. Top-level API functions are the direct target of fuzzing,
+   * like syscalls in syzkaller.
    *
-   * The extracted constructors, factory functions and top-level APIs are
-   * populated into the corresponding private fields of this class.
+   * The extracted constructors, factory functions and top-level APIs are populated into the
+   * corresponding private fields of this class.
    *
    * @param module The LLVM module to extract functions from.
    */
@@ -422,22 +367,15 @@ private:
     // TODO: This function need to be refactored to allow end users to define
     // TODO: custom filters for top-level APIs.
     for (auto& func : module) {
-      auto funcName = symbol::demangle(func.getName().str());
+      auto funcName = caf::demangle(func.getName().str());
       // funcName = removeParentheses(funcName);
 
       if (isConstructor(func)) {
         // This function is a constructor.
         auto typeName = getConstructedTypeName(func);
-        _symbols.addConstructor(typeName, &func);
+        _symbols.AddConstructor(typeName, &func);
         llvm::errs() << "CAF: found constructor: " << func.getName().str()
             << " for type: " << typeName
-            << "\n";
-      } else if (isFactoryFunction(func)) {
-        // This function is a factory function.
-        auto structName = getProducingTypeName(func);
-        _symbols.addFactoryFunction(structName, &func);
-        llvm::errs() << "CAF: found factory: " << func.getName().str()
-            << " for type: " << structName
             << "\n";
       } else if (isTopLevelApi(func)) {
         // This function is a top-level API.
@@ -447,16 +385,17 @@ private:
         for (auto targetApi : getFunctionCallees(func)) {
           llvm::errs() << "CAF: found fuzz-target API: "
               << targetApi->getName().str() << "\n";
-          _symbols.addApi(targetApi);
+          _symbols.AddApi(targetApi);
         }
-        _symbols.addApi(&func);
+        _symbols.AddApi(&func);
       }
     }
   }
 
   void saveCAFStore() {
-    auto store = _symbols.getCAFStore();
-    auto json = store->toJson();
+    auto store = _symbols.GetCAFStore();
+    caf::JsonSerializer jsonSerializer { };
+    auto json = jsonSerializer.Serialize(*store);
 
     // TODO: Refactor here to allow user specify the path to save CAF store.
     auto jsonText = json.dump();

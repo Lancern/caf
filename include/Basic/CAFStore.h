@@ -144,7 +144,7 @@ public:
    * @return const std::vector<std::unique_ptr<Function>> & a list of all API functions owned by
    * this @see CAFStore object.
    */
-  const std::vector<std::unique_ptr<Function>>& funcs() {
+  const std::vector<std::unique_ptr<Function>>& funcs() const {
     return _funcs;
   }
 

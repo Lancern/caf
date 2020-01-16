@@ -15,7 +15,7 @@ namespace caf {
 
 void JsonSerializer::Serialize(const CAFStore& object, nlohmann::json& json) const {
   auto typesJsonArr = nlohmann::json::array();
-  for (auto t : object.types()) {
+  for (const auto& t : object.types()) {
     auto typeJson = nlohmann::json::object();
     Serialize(*t, typeJson);
     typesJsonArr.push_back(std::move(typeJson));
@@ -23,7 +23,7 @@ void JsonSerializer::Serialize(const CAFStore& object, nlohmann::json& json) con
   json["types"] = std::move(typesJsonArr);
 
   auto funcsJsonArr = nlohmann::json::array();
-  for (auto f : object.funcs()) {
+  for (const auto& f : object.funcs()) {
     auto funcJson = nlohmann::json::object();
     Serialize(*f, funcJson);
     funcsJsonArr.push_back(std::move(funcJson));

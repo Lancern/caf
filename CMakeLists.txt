@@ -7,6 +7,9 @@ set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+set(CAF_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
+set(CAF_DEP_DIR "${CMAKE_SOURCE_DIR}/dep")
+
 # Configure LLVM related environments.
 include(ConfigureLLVM)
 

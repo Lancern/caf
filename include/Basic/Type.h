@@ -85,21 +85,6 @@ public:
    */
   void SetId(uint64_t id) { _id.SetId(id); }
 
-#ifdef CAF_LLVM
-  /**
-   * @brief Determine whether the given @see CAFStoreManaged object is an instance of @see Type.
-   *
-   * This function is used by LLVM's RTTI mechanism.
-   *
-   * @param entity the object to check.
-   * @return true if the given object is an instance of @see Type.
-   * @return false if the given object is not an instance of @see Type.
-   */
-  static bool classof(const CAFStoreManaged* entity) {
-    return entity->entityKind() == CAFStoreEntityKind::Type;
-  }
-#endif
-
 protected:
   /**
    * @brief Construct a new Type object.

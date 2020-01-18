@@ -8,6 +8,7 @@
 
 namespace llvm {
 class Function;
+class Type;
 } // namespace llvm
 
 namespace caf {
@@ -15,6 +16,9 @@ namespace caf {
 class CAFStore;
 template <typename T> class CAFStoreRef;
 class Constructor;
+
+class Type;
+class Function;
 
 /**
  * @brief Symbol table definition used in CAF.
@@ -46,9 +50,7 @@ public:
    * @param typeName the identifier of the type.
    * @param func the function to be added.
    */
-  void AddConstructor(const std::string& typeName, llvm::Function* func) {
-    _ctors[typeName].push_back(func);
-  }
+  void AddConstructor(const std::string& typeName, llvm::Function* func);
 
   /**
    * @brief Get the list of API definitions contained in the symbol table.

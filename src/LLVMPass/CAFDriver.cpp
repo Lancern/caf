@@ -20,8 +20,6 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/IRBuilder.h"
 
-#define CAF_LLVM
-
 #include "Basic/CAFStore.h"
 #include "Basic/JsonSerializer.h"
 #include "SymbolTable.h"

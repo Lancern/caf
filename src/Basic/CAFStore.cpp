@@ -10,6 +10,8 @@
 
 namespace caf {
 
+CAFStore::~CAFStore() = default;
+
 CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size) {
   auto i = _typeNames.find(name);
   if (i != _typeNames.end()) {
@@ -58,13 +60,13 @@ CAFStoreRef<Type> CAFStore::GetType(const std::string& name) {
   }
 }
 
-CAFStoreRef<Function> CAFStore::CreateApi(std::string name, const FunctionSignature& signature) {
+CAFStoreRef<Function> CAFStore::CreateApi(std::string name, FunctionSignature signature) {
   auto i = _apiNames.find(name);
   if (i != _apiNames.end()) {
     return CAFStoreRef<Function> { this, i->second };
   }
 
-  auto api = caf::make_unique<Function>(this, std::move(name), signature);
+  auto api = caf::make_unique<Function>(this, std::move(name), std::move(signature));
   return AddApi(std::move(api));
 }
 

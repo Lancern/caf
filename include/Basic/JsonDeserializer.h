@@ -49,7 +49,7 @@ private:
    */
   template <typename T>
   CAFStoreRef<T> DeserializeCAFStoreRef(const nlohmann::json& json) const {
-    return CAFStoreRef<T> { _store.get(), json.get<size_t>() };
+    return CAFStoreRef<T> { _context.store.get(), json.get<size_t>() };
   }
 
   /**

@@ -71,7 +71,7 @@ inline auto dyn_cast(From& from) -> typename propergate_cv<From, To>::Type & {
   static_assert(std::is_base_of<From, To>::value, "To does not derive from From.");
 
 #ifdef CAF_LLVM
-  return llvm::dyn_cast<To>(from);
+  return llvm::cast<To>(from);
 #else
   return dynamic_cast<typename propergate_cv<From, To>::Type &>(from);
 #endif

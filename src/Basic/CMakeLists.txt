@@ -29,3 +29,6 @@ target_compile_definitions(CAFBasicLLVM
 
 target_link_libraries(CAFBasic PUBLIC NLOHMANN_JSON)
 target_link_libraries(CAFBasicLLVM PUBLIC NLOHMANN_JSON)
+
+# CAFBasicLLVM should be compiled as PIC since it will be linked against LLVM loadable modules.
+target_compile_options(CAFBasicLLVM PRIVATE "-fPIC")

@@ -59,8 +59,8 @@ public:
    */
   template <typename U, typename std::enable_if<std::is_base_of<T, U>::value, int>::type = 0>
   CAFStoreRef(const CAFStoreRef<U>& another)
-    : _store(store),
-      _slot(slot)
+    : _store(another.store()),
+      _slot(another.slot())
   { }
 
   /**
@@ -127,6 +127,8 @@ class CAFStore {
 public:
   template <typename T>
   friend class CAFStoreRef;
+
+  ~CAFStore();
 
   /**
    * @brief Get all types owned by this @see CAFStore object.
@@ -220,7 +222,7 @@ public:
    * @param signature the signature of the function.
    * @return CAFStoreRef<Function> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<Function> CreateApi(std::string name, const FunctionSignature& signature);
+  CAFStoreRef<Function> CreateApi(std::string name, FunctionSignature signature);
 
   /**
    * @brief Add a new type to this @see CAFStore object.
@@ -260,7 +262,7 @@ private:
   template <typename T,
             typename std::enable_if<std::is_base_of<Type, T>::value, int>::type = 0>
   T* get(size_t slot) const {
-    return _types[slot].get();
+    return caf::dyn_cast<T>(_types[slot].get());
   }
 
   /**
@@ -280,7 +282,7 @@ private:
 
 template <typename T>
 T* CAFStoreRef<T>::get() const {
-  return caf::dyn_cast<T>(_store->get<T>(_slot));
+  return _store->get<T>(_slot);
 }
 
 } // namespace caf

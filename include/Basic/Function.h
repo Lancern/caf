@@ -59,13 +59,6 @@ public:
    */
   const std::vector<CAFStoreRef<Type>>& args() const { return _args; }
 
-  /**
-   * @brief Get the JSON representation of this FunctionSignature instance.
-   *
-   * @return nlohmann::json JSON representation of this object.
-   */
-  nlohmann::json toJson() const;
-
 private:
   CAFStoreRef<Type> _returnType;
   std::vector<CAFStoreRef<Type>> _args;

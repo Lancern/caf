@@ -98,6 +98,10 @@ void CAFSymbolTable::AddConstructor(const std::string& typeName, llvm::Function*
   _ctors[typeName].push_back(func);
 }
 
+void CAFSymbolTable::AddCallbackFunction(llvm::Function* func) {
+  _callbacks.push_back(func);
+}
+
 const std::vector<llvm::Function *>* CAFSymbolTable::GetConstructors(const std::string& typeName)
     const {
   auto i = _ctors.find(typeName);

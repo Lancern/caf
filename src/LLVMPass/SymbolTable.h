@@ -53,6 +53,15 @@ public:
   void AddConstructor(const std::string& typeName, llvm::Function* func);
 
   /**
+   * @brief Add a callback function to the symbol table.
+   *
+   * A callback function is a function that can be the pointee of a function pointer.
+   *
+   * @param func the callback function to be added.
+   */
+  void AddCallbackFunction(llvm::Function* func);
+
+  /**
    * @brief Get the list of API definitions contained in the symbol table.
    *
    * @return const std::vector<llvm::Function *>& list of API definitions contained in the symbol
@@ -70,6 +79,15 @@ public:
   const std::vector<llvm::Function *>* GetConstructors(const std::string& typeName) const;
 
   /**
+   * @brief Get the list of callback functions.
+   *
+   * A callback function is a function that can be the pointee of a function pointer.
+   *
+   * @return const std::vector<llvm::Function *>& the list of callback functions.
+   */
+  const std::vector<llvm::Function *>& callbacks() const { return _callbacks; }
+
+  /**
    * @brief Create a CAFStore instance holding CAF representation of the symbols
    * in this symbol table.
    *
@@ -84,6 +102,9 @@ private:
 
   // List of constructors.
   std::unordered_map<std::string, std::vector<llvm::Function *>> _ctors;
+
+  // List of callback functions.
+  std::vector<llvm::Function *> _callbacks;
 
   /**
    * @brief Create an instance of @see Constructor from the given LLVM function.

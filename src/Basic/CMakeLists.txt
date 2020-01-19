@@ -1,5 +1,6 @@
 set(CAF_BASIC_SOURCES
     CAFStore.cpp
+    CallbackFunctionManager.cpp
     JsonSerializer.cpp
     JsonDeserializer.cpp
     ${CAF_INCLUDE_DIR}/Basic/Identity.h
@@ -11,13 +12,16 @@ set(CAF_BASIC_SOURCES
     ${CAF_INCLUDE_DIR}/Basic/StructType.h
     ${CAF_INCLUDE_DIR}/Basic/Function.h
     ${CAF_INCLUDE_DIR}/Basic/Constructor.h
+    ${CAF_INCLUDE_DIR}/Basic/CallbackFunctionManager.h
     ${CAF_INCLUDE_DIR}/Basic/CAFStore.h
     ${CAF_INCLUDE_DIR}/Basic/JsonSerializer.h
     ${CAF_INCLUDE_DIR}/Basic/JsonDeserializer.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Casting.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Intrinsic.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h)
+    ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Trie.h)
 
 add_library(CAFBasic STATIC
     ${CAF_BASIC_SOURCES})

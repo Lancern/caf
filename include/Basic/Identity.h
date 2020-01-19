@@ -5,16 +5,13 @@
 
 namespace caf {
 
-namespace details {
-
 /**
- * @brief Provide default logic to allocate self-increment IDs. This class is
- * not thread-safe. Multiple instances of IdAllocator are independent, and they
- * may produce the same IDs.
+ * @brief Provide an ID allocator to allocate self-increment IDs. This class is not thread-safe.
+ * Multiple instances of IdAllocator are independent, and they may produce the same IDs.
  *
  */
 template <typename T>
-class DefaultIdAllocator {
+class IncrementIdAllocator {
   static_assert(std::is_integral<T>::value, "T should be an integral type.");
 
 public:
@@ -23,15 +20,22 @@ public:
    *
    * @return T the next ID.
    */
-  T operator()() noexcept {
+  T operator()() {
+    return next();
+  }
+
+  /**
+   * @brief Generate next ID in ID sequence.
+   *
+   * @return T the next ID.
+   */
+  T next() {
     return _id++;
   }
 
 private:
   T _id;
 }; // class IdAllocator
-
-} // namespace details
 
 /**
  * @brief Abstract base class for types whose instances own unique IDs.
@@ -44,7 +48,7 @@ private:
  */
 template <typename SeriesTag,
           typename Id,
-          typename IdAllocator = details::DefaultIdAllocator<Id>>
+          typename IdAllocator = IncrementIdAllocator<Id>>
 class Identity {
   static IdAllocator _allocator;
 

@@ -34,6 +34,12 @@ public:
    */
   const FunctionSignature& signature() const { return _signature; }
 
+#ifdef CAF_LLVM
+  static bool classof(const Type* object) {
+    return object->kind() == TypeKind::Function;
+  }
+#endif
+
 private:
   FunctionSignature _signature;
 }; // class FunctionType

@@ -42,7 +42,13 @@ enum class TypeKind {
    * @brief Struct type, defined in StructType class.
    *
    */
-  Struct
+  Struct,
+
+  /**
+   * @brief Function type, defined in FunctionType class.
+   *
+   */
+  Function
 };
 
 /**

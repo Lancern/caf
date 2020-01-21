@@ -93,6 +93,14 @@ private:
   std::unique_ptr<Type> DeserializeStructType(const nlohmann::json& json) const;
 
   /**
+   * @brief Deserialize a @see FunctionType object from the given JSON container.
+   *
+   * @param json the JSON container.
+   * @return std::unique_ptr<Type> the deserialized object.
+   */
+  std::unique_ptr<Type> DeserializeFunctionType(const nlohmann::json& json) const;
+
+  /**
    * @brief Deserialize a @see FunctionSignature object from the given JSON container.
    *
    * @param json the JSON container.

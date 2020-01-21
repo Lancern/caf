@@ -4,6 +4,7 @@
 #include "Basic/PointerType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
+#include "Basic/FunctionType.h"
 #include "Basic/Constructor.h"
 #include "Basic/JsonDeserializer.h"
 
@@ -82,6 +83,11 @@ std::unique_ptr<Type> JsonDeserializer::DeserializeStructType(const nlohmann::js
   }
 
   return caf::make_unique<StructType>(_context.store.get(), std::move(name), std::move(ctors));
+}
+
+std::unique_ptr<Type> JsonDeserializer::DeserializeFunctionType(const nlohmann::json& json) const {
+  auto signature = DeserializeFunctionSignature(json["signature"]);
+  return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature));
 }
 
 FunctionSignature JsonDeserializer::DeserializeFunctionSignature(const nlohmann::json& json) const {

@@ -16,6 +16,7 @@ class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
+class FunctionType;
 class FunctionSignature;
 class Function;
 
@@ -195,6 +196,14 @@ public:
    * @return CAFStoreRef<StructType> the created unnamed struct type.
    */
   CAFStoreRef<StructType> CreateUnnamedStructType();
+
+  /**
+   * @brief Create a FunctionType object managed by this store.
+   *
+   * @param signature the signature of the function type.
+   * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
+   */
+  CAFStoreRef<FunctionType> CreateFunctionType(FunctionSignature signature);
 
   /**
    * @brief Test whether a type with the given name exists in the store.

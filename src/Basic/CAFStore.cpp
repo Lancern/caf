@@ -6,6 +6,7 @@
 #include "Basic/PointerType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
+#include "Basic/FunctionType.h"
 #include "Basic/Function.h"
 
 namespace caf {
@@ -45,6 +46,11 @@ CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name) {
 CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType() {
   auto type = caf::make_unique<StructType>(this, "");
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
+}
+
+CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(FunctionSignature signature) {
+  auto type = caf::make_unique<FunctionType>(this, std::move(signature));
+  return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
 }
 
 bool CAFStore::ContainsType(const std::string& name) const {

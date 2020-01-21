@@ -29,7 +29,10 @@ add_library(CAFBasicLLVM STATIC
     ${CAF_BASIC_SOURCES})
 
 target_compile_definitions(CAFBasicLLVM
-    PUBLIC CAF_LLVM)
+    PUBLIC CAF_LLVM ${LLVM_DEFINITIONS})
+
+target_include_directories(CAFBasicLLVM
+    PUBLIC "${LLVM_INCLUDE_DIRS}")
 
 target_link_libraries(CAFBasic PUBLIC NLOHMANN_JSON)
 target_link_libraries(CAFBasicLLVM PUBLIC NLOHMANN_JSON)

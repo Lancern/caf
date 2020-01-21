@@ -1,6 +1,8 @@
 #ifndef CAF_OPTIONAL_H
 #define CAF_OPTIONAL_H
 
+#include <utility>
+
 namespace caf {
 
 /**

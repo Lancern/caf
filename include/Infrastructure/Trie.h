@@ -21,6 +21,8 @@ template <typename Key,
           typename Allocator = std::allocator<std::pair<const Key, T>>>
 class TrieNode {
 public:
+  using NodeType = TrieNode<Key, T, Hash, KeyEqual, Allocator>;
+
   /**
    * @brief Get the value contained on this node.
    *
@@ -80,8 +82,6 @@ public:
   }
 
 private:
-  using NodeType = TrieNode<Key, T, Hash, KeyEqual, Allocator>;
-
   Optional<T> _value;
   std::unordered_map<Key, std::unique_ptr<NodeType>,
                      Hash, KeyEqual, Allocator> _children;

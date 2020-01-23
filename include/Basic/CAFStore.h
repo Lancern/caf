@@ -2,6 +2,7 @@
 #define CAF_CAF_STORE_H
 
 #include "Infrastructure/Casting.h"
+#include "Infrastructure/Hash.h"
 
 #include <cstddef>
 #include <memory>
@@ -115,10 +116,31 @@ public:
 
   explicit operator bool() const noexcept { return valid(); }
 
+  friend bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+
+  friend bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+
 private:
   CAFStore* _store;
   size_t _slot;
 }; // class CAFStoreRef
+
+template <typename T>
+bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+  return lhs._store == rhs._store && lhs._slot == rhs._slot;
+}
+
+template <typename T>
+bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+  return !(lhs == rhs);
+}
+
+template <typename T>
+struct Hasher<CAFStoreRef<T>> {
+  size_t operator()(const CAFStoreRef<T>& ref) const {
+    return GetHashCode(ref.store(), ref.slot());
+  }
+}; // struct Hasher<CAFStoreRef<T>>
 
 /**
  * @brief Container for CAF related metadata, a.k.a. types and API definitions.

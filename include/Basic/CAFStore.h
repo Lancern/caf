@@ -222,10 +222,9 @@ public:
   /**
    * @brief Create a FunctionType object managed by this store.
    *
-   * @param signature the signature of the function type.
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
-  CAFStoreRef<FunctionType> CreateFunctionType(FunctionSignature signature);
+  CAFStoreRef<FunctionType> CreateFunctionType(FunctionSignature signature, uint64_t signatureId);
 
   /**
    * @brief Test whether a type with the given name exists in the store.

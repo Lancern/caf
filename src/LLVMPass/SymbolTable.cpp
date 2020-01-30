@@ -83,6 +83,7 @@ void CAFSymbolTable::clear() {
   _apis.clear();
   _apiNames.clear();
   _ctors.clear();
+  _callbackFunctionGrouper.clear();
 }
 
 void CAFSymbolTable::AddApi(llvm::Function* func) {
@@ -99,8 +100,8 @@ void CAFSymbolTable::AddConstructor(const std::string& typeName, llvm::Function*
   _ctors[typeName].push_back(func);
 }
 
-void CAFSymbolTable::AddCallbackFunction(llvm::Function* func) {
-  _callbacks.push_back(func);
+void CAFSymbolTable::AddCallbackFunctionCandidate(llvm::Function* candidate) {
+  _callbackFunctionGrouper.Register(candidate);
 }
 
 const std::vector<llvm::Function *>* CAFSymbolTable::GetConstructors(const std::string& typeName)

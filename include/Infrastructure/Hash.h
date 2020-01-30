@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <iterator>
 
 namespace caf {
 
@@ -49,17 +50,37 @@ size_t GetHashCode(const T& object) {
 }
 
 /**
- * @brief Get the combined hash value of all the given objects.
+ * @brief Get the overall hash code of a range of objects.
  *
- * @tparam T the types of the objects.
- * @tparam Last the type of the last object given in the object list.
- * @param objects the head of the object list.
- * @param last the last object.
- * @return size_t the combined hash value of all the given objects.
+ * @tparam Iter type of the iterator iterating over the range.
+ * @param first the first iterator.
+ * @param last the last iterator.
+ * @return size_t the overall hash code of the given range of objects.
  */
-template <typename ...T, typename Last>
-size_t GetHashCode(const T& ...objects, const Last& last) {
-  return CombineHash(GetHashCode(objects...), GetHashCode(last));
+template <typename Iter>
+size_t GetRangeHashCode(Iter first, Iter last) {
+  if (first == last) {
+    return 0;
+  }
+
+  auto hash = GetHashCode(*first++);
+  while (first != last) {
+    hash = CombineHash(hash, GetHashCode(*first++));
+  }
+
+  return hash;
+}
+
+/**
+ * @brief Get the overall hash code of all objects contained in the given container.
+ *
+ * @tparam Container the type of the container.
+ * @param container the container object.
+ * @return size_t the overall hash code of all objects contained in the given container.
+ */
+template <typename Container>
+size_t GetContainerHashCode(const Container& container) {
+  return GetContainerHashCode(std::begin(container), std::end(container));
 }
 
 }; // namespace caf

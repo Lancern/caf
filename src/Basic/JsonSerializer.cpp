@@ -93,6 +93,7 @@ void JsonSerializer::Serialize(const FunctionType& object, nlohmann::json& json)
   auto signatureJson = nlohmann::json::object();
   Serialize(object.signature(), signatureJson);
   json["signature"] = std::move(signatureJson);
+  json["signatureId"] = object.signatureId();
 }
 
 void JsonSerializer::Serialize(const FunctionSignature& object, nlohmann::json& json) const {

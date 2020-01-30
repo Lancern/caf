@@ -48,8 +48,9 @@ CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType() {
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(FunctionSignature signature) {
-  auto type = caf::make_unique<FunctionType>(this, std::move(signature));
+CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(
+    FunctionSignature signature, uint64_t signatureId) {
+  auto type = caf::make_unique<FunctionType>(this, std::move(signature), signatureId);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
 }
 

@@ -1,6 +1,8 @@
 #ifndef CAF_SYMBOL_TABLE_H
 #define CAF_SYMBOL_TABLE_H
 
+#include "FunctionSignatureGrouper.h"
+
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -53,13 +55,12 @@ public:
   void AddConstructor(const std::string& typeName, llvm::Function* func);
 
   /**
-   * @brief Add a callback function to the symbol table.
+   * @brief Add a callback function candidate. A callback function candidate is a function that can
+   * be selected as the pointee of some function pointer.
    *
-   * A callback function is a function that can be the pointee of a function pointer.
-   *
-   * @param func the callback function to be added.
+   * @param candidate the candidate to add.
    */
-  void AddCallbackFunction(llvm::Function* func);
+  void AddCallbackFunctionCandidate(llvm::Function* candidate);
 
   /**
    * @brief Get the list of API definitions contained in the symbol table.
@@ -79,15 +80,6 @@ public:
   const std::vector<llvm::Function *>* GetConstructors(const std::string& typeName) const;
 
   /**
-   * @brief Get the list of callback functions.
-   *
-   * A callback function is a function that can be the pointee of a function pointer.
-   *
-   * @return const std::vector<llvm::Function *>& the list of callback functions.
-   */
-  const std::vector<llvm::Function *>& callbacks() const { return _callbacks; }
-
-  /**
    * @brief Create a CAFStore instance holding CAF representation of the symbols
    * in this symbol table.
    *
@@ -103,8 +95,8 @@ private:
   // List of constructors.
   std::unordered_map<std::string, std::vector<llvm::Function *>> _ctors;
 
-  // List of callback functions.
-  std::vector<llvm::Function *> _callbacks;
+  // Groups callback function candidates by their function signatures.
+  FunctionSignatureGrouper _callbackFunctionGrouper;
 
   /**
    * @brief Create an instance of @see Constructor from the given LLVM function.

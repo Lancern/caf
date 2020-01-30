@@ -87,7 +87,8 @@ std::unique_ptr<Type> JsonDeserializer::DeserializeStructType(const nlohmann::js
 
 std::unique_ptr<Type> JsonDeserializer::DeserializeFunctionType(const nlohmann::json& json) const {
   auto signature = DeserializeFunctionSignature(json["signature"]);
-  return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature));
+  auto signatureId = json["signatureId"].get<uint64_t>();
+  return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature), signatureId);
 }
 
 FunctionSignature JsonDeserializer::DeserializeFunctionSignature(const nlohmann::json& json) const {

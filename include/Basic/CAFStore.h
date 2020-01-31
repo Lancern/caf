@@ -300,6 +300,25 @@ public:
    */
   const std::vector<size_t>* GetCallbackFunctions(uint64_t signatureId);
 
+  /**
+   * @brief Set the callback function candidates contained in this @see CAFStore object.
+   *
+   * This function should only be used by the JSON deserializer.
+   *
+   * @param functions the new callback function candidates.
+   */
+  void SetCallbackFunctions(std::unordered_map<uint64_t, std::vector<size_t>> functions);
+
+  /**
+   * @brief Get all callback function candidates, encapsulated into a std::unordered_map whose key
+   * is the function signature ID and value is a list of function IDs.
+   *
+   * @return const std::unordered_map<uint64_t, std::vector<size_t>>&
+   */
+  const std::unordered_map<uint64_t, std::vector<size_t>>& callbackFuncs() const {
+    return _callbackFunctions;
+  }
+
 private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _funcs;

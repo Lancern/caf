@@ -23,6 +23,9 @@ std::unique_ptr<CAFStore> JsonDeserializer::DeserializeCAFStore(const nlohmann::
     _context.store->AddApi(std::move(api));
   }
 
+  _context.store->SetCallbackFunctions(
+      json["callbackFuncs"].get<std::unordered_map<uint64_t, std::vector<size_t>>>());
+
   return std::move(_context.store);
 }
 

@@ -30,6 +30,8 @@ void JsonSerializer::Serialize(const CAFStore& object, nlohmann::json& json) con
     funcsJsonArr.push_back(std::move(funcJson));
   }
   json["apis"] = std::move(funcsJsonArr);
+
+  json["callbackFuncs"] = object.callbackFuncs();
 }
 
 void JsonSerializer::Serialize(const Type& object, nlohmann::json& json) const {

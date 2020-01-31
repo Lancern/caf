@@ -161,4 +161,8 @@ const std::vector<size_t>* CAFStore::GetCallbackFunctions(uint64_t signatureId) 
   return &i->second;
 }
 
+void CAFStore::SetCallbackFunctions(std::unordered_map<uint64_t, std::vector<size_t>> functions) {
+  _callbackFunctions = std::move(functions);
+}
+
 } // namespace caf

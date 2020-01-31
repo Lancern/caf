@@ -6,11 +6,11 @@
 
 namespace caf {
 
-LLVMFunctionSignature LLVMFunctionSignature::FromType(llvm::Type* type) {
+LLVMFunctionSignature LLVMFunctionSignature::FromType(const llvm::Type* type) {
   return FromType(llvm::cast<llvm::FunctionType>(type));
 }
 
-LLVMFunctionSignature LLVMFunctionSignature::FromType(llvm::FunctionType* type) {
+LLVMFunctionSignature LLVMFunctionSignature::FromType(const llvm::FunctionType* type) {
   std::vector<llvm::Type *> paramTypes;
   paramTypes.reserve(type->getNumParams());
   for (auto t : type->params()) {
@@ -21,7 +21,7 @@ LLVMFunctionSignature LLVMFunctionSignature::FromType(llvm::FunctionType* type) 
   return LLVMFunctionSignature { retType, std::move(paramTypes) };
 }
 
-LLVMFunctionSignature LLVMFunctionSignature::FromFunction(llvm::Function* func) {
+LLVMFunctionSignature LLVMFunctionSignature::FromFunction(const llvm::Function* func) {
   return FromType(func->getFunctionType());
 }
 

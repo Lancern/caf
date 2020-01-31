@@ -25,7 +25,8 @@ public:
    * @param retType the function's return type.
    * @param paramTypes the types of the parameters.
    */
-  explicit LLVMFunctionSignature(llvm::Type* retType, llvm::ArrayRef<llvm::Type *> paramTypes)
+  explicit LLVMFunctionSignature(
+      const llvm::Type* retType, llvm::ArrayRef<const llvm::Type *> paramTypes)
     : _retType(retType),
       _paramTypes(paramTypes)
   { }
@@ -35,14 +36,14 @@ public:
    *
    * @return llvm::Type* the function's return type.
    */
-  llvm::Type* retType() const { return _retType; }
+  const llvm::Type* retType() const { return _retType; }
 
   /**
    * @brief Get the function's parameter types.
    *
    * @return llvm::ArrayRef<llvm::Type *> the function's parameter types.
    */
-  llvm::ArrayRef<llvm::Type *> paramTypes() const { return _paramTypes; }
+  llvm::ArrayRef<const llvm::Type *> paramTypes() const { return _paramTypes; }
 
   /**
    * @brief Create a new @see LLVMFunctionSignature object from the given LLVM type.
@@ -52,7 +53,7 @@ public:
    * @param type the LLVM type.
    * @return LLVMFunctionSignature the function signature of the given type.
    */
-  static LLVMFunctionSignature FromType(llvm::Type* type);
+  static LLVMFunctionSignature FromType(const llvm::Type* type);
 
   /**
    * @brief Create a new @see LLVMFunctionSignature object from the given LLVM function type.
@@ -60,7 +61,7 @@ public:
    * @param type the LLVM function type.
    * @return LLVMFunctionSignature the function signature of the given type.
    */
-  static LLVMFunctionSignature FromType(llvm::FunctionType* type);
+  static LLVMFunctionSignature FromType(const llvm::FunctionType* type);
 
   /**
    * @brief Create a new @see LLVMFunctionSignature object representing the given LLVM function's
@@ -69,11 +70,11 @@ public:
    * @param func the LLVM function.
    * @return LLVMFunctionSignature the function signature of the given LLVM function.
    */
-  static LLVMFunctionSignature FromFunction(llvm::Function* func);
+  static LLVMFunctionSignature FromFunction(const llvm::Function* func);
 
 private:
-  llvm::Type* _retType;
-  llvm::ArrayRef<llvm::Type *> _paramTypes;
+  const llvm::Type* _retType;
+  llvm::ArrayRef<const llvm::Type *> _paramTypes;
 };
 
 bool operator==(const LLVMFunctionSignature& lhs, const LLVMFunctionSignature& rhs);

@@ -22,6 +22,10 @@ class Constructor;
 class Type;
 class Function;
 
+namespace {
+class SymbolTableFreezeContext;
+} // namespace <anonymous>
+
 /**
  * @brief Symbol table definition used in CAF.
  *
@@ -101,37 +105,40 @@ private:
   /**
    * @brief Create an instance of @see Constructor from the given LLVM function.
    *
+   * @param context the current freeze context.
    * @param func the LLVM function.
    * @param constructingType the type the constructor constructs.
    * @return Constructor the created @see Constructor instance.
    */
   Constructor CreateConstructorFromLLVMFunction(
+      SymbolTableFreezeContext& context,
       const llvm::Function* func,
       CAFStoreRef<Type> constructingType) const;
 
   /**
-   * @brief Add the given LLVM type definition to the given CAFStore. The corresponding constructors
-   * (if the given type is a struct type) and all reachable types will be added to the CAFStore
-   * recursively.
+   * @brief Add the given LLVM type definition to the CAFStore contained in the given freeze
+   * context. The corresponding constructors (if the given type is a struct type) and all reachable
+   * types will be added to the CAFStore recursively.
    *
+   * @param context the freeze context.
    * @param type the type to add.
-   * @param store the store.
    * @return CAFStoreRef<Type> pointer to the added CAF type definition.
    */
-  CAFStoreRef<Type> AddLLVMTypeToStore(const llvm::Type* type, CAFStore& store) const;
+  CAFStoreRef<Type> AddLLVMTypeToStore(
+      SymbolTableFreezeContext& context, const llvm::Type* type) const;
 
   /**
-   * @brief Add the given LLVM function to the given CAFStore as an API definition. The types
-   * reachable from the given function will be added to the store recursively. Construction of type
-   * definitions will use the constructors defined in this symbol table.
+   * @brief Add the given LLVM function to the CAFStore contained in the given freeze context as an
+   * API definition. The types reachable from the given function will be added to the store
+   * recursively. Construction of type definitions will use the constructors defined in this symbol
+   * table.
    *
+   * @param context the freeze context.
    * @param func the function to be added.
-   * @param store the CAFStore.
-   * @return CAFStoreRef<Function> pointer to the added CAF function
-   * definition.
+   * @return CAFStoreRef<Function> pointer to the added CAF function definition.
    */
   CAFStoreRef<Function> AddLLVMApiFunctionToStore(
-      const llvm::Function* func, CAFStore& store) const;
+      SymbolTableFreezeContext& context, const llvm::Function* func) const;
 };
 
 } // namespace caf

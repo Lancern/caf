@@ -222,9 +222,10 @@ public:
   /**
    * @brief Create a FunctionType object managed by this store.
    *
+   * @param signatureId ID of the function signature.
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
-  CAFStoreRef<FunctionType> CreateFunctionType(FunctionSignature signature, uint64_t signatureId);
+  CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId);
 
   /**
    * @brief Test whether a type with the given name exists in the store.
@@ -242,6 +243,15 @@ public:
    * @return CAFStoreRef<Type> pointer to the type, or empty if the name cannot be found.
    */
   CAFStoreRef<Type> GetType(const std::string& name);
+
+  /**
+   * @brief Get the function type with the given signature ID.
+   *
+   * @param signatureId the signature ID.
+   * @return CAFStoreRef<FunctionType> pointer to the function type, or empty if the signature ID
+   * does not exist.
+   */
+  CAFStoreRef<FunctionType> GetFunctionType(uint64_t signatureId);
 
   /**
    * @brief Create a Function object representing an API in this store. If the name of the API
@@ -278,6 +288,7 @@ private:
   std::vector<std::unique_ptr<Function>> _funcs;
   std::unordered_map<int, size_t> _typeIds;
   std::unordered_map<std::string, size_t> _typeNames;
+  std::unordered_map<uint64_t, size_t> _funcTypeSignatures;
   std::unordered_map<int, size_t> _apiIds;
   std::unordered_map<std::string, size_t> _apiNames;
 

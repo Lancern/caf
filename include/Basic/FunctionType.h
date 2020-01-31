@@ -21,12 +21,11 @@ public:
    * @brief Construct a new FunctionType object.
    *
    * @param store the @see CAFStore object holding this type definition.
-   * @param signature the function signature of this function type.
    * @param signatureId the ID of the function signature.
    */
-  explicit FunctionType(CAFStore* store, FunctionSignature signature, uint64_t signatureId)
+  explicit FunctionType(CAFStore* store, uint64_t signatureId)
     : Type { store, TypeKind::Function },
-      _signature(std::move(signature)),
+      _signature { },
       _signatureId(signatureId)
   { }
 
@@ -36,6 +35,15 @@ public:
    * @return const FunctionSignature& the function signature.
    */
   const FunctionSignature& signature() const { return _signature; }
+
+  /**
+   * @brief Set the function signature.
+   *
+   * @param signature the function signature.
+   */
+  void SetSigature(FunctionSignature signature) {
+    _signature = std::move(signature);
+  }
 
   /**
    * @brief Get the ID of the function signature.

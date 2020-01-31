@@ -48,9 +48,8 @@ CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType() {
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(
-    FunctionSignature signature, uint64_t signatureId) {
-  auto type = caf::make_unique<FunctionType>(this, std::move(signature), signatureId);
+CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId) {
+  auto type = caf::make_unique<FunctionType>(this, signatureId);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
 }
 
@@ -65,6 +64,14 @@ CAFStoreRef<Type> CAFStore::GetType(const std::string& name) {
   } else {
     return CAFStoreRef<Type> { };
   }
+}
+
+CAFStoreRef<FunctionType> CAFStore::GetFunctionType(uint64_t signatureId) {
+  auto i = _funcTypeSignatures.find(signatureId);
+  if (i == _funcTypeSignatures.end()) {
+    return CAFStoreRef<FunctionType> { };
+  }
+  return CAFStoreRef<FunctionType> { this, i->second };
 }
 
 CAFStoreRef<Function> CAFStore::CreateApi(std::string name, FunctionSignature signature) {
@@ -84,12 +91,22 @@ CAFStoreRef<Type> CAFStore::AddType(std::unique_ptr<Type> type) {
   }
 
   auto isNamedType = caf::is_a<NamedType>(type.get());
+  auto isFuncType = caf::is_a<FunctionType>(type.get());
   NamedType* namedType = nullptr;
+  FunctionType* funcType = nullptr;
+
   if (isNamedType) {
     namedType = caf::dyn_cast<NamedType>(type.get());
     auto typeName = namedType->name();
     if (_typeNames.find(typeName) != _typeNames.end()) {
       return CAFStoreRef<Type> { this, _typeNames[typeName] };
+    }
+  }
+
+  if (isFuncType) {
+    funcType = caf::dyn_cast<FunctionType>(type.get());
+    if (_funcTypeSignatures.find(funcType->signatureId()) != _funcTypeSignatures.end()) {
+      return CAFStoreRef<Type> { this, _funcTypeSignatures[funcType->signatureId()] };
     }
   }
 
@@ -99,6 +116,10 @@ CAFStoreRef<Type> CAFStore::AddType(std::unique_ptr<Type> type) {
 
   if (isNamedType) {
     _typeNames.emplace(namedType->name(), slot);
+  }
+
+  if (isFuncType) {
+    _funcTypeSignatures.emplace(funcType->signatureId(), slot);
   }
 
   return CAFStoreRef<Type> { this, slot };

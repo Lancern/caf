@@ -394,4 +394,9 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
   return std::make_pair(caseId, invokeApiCase);
 }
 
+void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
+    const std::vector<llvm::Function *>& candidates) {
+  // TODO: Implement CAFCodeGenerator::GenerateCallbackFunctionCandidateArray.
+}
+
 } // namespace caf

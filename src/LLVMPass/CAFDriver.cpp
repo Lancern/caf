@@ -330,9 +330,12 @@ public:
     // Extract interesting module functions and populates them into the private
     // fields of this class.
     populateSymbolTable(module);
-    saveCAFStore();
+
+    auto symbolTableFreeze = _symbols.Freeze();
+    saveCAFStore(symbolTableFreeze.store.get());
 
     _codeGen.SetContext(module, _symbols);
+    _codeGen.GenerateCallbackFunctionCandidateArray(symbolTableFreeze.callbackFunctions);
     _codeGen.GenerateStub();
 
     return false;
@@ -365,6 +368,8 @@ private:
     // TODO: This function need to be refactored to allow end users to define
     // TODO: custom filters for top-level APIs.
     for (auto& func : module) {
+      _symbols.AddCallbackFunctionCandidate(&func);
+
       auto funcName = caf::demangle(func.getName().str());
       // funcName = removeParentheses(funcName);
 
@@ -390,8 +395,7 @@ private:
     }
   }
 
-  void saveCAFStore() {
-    auto store = _symbols.GetCAFStore();
+  void saveCAFStore(const caf::CAFStore* store) {
     caf::JsonSerializer jsonSerializer { };
     auto json = jsonSerializer.Serialize(*store);
 

@@ -14,7 +14,7 @@ void FunctionSignatureGrouper::Register(llvm::Function* function) {
 }
 
 const std::vector<llvm::Function *>* FunctionSignatureGrouper::GetFunctions(
-    const LLVMFunctionSignature& signature) {
+    const LLVMFunctionSignature& signature) const {
   auto i = _signatures.find(signature);
   if (i == _signatures.end()) {
     return nullptr;

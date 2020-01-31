@@ -26,6 +26,11 @@ namespace {
 class SymbolTableFreezeContext;
 } // namespace <anonymous>
 
+struct CAFSymbolTableFreezeResult {
+  std::unique_ptr<CAFStore> store;
+  std::vector<llvm::Function *> callbackFunctions;
+}; // struct CAFSymbolTableFreezeResult
+
 /**
  * @brief Symbol table definition used in CAF.
  *
@@ -84,12 +89,12 @@ public:
   const std::vector<llvm::Function *>* GetConstructors(const std::string& typeName) const;
 
   /**
-   * @brief Create a CAFStore instance holding CAF representation of the symbols
-   * in this symbol table.
+   * @brief Freeze this @see CAFSymbolTable and creates corresponding @see CAFStore and related data
+   * structures describing this @see CAFSymbolTable object.
    *
-   * @return std::unique_ptr<CAFStore> the created CAFStore object.
+   * @return CAFSymbolTableFreezeResult freeze result of this @see CAFSymbolTable object.
    */
-  std::unique_ptr<CAFStore> GetCAFStore() const;
+  CAFSymbolTableFreezeResult Freeze() const;
 
 private:
   // Fuzz-target APIs.

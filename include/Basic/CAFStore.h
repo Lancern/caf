@@ -283,9 +283,28 @@ public:
    */
   CAFStoreRef<Function> AddApi(std::unique_ptr<Function> api);
 
+  /**
+   * @brief Add a callback function candidate to the store.
+   *
+   * @param signatureId the ID of the callback function's signature
+   * @param functionId the ID of the function.
+   */
+  void AddCallbackFunction(uint64_t signatureId, size_t functionId);
+
+  /**
+   * @brief Get all registered callback functions that matches the given signature.
+   *
+   * @param signatureId the ID of the function signature.
+   * @return const std::vector<size_t>* pointer to a list of callback functions that matches the
+   * given signature. If no functions match the given signature, returns nullptr.
+   */
+  const std::vector<size_t>* GetCallbackFunctions(uint64_t signatureId);
+
 private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _funcs;
+  std::unordered_map<uint64_t, std::vector<size_t>> _callbackFunctions;
+
   std::unordered_map<int, size_t> _typeIds;
   std::unordered_map<std::string, size_t> _typeNames;
   std::unordered_map<uint64_t, size_t> _funcTypeSignatures;

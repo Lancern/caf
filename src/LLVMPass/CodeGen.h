@@ -46,6 +46,13 @@ public:
    */
   void GenerateStub();
 
+  /**
+   * @brief Generate a global array for storing function pointers to the given list of functions.
+   *
+   * @param candidates the callback function candidates.
+   */
+  void GenerateCallbackFunctionCandidateArray(const std::vector<llvm::Function *>& candidates);
+
 private:
   llvm::Module* _module;
   const CAFSymbolTable* _symbols;

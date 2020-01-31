@@ -144,4 +144,21 @@ CAFStoreRef<Function> CAFStore::AddApi(std::unique_ptr<Function> api) {
   return CAFStoreRef<Function> { this, slot };
 }
 
+void CAFStore::AddCallbackFunction(uint64_t signatureId, size_t functionId) {
+  auto i = _callbackFunctions.find(signatureId);
+  if (i == _callbackFunctions.end()) {
+    _callbackFunctions.emplace(signatureId, std::vector<size_t> { functionId });
+    return;
+  }
+  i->second.push_back(functionId);
+}
+
+const std::vector<size_t>* CAFStore::GetCallbackFunctions(uint64_t signatureId) {
+  auto i = _callbackFunctions.find(signatureId);
+  if (i == _callbackFunctions.end()) {
+    return nullptr;
+  }
+  return &i->second;
+}
+
 } // namespace caf

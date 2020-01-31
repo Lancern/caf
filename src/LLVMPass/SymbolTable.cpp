@@ -111,7 +111,14 @@ public:
    *
    * @return std::unique_ptr<CAFStore> an owned pointer to the initialized @see CAFStore object.
    */
-  std::unique_ptr<CAFStore> take_store() { return std::move(_store); }
+  std::unique_ptr<CAFStore> TakeStore() { return std::move(_store); }
+
+  /**
+   * @brief Takes ownership of the underlying callback function candidate list.
+   *
+   * @return std::vector<llvm::Function *> a list of registered callback function candidates.
+   */
+  std::vector<llvm::Function *> TakeCallbackFunctions() { return std::move(_callbackFunctions); }
 
   /**
    * @brief Get the ID of the given LLVM function signature.
@@ -136,9 +143,22 @@ public:
     return std::make_pair(true, i->second);
   }
 
+  /**
+   * @brief Add the given function to the callback function candidate list.
+   *
+   * @param function the function to add.
+   * @return size_t the ID of the added callback function.
+   */
+  size_t AddCallbackFunction(llvm::Function* function) {
+    auto id = _callbackFunctions.size();
+    _callbackFunctions.push_back(function);
+    return id;
+  }
+
 private:
   std::unique_ptr<CAFStore> _store;
   std::unordered_map<LLVMFunctionSignature, uint64_t, Hasher<LLVMFunctionSignature>> _signatureIds;
+  std::vector<llvm::Function *> _callbackFunctions;
   IncrementIdAllocator<uint64_t> _signatureIdAlloc;
 }; // class SymbolTableFreezeContext
 
@@ -179,7 +199,7 @@ const std::vector<llvm::Function *>* CAFSymbolTable::GetConstructors(
   }
 }
 
-std::unique_ptr<CAFStore> CAFSymbolTable::GetCAFStore() const {
+CAFSymbolTableFreezeResult CAFSymbolTable::Freeze() const {
   auto store = caf::make_unique<CAFStore>();
   SymbolTableFreezeContext context { std::move(store) };
 
@@ -187,7 +207,10 @@ std::unique_ptr<CAFStore> CAFSymbolTable::GetCAFStore() const {
     AddLLVMApiFunctionToStore(context, func);
   }
 
-  return context.take_store();
+  CAFSymbolTableFreezeResult result;
+  result.store = context.TakeStore();
+  result.callbackFunctions = context.TakeCallbackFunctions();
+  return result;
 }
 
 Constructor CAFSymbolTable::CreateConstructorFromLLVMFunction(
@@ -273,6 +296,15 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(
 
     FunctionSignature cafSignature { retType, std::move(paramTypes) };
     funcType->SetSigature(std::move(cafSignature));
+
+    // Add callback function candidates that match the current function signature to the store.
+    auto callbackFunctions = _callbackFunctionGrouper.GetFunctions(signature);
+    if (callbackFunctions) {
+      for (auto fn : *callbackFunctions) {
+        auto id = context.AddCallbackFunction(fn);
+        context.store()->AddCallbackFunction(existId.second, id);
+      }
+    }
 
     return funcType;
   } else {

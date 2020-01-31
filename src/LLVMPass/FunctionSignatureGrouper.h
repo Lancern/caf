@@ -55,7 +55,7 @@ public:
    * @return const std::vector<llvm::Function *>* pointer to a list of functions that matches the
    * given signature. If no functions match the given signature, returns nullptr.
    */
-  const std::vector<llvm::Function *>* GetFunctions(const LLVMFunctionSignature& signature);
+  const std::vector<llvm::Function *>* GetFunctions(const LLVMFunctionSignature& signature) const;
 
 private:
   std::unordered_map<

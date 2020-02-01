@@ -116,24 +116,18 @@ public:
 
   explicit operator bool() const noexcept { return valid(); }
 
-  friend bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+  friend bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+    return lhs._store == rhs._store && lhs._slot == rhs._slot;
+  }
 
-  friend bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+  friend bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+    return !(lhs == rhs);
+  }
 
 private:
   CAFStore* _store;
   size_t _slot;
 }; // class CAFStoreRef
-
-template <typename T>
-bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
-  return lhs._store == rhs._store && lhs._slot == rhs._slot;
-}
-
-template <typename T>
-bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
-  return !(lhs == rhs);
-}
 
 template <typename T>
 struct Hasher<CAFStoreRef<T>> {

@@ -9,6 +9,7 @@ set(CAF_BASIC_SOURCES
     ${CAF_INCLUDE_DIR}/Basic/PointerType.h
     ${CAF_INCLUDE_DIR}/Basic/ArrayType.h
     ${CAF_INCLUDE_DIR}/Basic/StructType.h
+    ${CAF_INCLUDE_DIR}/Basic/FunctionType.h
     ${CAF_INCLUDE_DIR}/Basic/Function.h
     ${CAF_INCLUDE_DIR}/Basic/Constructor.h
     ${CAF_INCLUDE_DIR}/Basic/CAFStore.h
@@ -18,8 +19,7 @@ set(CAF_BASIC_SOURCES
     ${CAF_INCLUDE_DIR}/Infrastructure/Intrinsic.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
     ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Trie.h)
+    ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h)
 
 add_library(CAFBasic STATIC
     ${CAF_BASIC_SOURCES})

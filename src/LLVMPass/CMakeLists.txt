@@ -4,6 +4,10 @@ add_llvm_loadable_module(CAFPass
     CAFDriver.cpp
     CodeGen.cpp
     CodeGen.h
+    FunctionSignatureGrouper.cpp
+    FunctionSignatureGrouper.h
+    LLVMFunctionSignature.cpp
+    LLVMFunctionSignature.h
     SymbolTable.cpp
     SymbolTable.h
 

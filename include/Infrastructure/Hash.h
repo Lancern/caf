@@ -27,7 +27,7 @@ struct Hasher {
  * @param rhs the second hash value.
  * @return size_t the combined hash value.
  */
-size_t CombineHash(size_t lhs, size_t rhs) {
+inline size_t CombineHash(size_t lhs, size_t rhs) {
   // Use the same algorithm used in boost's `hash_combine` to combine two hash values.
   lhs ^= rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
   return lhs;
@@ -44,7 +44,7 @@ size_t CombineHash(size_t lhs, size_t rhs) {
  * @return size_t the hash value of the object.
  */
 template <typename T>
-size_t GetHashCode(const T& object) {
+inline size_t GetHashCode(const T& object) {
   Hasher<T> hasher;
   return hasher(object);
 }
@@ -58,7 +58,7 @@ size_t GetHashCode(const T& object) {
  * @return size_t the overall hash code of the given range of objects.
  */
 template <typename Iter>
-size_t GetRangeHashCode(Iter first, Iter last) {
+inline size_t GetRangeHashCode(Iter first, Iter last) {
   if (first == last) {
     return 0;
   }
@@ -79,8 +79,8 @@ size_t GetRangeHashCode(Iter first, Iter last) {
  * @return size_t the overall hash code of all objects contained in the given container.
  */
 template <typename Container>
-size_t GetContainerHashCode(const Container& container) {
-  return GetContainerHashCode(std::begin(container), std::end(container));
+inline size_t GetContainerHashCode(const Container& container) {
+  return GetRangeHashCode(std::begin(container), std::end(container));
 }
 
 }; // namespace caf

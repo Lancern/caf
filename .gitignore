@@ -1,6 +1,8 @@
 .vscode/
+.clangd/
+.idea/
 
 docs/doxygen/
 
 build/
-demo/
+clangd-build/

@@ -44,4 +44,30 @@ Some CMake options are available when configuring and generating build scripts. 
 |------|----------|-------|
 | `LLVM_BUILD_DIR` | Yes | Path to the root directory of the LLVM build tree |
 
+## Engineering
 
+### Documents
+
+All available documents are maintained under `docs/`. Doxygen documents are also available, to
+generate a copy of doxygen documents, execute the following command in the root directory of this
+project:
+
+```shell
+doxygen
+```
+
+Then doxygen documents will be available under `docs/doxygen`.
+
+### Editor Plugin
+
+It's recommended to use `clangd` while developing. To prepare a `compile_commands.json` file, which is essential for `clangd`, at the root directory of this project, execute the following commands at the root directory of this project:
+
+```shell
+mkdir build && cd build
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 [Other CMake Options] ..
+cp compile_commands.json ../
+```
+
+`[Other CMake Options]` are those options available during regular build process.
+
+For more information on using `clangd`, please refer to [here](https://clang.llvm.org/extra/clangd/).

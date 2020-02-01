@@ -6,3 +6,7 @@ docs/doxygen/
 
 build/
 clangd-build/
+
+# The following two files are used for clangd.
+compile_commands.json
+compile_flags.txt

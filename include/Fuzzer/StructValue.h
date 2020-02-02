@@ -21,7 +21,7 @@ public:
    * @param constructor the constructor to use to activate the object.
    * @param args arguments passed to the object.
    */
-  explicit StructValue(CAFObjectPool* pool, StructType* type,
+  explicit StructValue(CAFObjectPool* pool, const StructType* type,
       const Constructor* constructor, std::vector<Value *> args)
     : Value { pool, ValueKind::StructValue, type },
       _constructor(constructor),

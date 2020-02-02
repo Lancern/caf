@@ -21,7 +21,7 @@ public:
    * @param functionId the ID of the pointee function.
    * @param type the type of the function pointer.
    */
-  explicit FunctionPointerValue(CAFObjectPool* pool, size_t functionId, PointerType* type)
+  explicit FunctionPointerValue(CAFObjectPool* pool, size_t functionId, const PointerType* type)
     : Value { pool, ValueKind::FunctionPointerValue, type },
       _functionId(functionId)
   { }

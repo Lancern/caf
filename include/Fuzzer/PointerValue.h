@@ -19,7 +19,7 @@ public:
    * @param pointee value at the pointee's site.
    * @param type type of the pointer.
    */
-  explicit PointerValue(CAFObjectPool* pool, Value* pointee, PointerType* type)
+  explicit PointerValue(CAFObjectPool* pool, Value* pointee, const PointerType* type)
     : Value { pool, ValueKind::PointerValue, type },
       _pointee(pointee)
   { }

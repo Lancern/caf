@@ -57,7 +57,7 @@ Value* ValueGenerator::GenerateNewStructType(const StructType* type) {
   }
 
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<StructValue>(objectPool, type, constructor, std::move(args));
+  return objectPool->CreateValue<StructValue>(objectPool, type, &constructor, std::move(args));
 }
 
 Value* ValueGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
@@ -76,16 +76,16 @@ Value* ValueGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
 Value* ValueGenerator::GenerateNewValue(const Type* type) {
   switch (type->kind()) {
     case TypeKind::Bits: {
-      return GenerateNewBitsType(dynamic_cast<const BitsType *>(type));
+      return GenerateNewBitsType(caf::dyn_cast<BitsType>(type));
     }
     case TypeKind::Pointer: {
-      return GenerateNewPointerType(dynamic_cast<const PointerType *>(type));
+      return GenerateNewPointerType(caf::dyn_cast<PointerType>(type));
     }
     case TypeKind::Array: {
-      return GenerateNewArrayType(dynamic_cast<const ArrayType *>(type));
+      return GenerateNewArrayType(caf::dyn_cast<ArrayType>(type));
     }
     case TypeKind::Struct: {
-      return GenerateNewStructType(dynamic_cast<const StructType *>(type));
+      return GenerateNewStructType(caf::dyn_cast<StructType>(type));
     }
     default: CAF_UNREACHABLE;
   }

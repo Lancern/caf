@@ -16,4 +16,4 @@ add_library(CAFMutator MODULE
     ${CAF_INCLUDE_DIR}/Fuzzer/Value.h
     ${CAF_INCLUDE_DIR}/Fuzzer/ValueGenerator.h)
 
-target_link_libraries(CAFMutator PRIVATE CAFBasic)
+target_link_libraries(CAFMutator PRIVATE CAFBasicPIC)

@@ -226,7 +226,7 @@ Value* TestCaseMutator::MutatePointerValue(const PointerValue* value) {
   auto objectPool = value->pool();
   auto mutatedPointee = MutateValue(value->pointee());
   return objectPool->CreateValue<PointerValue>(objectPool, mutatedPointee,
-      dynamic_cast<const PointerType *>(value->type()));
+      caf::dyn_cast<PointerType>(value->type()));
 }
 
 Value* TestCaseMutator::MutateFunctionPointerValue(const FunctionPointerValue* value) {
@@ -236,12 +236,13 @@ Value* TestCaseMutator::MutateFunctionPointerValue(const FunctionPointerValue* v
   }
 
   auto store = _corpus->store();
-  auto functionType = caf::dyn_cast<FunctionType>(value->type());
+  auto pointerType = caf::dyn_cast<PointerType>(value->type());
+  auto functionType = caf::dyn_cast<FunctionType>(pointerType->pointeeType().get());
   auto candidates = store->GetCallbackFunctions(functionType->signatureId());
   assert(candidates && "No callback function candidates viable.");
 
   auto pointeeFunctionId = _rnd.Select(*candidates);
-  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, functionType);
+  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, pointerType);
 }
 
 Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value) {

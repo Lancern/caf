@@ -91,7 +91,7 @@ private:
       case ValueKind::FunctionPointerValue: {
         // Write the ID of the pointee function.
         const auto& functionValue = caf::dyn_cast<FunctionPointerValue>(value);
-        Write(o, functionValue.functionId());
+        WriteTrivial(o, functionValue.functionId());
         break;
       }
       case ValueKind::ArrayValue: {

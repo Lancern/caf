@@ -1,6 +1,8 @@
 #include "Basic/BitsType.h"
+#include "Basic/FunctionType.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
+#include "Fuzzer/FunctionPointerValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/TestCaseMutator.h"
@@ -227,6 +229,21 @@ Value* TestCaseMutator::MutatePointerValue(const PointerValue* value) {
       dynamic_cast<const PointerType *>(value->type()));
 }
 
+Value* TestCaseMutator::MutateFunctionPointerValue(const FunctionPointerValue* value) {
+  auto objectPool = value->pool();
+  if (_rnd.WithProbability(0.5)) {
+    return objectPool->CreateValue<FunctionPointerValue>(*value);
+  }
+
+  auto store = _corpus->store();
+  auto functionType = caf::dyn_cast<FunctionType>(value->type());
+  auto candidates = store->GetCallbackFunctions(functionType->signatureId());
+  assert(candidates && "No callback function candidates viable.");
+
+  auto pointeeFunctionId = _rnd.Select(*candidates);
+  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, functionType);
+}
+
 Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value) {
   auto elementIndex = _rnd.Index(value->elements());
   auto mutatedElement = MutateValue(value->elements()[elementIndex]);
@@ -270,16 +287,19 @@ Value* TestCaseMutator::MutateStructValue(const StructValue* value) {
 Value* TestCaseMutator::MutateValue(const Value* value) {
   switch (value->kind()) {
     case ValueKind::BitsValue: {
-      return MutateBitsValue(dynamic_cast<const BitsValue *>(value));
+      return MutateBitsValue(caf::dyn_cast<BitsValue>(value));
     }
     case ValueKind::PointerValue: {
-      return MutatePointerValue(dynamic_cast<const PointerValue *>(value));
+      return MutatePointerValue(caf::dyn_cast<PointerValue>(value));
+    }
+    case ValueKind::FunctionPointerValue: {
+      return MutateFunctionPointerValue(caf::dyn_cast<FunctionPointerValue>(value));
     }
     case ValueKind::ArrayValue: {
-      return MutateArrayValue(dynamic_cast<const ArrayValue *>(value));
+      return MutateArrayValue(caf::dyn_cast<ArrayValue>(value));
     }
     case ValueKind::StructValue: {
-      return MutateStructValue(dynamic_cast<const StructValue *>(value));
+      return MutateStructValue(caf::dyn_cast<StructValue>(value));
     }
     default: CAF_UNREACHABLE;
   }

@@ -8,6 +8,12 @@
 
 namespace caf {
 
+class BitsValue;
+class PointerValue;
+class FunctionPointerValue;
+class ArrayValue;
+class StructValue;
+
 /**
  * @brief Provide mutation strategy for test cases.
  *
@@ -71,6 +77,8 @@ private:
   Value* MutateBitsValue(const BitsValue* value);
 
   Value* MutatePointerValue(const PointerValue* value);
+
+  Value* MutateFunctionPointerValue(const FunctionPointerValue* value);
 
   Value* MutateArrayValue(const ArrayValue* value);
 

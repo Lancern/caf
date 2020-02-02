@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <memory>
 
+namespace {
+
 std::unique_ptr<caf::CAFCorpus> _corpus;
 
 std::vector<uint8_t> testcaseBuffer;
@@ -38,6 +40,8 @@ public:
 private:
   std::vector<uint8_t>& _mem;
 };
+
+} // namespace <anonymous>
 
 extern "C" {
 

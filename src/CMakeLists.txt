@@ -10,4 +10,4 @@ target_sources(NLOHMANN_JSON INTERFACE
 
 add_subdirectory(Basic)
 add_subdirectory(LLVMPass)
-# add_subdirectory(Fuzzer)
+add_subdirectory(Fuzzer)

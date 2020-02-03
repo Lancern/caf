@@ -395,7 +395,7 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
 }
 
 void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
-    const std::vector<llvm::Function *>& candidates) {
+    const std::vector<Either<llvm::Function *, LLVMFunctionSignature>>& candidates) {
   // TODO: Implement CAFCodeGenerator::GenerateCallbackFunctionCandidateArray.
 }
 

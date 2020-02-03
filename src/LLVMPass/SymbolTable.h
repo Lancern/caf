@@ -1,6 +1,7 @@
 #ifndef CAF_SYMBOL_TABLE_H
 #define CAF_SYMBOL_TABLE_H
 
+#include "Infrastructure/Either.h"
 #include "FunctionSignatureGrouper.h"
 
 #include <memory>
@@ -28,7 +29,7 @@ class SymbolTableFreezeContext;
 
 struct CAFSymbolTableFreezeResult {
   std::unique_ptr<CAFStore> store;
-  std::vector<llvm::Function *> callbackFunctions;
+  std::vector<Either<llvm::Function *, LLVMFunctionSignature>> callbackFunctions;
 }; // struct CAFSymbolTableFreezeResult
 
 /**

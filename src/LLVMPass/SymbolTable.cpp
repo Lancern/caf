@@ -116,9 +116,12 @@ public:
   /**
    * @brief Takes ownership of the underlying callback function candidate list.
    *
-   * @return std::vector<llvm::Function *> a list of registered callback function candidates.
+   * @return std::vector<Either<llvm::Function *, LLVMFunctionSignature>> a list of registered
+   * callback function candidates.
    */
-  std::vector<llvm::Function *> TakeCallbackFunctions() { return std::move(_callbackFunctions); }
+  std::vector<Either<llvm::Function *, LLVMFunctionSignature>> TakeCallbackFunctions() {
+    return std::move(_callbackFunctions);
+  }
 
   /**
    * @brief Get the ID of the given LLVM function signature.
@@ -150,16 +153,38 @@ public:
    * @return size_t the ID of the added callback function.
    */
   size_t AddCallbackFunction(llvm::Function* function) {
-    auto id = _callbackFunctions.size();
-    _callbackFunctions.push_back(function);
-    return id;
+    return AddCallbackFunction(
+        Either<llvm::Function *, LLVMFunctionSignature>::CreateLhs(function));
+  }
+
+  /**
+   * @brief Add the given function signature to the callback function candidate list.
+   *
+   * @param signature the function signature to add.
+   * @return size_t teh ID of the added callback function.
+   */
+  size_t AddCallbackFunction(LLVMFunctionSignature signature) {
+    return AddCallbackFunction(
+        Either<llvm::Function *, LLVMFunctionSignature>::CreateRhs(signature));
   }
 
 private:
   std::unique_ptr<CAFStore> _store;
   std::unordered_map<LLVMFunctionSignature, uint64_t, Hasher<LLVMFunctionSignature>> _signatureIds;
-  std::vector<llvm::Function *> _callbackFunctions;
+  std::vector<Either<llvm::Function *, LLVMFunctionSignature>> _callbackFunctions;
   IncrementIdAllocator<uint64_t> _signatureIdAlloc;
+
+  /**
+   * @brief Add the given callback function representation to the callback function candidate list.
+   *
+   * @param fn the function representation to add.
+   * @return size_t the ID of the added callback function.
+   */
+  size_t AddCallbackFunction(Either<llvm::Function *, LLVMFunctionSignature> fn) {
+    auto id = _callbackFunctions.size();
+    _callbackFunctions.push_back(std::move(fn));
+    return id;
+  }
 }; // class SymbolTableFreezeContext
 
 } // namespace <anonymous>
@@ -263,7 +288,7 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(
         : store->CreateUnnamedStructType();
 
     if (structType->hasName()) {
-      // Attach all activators to this struct type.
+      // Attach all constructors to this struct type.
       auto name = structType->getName().str();
 
       auto ctors = _ctors.find(name);
@@ -304,6 +329,11 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(
         auto id = context.AddCallbackFunction(fn);
         context.store()->AddCallbackFunction(existId.second, id);
       }
+    } else {
+      // No existing functions match the signature. Add the function signature to the callback
+      // function candidates list to let the code generator to generate one.
+      auto id = context.AddCallbackFunction(signature);
+      context.store()->AddCallbackFunction(existId.second, id);
     }
 
     return funcType;

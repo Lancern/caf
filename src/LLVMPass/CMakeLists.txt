@@ -14,5 +14,5 @@ add_llvm_loadable_module(CAFPass
     PLUGIN_TOOL
     opt)
 
-target_link_libraries(CAFPass
-    PUBLIC CAFBasicLLVM)
+target_link_libraries(CAFPass PUBLIC CAFInfrastructure)
+target_link_libraries(CAFPass PUBLIC CAFBasicLLVM)

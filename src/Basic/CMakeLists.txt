@@ -14,12 +14,7 @@ set(CAF_BASIC_SOURCES
     ${CAF_INCLUDE_DIR}/Basic/Constructor.h
     ${CAF_INCLUDE_DIR}/Basic/CAFStore.h
     ${CAF_INCLUDE_DIR}/Basic/JsonSerializer.h
-    ${CAF_INCLUDE_DIR}/Basic/JsonDeserializer.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Casting.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Intrinsic.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h
-    ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h)
+    ${CAF_INCLUDE_DIR}/Basic/JsonDeserializer.h)
 
 add_library(CAFBasic STATIC
     ${CAF_BASIC_SOURCES})
@@ -39,6 +34,11 @@ target_compile_options(CAFBasicLLVM PRIVATE "-fPIC")
 target_compile_options(CAFBasicPIC
     PUBLIC "-fPIC")
 
-target_link_libraries(CAFBasic PUBLIC NLOHMANN_JSON)
-target_link_libraries(CAFBasicLLVM PUBLIC NLOHMANN_JSON)
-target_link_libraries(CAFBasicPIC PUBLIC NLOHMANN_JSON)
+target_link_libraries(CAFBasic      PUBLIC NLOHMANN_JSON)
+target_link_libraries(CAFBasicLLVM  PUBLIC NLOHMANN_JSON)
+target_link_libraries(CAFBasicPIC   PUBLIC NLOHMANN_JSON)
+
+target_link_libraries(CAFBasic      PUBLIC CAFInfrastructure)
+target_link_libraries(CAFBasicLLVM  PUBLIC CAFInfrastructure)
+target_link_libraries(CAFBasicPIC   PUBLIC CAFInfrastructure)
+

@@ -1,0 +1,14 @@
+.vscode/
+.idea/
+.clangd/
+.git/
+
+build/
+docs/
+patches/
+
+compile_commands.json
+Doxyfile
+README.md
+
+.gitignore

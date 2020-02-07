@@ -3,6 +3,7 @@
 
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Random.h"
+#include "Fuzzer/Value.h"
 
 #include <vector>
 #include <memory>
@@ -85,8 +86,8 @@ public:
    * @return Value* the selected value.
    */
   template <typename RNG>
-  Value* Select(RNG& rng) const {
-    return caf::rng::select(rng, _values)->get();
+  Value* Select(caf::Random<RNG>& random) const {
+    return random.Select(_values)->get();
   }
 
 private:

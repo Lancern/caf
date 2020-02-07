@@ -8,6 +8,19 @@ target_include_directories(NLOHMANN_JSON INTERFACE
 target_sources(NLOHMANN_JSON INTERFACE
     "${CAF_DEP_DIR}/json/json.hpp")
 
+set(CAF_INFRASTRUCTURE_SOURCES
+    ${CAF_INCLUDE_DIR}/Infrastructure/Casting.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Either.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Hash.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Intrinsic.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Random.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h)
+add_library(CAFInfrastructure INTERFACE)
+target_sources(CAFInfrastructure INTERFACE
+    ${CAF_INFRASTRUCTURE_SOURCES})
+
 add_subdirectory(Basic)
 add_subdirectory(LLVMPass)
-# add_subdirectory(Fuzzer)
+add_subdirectory(Fuzzer)

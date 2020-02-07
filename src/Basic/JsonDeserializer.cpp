@@ -23,6 +23,9 @@ std::unique_ptr<CAFStore> JsonDeserializer::DeserializeCAFStore(const nlohmann::
     _context.store->AddApi(std::move(api));
   }
 
+  _context.store->SetCallbackFunctions(
+      json["callbackFuncs"].get<std::unordered_map<uint64_t, std::vector<size_t>>>());
+
   return std::move(_context.store);
 }
 
@@ -87,7 +90,8 @@ std::unique_ptr<Type> JsonDeserializer::DeserializeStructType(const nlohmann::js
 
 std::unique_ptr<Type> JsonDeserializer::DeserializeFunctionType(const nlohmann::json& json) const {
   auto signature = DeserializeFunctionSignature(json["signature"]);
-  return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature));
+  auto signatureId = json["signatureId"].get<uint64_t>();
+  return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature), signatureId);
 }
 
 FunctionSignature JsonDeserializer::DeserializeFunctionSignature(const nlohmann::json& json) const {

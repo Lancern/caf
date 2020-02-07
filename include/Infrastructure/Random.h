@@ -61,6 +61,24 @@ public:
   }
 
   /**
+   * @brief Generate a floating point value in [0, 1] and test whether it is less than p.
+   *
+   * @param p the probability of returning true.
+   * @return true if the generated value is less than p.
+   * @return false if the generated value is equal to or greater than p.
+   */
+  bool WithProbability(double p) {
+    if (p < 0) {
+      p = 0;
+    }
+    if (p > 1) {
+      p = 1;
+    }
+
+    return Next<double>() < p;
+  }
+
+  /**
    * @brief Generate a random integer number that is greater than or equal to 0 and less than the
    * size of the given container.
    *
@@ -86,7 +104,7 @@ public:
    */
   template <typename Container>
   typename Container::const_reference Select(const Container& c) {
-    return c[Index(r, c)];
+    return c[Index(c)];
   }
 
   /**
@@ -99,7 +117,7 @@ public:
    */
   template <typename Container>
   typename Container::reference Select(Container& c) {
-    return c[Index(r, c)];
+    return c[Index(c)];
   }
 
 private:

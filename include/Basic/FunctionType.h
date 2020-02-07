@@ -4,6 +4,7 @@
 #include "Basic/Type.h"
 #include "Basic/Function.h"
 
+#include <cstdint>
 #include <utility>
 
 namespace caf {
@@ -20,11 +21,25 @@ public:
    * @brief Construct a new FunctionType object.
    *
    * @param store the @see CAFStore object holding this type definition.
-   * @param signature the function signature of this function type.
+   * @param signatureId the ID of the function signature.
    */
-  explicit FunctionType(CAFStore* store, FunctionSignature signature)
+  explicit FunctionType(CAFStore* store, uint64_t signatureId)
     : Type { store, TypeKind::Function },
-      _signature(std::move(signature))
+      _signature { },
+      _signatureId(signatureId)
+  { }
+
+  /**
+   * @brief Construct a new FunctionType object.
+   *
+   * @param store the @see CAFStore object holding this type definition.
+   * @param signature the signature of the function type.
+   * @param signatureId the ID of the signature.
+   */
+  explicit FunctionType(CAFStore* store, FunctionSignature signature, uint64_t signatureId)
+    : Type { store, TypeKind::Function },
+      _signature { std::move(signature) },
+      _signatureId(signatureId)
   { }
 
   /**
@@ -34,6 +49,22 @@ public:
    */
   const FunctionSignature& signature() const { return _signature; }
 
+  /**
+   * @brief Set the function signature.
+   *
+   * @param signature the function signature.
+   */
+  void SetSigature(FunctionSignature signature) {
+    _signature = std::move(signature);
+  }
+
+  /**
+   * @brief Get the ID of the function signature.
+   *
+   * @return uint64_t ID of the function signature.
+   */
+  uint64_t signatureId() const { return _signatureId; }
+
 #ifdef CAF_LLVM
   static bool classof(const Type* object) {
     return object->kind() == TypeKind::Function;
@@ -42,6 +73,7 @@ public:
 
 private:
   FunctionSignature _signature;
+  uint64_t _signatureId;
 }; // class FunctionType
 
 } // namespace caf

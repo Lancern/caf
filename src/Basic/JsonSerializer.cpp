@@ -30,6 +30,8 @@ void JsonSerializer::Serialize(const CAFStore& object, nlohmann::json& json) con
     funcsJsonArr.push_back(std::move(funcJson));
   }
   json["apis"] = std::move(funcsJsonArr);
+
+  json["callbackFuncs"] = object.callbackFuncs();
 }
 
 void JsonSerializer::Serialize(const Type& object, nlohmann::json& json) const {
@@ -93,6 +95,7 @@ void JsonSerializer::Serialize(const FunctionType& object, nlohmann::json& json)
   auto signatureJson = nlohmann::json::object();
   Serialize(object.signature(), signatureJson);
   json["signature"] = std::move(signatureJson);
+  json["signatureId"] = object.signatureId();
 }
 
 void JsonSerializer::Serialize(const FunctionSignature& object, nlohmann::json& json) const {

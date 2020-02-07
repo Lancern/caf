@@ -2,7 +2,16 @@
 #define CAF_TEST_CASE_SERIALIZER_H
 
 #include "Infrastructure/Intrinsic.h"
+#include "Infrastructure/Casting.h"
 #include "Fuzzer/TestCase.h"
+#include "Fuzzer/Value.h"
+#include "Fuzzer/BitsValue.h"
+#include "Fuzzer/PointerValue.h"
+#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/ArrayValue.h"
+#include "Fuzzer/StructValue.h"
+
+#include <cstdint>
 
 namespace caf {
 
@@ -29,10 +38,10 @@ public:
   template <typename Output>
   void Write(Output& o, const TestCase& testCase) const {
     // Write the number of function calls to the output stream.
-    WriteTrivial(o, testCase.sequence().size());
+    WriteTrivial(o, testCase.calls().size());
 
     // Write each function call to the output stream.
-    for (const auto& funcCall : testCase.sequence()) {
+    for (const auto& funcCall : testCase.calls()) {
       Write(o, funcCall);
     }
   }
@@ -68,20 +77,26 @@ private:
       case ValueKind::BitsValue: {
         // Write the number of bytes followed by the raw binary data of the value to the output
         // stream.
-        auto bitsValue = dynamic_cast<const BitsValue &>(value);
+        const auto& bitsValue = caf::dyn_cast<BitsValue>(value);
         WriteTrivial(o, bitsValue.size());
         o.write(bitsValue.data(), bitsValue.size());
         break;
       }
       case ValueKind::PointerValue: {
         // Write the underlying value pointed to by the pointer.
-        auto pointerValue = dynamic_cast<const PointerValue &>(value);
+        const auto& pointerValue = caf::dyn_cast<PointerValue>(value);
         Write(o, *pointerValue.pointee());
+        break;
+      }
+      case ValueKind::FunctionPointerValue: {
+        // Write the ID of the pointee function.
+        const auto& functionValue = caf::dyn_cast<FunctionPointerValue>(value);
+        WriteTrivial(o, functionValue.functionId());
         break;
       }
       case ValueKind::ArrayValue: {
         // Write the number of elements and each element into the output stream.
-        auto arrayValue = dynamic_cast<const ArrayValue &>(value);
+        const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
         WriteTrivial(o, arrayValue.size());
         for (auto el : arrayValue.elements()) {
           Write(o, *el);
@@ -90,8 +105,8 @@ private:
       }
       case ValueKind::StructValue: {
         // Write the ID of the activator and arguments to the activator to the output stream.
-        auto structValue = dynamic_cast<const StructValue &>(value);
-        WriteTrivial(o, structValue.activator()->id());
+        const auto& structValue = caf::dyn_cast<StructValue>(value);
+        WriteTrivial(o, structValue.ctor()->id());
         WriteTrivial(o, structValue.args().size());
         for (auto arg : structValue.args()) {
           Write(o, *arg);

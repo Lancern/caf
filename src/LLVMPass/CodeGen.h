@@ -1,6 +1,9 @@
 #ifndef CAF_CODE_GEN_H
 #define CAF_CODE_GEN_H
 
+#include "Infrastructure/Either.h"
+#include "LLVMFunctionSignature.h"
+
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
@@ -43,6 +46,20 @@ public:
    *
    */
   void GenerateStub();
+
+  /**
+   * @brief Generate a global array for storing function pointers to the given list of functions.
+   *
+   * If some element of candidates is llvm::Function *, then the callee should leave a pointer to
+   * the function at the corresponding position in the generated array; otherwise, if some element
+   * of candidates is LLVMFunctionSignature, then the callee should generated a function matching
+   * the signature and leave the pointer to the generated function at the corresponding position in
+   * the generated array.
+   *
+   * @param candidates the callback function candidates.
+   */
+  void GenerateCallbackFunctionCandidateArray(
+      const std::vector<Either<llvm::Function *, LLVMFunctionSignature>>& candidates);
 
 private:
   llvm::Module* _module;

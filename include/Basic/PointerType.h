@@ -31,6 +31,16 @@ public:
    */
   CAFStoreRef<Type> pointeeType() const { return _pointeeType; }
 
+  /**
+   * @brief Determine whether this pointer is a function pointer.
+   *
+   * @return true if this pointer is a function pointer.
+   * @return false if this pointer is not a function pointer.
+   */
+  bool isFunctionPointer() const {
+    return _pointeeType.valid() && _pointeeType->kind() == TypeKind::Function;
+  }
+
 #ifdef CAF_LLVM
   /**
    * @brief Test whether the given object is an instance of PointerType.

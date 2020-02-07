@@ -57,7 +57,7 @@ public:
    *
    * @return TestCase*
    */
-  TestCase* get() const;
+  inline TestCase* get() const;
 
 private:
   CAFCorpus* _corpus;
@@ -84,6 +84,8 @@ public:
     : _store(std::move(store)),
       _pools { }
   { }
+
+  ~CAFCorpus();
 
   /**
    * @brief Get the @see CAFStore instance containing type information and API information in the
@@ -162,8 +164,8 @@ public:
    * @return CAFCorpusTestCaseRef the selected test case.
    */
   template <typename RNG>
-  CAFCorpusTestCaseRef SelectTestCase(Random<RNG>& rnd) const {
-    return &rnd.Select(_testCases);
+  CAFCorpusTestCaseRef SelectTestCase(Random<RNG>& rnd) {
+    return CAFCorpusTestCaseRef { this, rnd.Index(_testCases) };
   }
 
 private:
@@ -172,7 +174,7 @@ private:
   std::vector<TestCase> _testCases;
 };
 
-TestCase* CAFCorpusTestCaseRef::get() const {
+inline TestCase* CAFCorpusTestCaseRef::get() const {
   return _corpus->GetTestCaseRaw(_index);
 }
 

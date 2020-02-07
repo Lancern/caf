@@ -33,6 +33,14 @@ public:
     return _id++;
   }
 
+  /**
+   * @brief Reset this ID allocator to its initial state.
+   *
+   */
+  void reset() {
+    _id = 0;
+  }
+
 private:
   T _id;
 }; // class IdAllocator

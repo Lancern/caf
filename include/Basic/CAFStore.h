@@ -116,24 +116,18 @@ public:
 
   explicit operator bool() const noexcept { return valid(); }
 
-  friend bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+  friend bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+    return lhs._store == rhs._store && lhs._slot == rhs._slot;
+  }
 
-  friend bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs);
+  friend bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
+    return !(lhs == rhs);
+  }
 
 private:
   CAFStore* _store;
   size_t _slot;
 }; // class CAFStoreRef
-
-template <typename T>
-bool operator==(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
-  return lhs._store == rhs._store && lhs._slot == rhs._slot;
-}
-
-template <typename T>
-bool operator!=(const CAFStoreRef<T>& lhs, const CAFStoreRef<T>& rhs) {
-  return !(lhs == rhs);
-}
 
 template <typename T>
 struct Hasher<CAFStoreRef<T>> {
@@ -222,10 +216,10 @@ public:
   /**
    * @brief Create a FunctionType object managed by this store.
    *
-   * @param signature the signature of the function type.
+   * @param signatureId ID of the function signature.
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
-  CAFStoreRef<FunctionType> CreateFunctionType(FunctionSignature signature);
+  CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId);
 
   /**
    * @brief Test whether a type with the given name exists in the store.
@@ -243,6 +237,15 @@ public:
    * @return CAFStoreRef<Type> pointer to the type, or empty if the name cannot be found.
    */
   CAFStoreRef<Type> GetType(const std::string& name);
+
+  /**
+   * @brief Get the function type with the given signature ID.
+   *
+   * @param signatureId the signature ID.
+   * @return CAFStoreRef<FunctionType> pointer to the function type, or empty if the signature ID
+   * does not exist.
+   */
+  CAFStoreRef<FunctionType> GetFunctionType(uint64_t signatureId);
 
   /**
    * @brief Create a Function object representing an API in this store. If the name of the API
@@ -274,11 +277,50 @@ public:
    */
   CAFStoreRef<Function> AddApi(std::unique_ptr<Function> api);
 
+  /**
+   * @brief Add a callback function candidate to the store.
+   *
+   * @param signatureId the ID of the callback function's signature
+   * @param functionId the ID of the function.
+   */
+  void AddCallbackFunction(uint64_t signatureId, size_t functionId);
+
+  /**
+   * @brief Get all registered callback functions that matches the given signature.
+   *
+   * @param signatureId the ID of the function signature.
+   * @return const std::vector<size_t>* pointer to a list of callback functions that matches the
+   * given signature. If no functions match the given signature, returns nullptr.
+   */
+  const std::vector<size_t>* GetCallbackFunctions(uint64_t signatureId);
+
+  /**
+   * @brief Set the callback function candidates contained in this @see CAFStore object.
+   *
+   * This function should only be used by the JSON deserializer.
+   *
+   * @param functions the new callback function candidates.
+   */
+  void SetCallbackFunctions(std::unordered_map<uint64_t, std::vector<size_t>> functions);
+
+  /**
+   * @brief Get all callback function candidates, encapsulated into a std::unordered_map whose key
+   * is the function signature ID and value is a list of function IDs.
+   *
+   * @return const std::unordered_map<uint64_t, std::vector<size_t>>&
+   */
+  const std::unordered_map<uint64_t, std::vector<size_t>>& callbackFuncs() const {
+    return _callbackFunctions;
+  }
+
 private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _funcs;
+  std::unordered_map<uint64_t, std::vector<size_t>> _callbackFunctions;
+
   std::unordered_map<int, size_t> _typeIds;
   std::unordered_map<std::string, size_t> _typeNames;
+  std::unordered_map<uint64_t, size_t> _funcTypeSignatures;
   std::unordered_map<int, size_t> _apiIds;
   std::unordered_map<std::string, size_t> _apiNames;
 

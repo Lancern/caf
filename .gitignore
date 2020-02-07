@@ -1,6 +1,12 @@
 .vscode/
+.clangd/
+.idea/
 
 docs/doxygen/
 
 build/
-demo/
+clangd-build/
+
+# The following two files are used for clangd.
+compile_commands.json
+compile_flags.txt

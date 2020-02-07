@@ -2,11 +2,13 @@
 #include "Basic/Type.h"
 #include "Basic/BitsType.h"
 #include "Basic/PointerType.h"
+#include "Basic/FunctionType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Fuzzer/Value.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
+#include "Fuzzer/FunctionPointerValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/Corpus.h"
@@ -55,22 +57,35 @@ Value* ValueGenerator::GenerateNewStructType(const StructType* type) {
   }
 
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<StructValue>(objectPool, type, constructor, std::move(args));
+  return objectPool->CreateValue<StructValue>(objectPool, type, &constructor, std::move(args));
+}
+
+Value* ValueGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
+  assert(type->isFunctionPointer() && "The given pointer type is not a function pointer type.");
+
+  auto functionType = type->pointeeType().unchecked_dyn_cast<FunctionType>();
+  auto candidates = _corpus->store()->GetCallbackFunctions(functionType->signatureId());
+  assert(candidates && "No callback function candidates viable.");
+
+  auto pointeeFunctionId = _rnd.Select(*candidates);
+
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, type);
 }
 
 Value* ValueGenerator::GenerateNewValue(const Type* type) {
   switch (type->kind()) {
     case TypeKind::Bits: {
-      return GenerateNewBitsType(dynamic_cast<const BitsType *>(type));
+      return GenerateNewBitsType(caf::dyn_cast<BitsType>(type));
     }
     case TypeKind::Pointer: {
-      return GenerateNewPointerType(dynamic_cast<const PointerType *>(type));
+      return GenerateNewPointerType(caf::dyn_cast<PointerType>(type));
     }
     case TypeKind::Array: {
-      return GenerateNewArrayType(dynamic_cast<const ArrayType *>(type));
+      return GenerateNewArrayType(caf::dyn_cast<ArrayType>(type));
     }
     case TypeKind::Struct: {
-      return GenerateNewStructType(dynamic_cast<const StructType *>(type));
+      return GenerateNewStructType(caf::dyn_cast<StructType>(type));
     }
     default: CAF_UNREACHABLE;
   }

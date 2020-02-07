@@ -18,7 +18,7 @@ public:
    * @param pool object pool containing this value.
    * @param type the type of the value.
    */
-  explicit BitsValue(CAFObjectPool* pool, BitsType* type)
+  explicit BitsValue(CAFObjectPool* pool, const BitsType* type)
     : Value { pool, ValueKind::BitsValue, type },
       _size(type->size()),
       _data { } {

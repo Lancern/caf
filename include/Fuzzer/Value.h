@@ -24,6 +24,12 @@ enum class ValueKind : int {
   PointerValue,
 
   /**
+   * @brief The value is an instance of `PointerType` and the pointee is a function.
+   *
+   */
+  FunctionPointerValue,
+
+  /**
    * @brief The value is an instance of `ArrayType`.
    *
    */
@@ -65,9 +71,9 @@ public:
   /**
    * @brief Get the type of the value.
    *
-   * @return Type* type of the value.
+   * @return const Type* type of the value.
    */
-  Type* type() const { return _type; }
+  const Type* type() const { return _type; }
 
 protected:
   /**
@@ -77,7 +83,7 @@ protected:
    * @param kind kind of the value.
    * @param type the type of the value.
    */
-  explicit Value(CAFObjectPool* pool, ValueKind kind, Type* type)
+  explicit Value(CAFObjectPool* pool, ValueKind kind, const Type* type)
     : _pool(pool),
       _kind(kind),
       _type(type)
@@ -86,7 +92,7 @@ protected:
 private:
   CAFObjectPool* _pool;
   ValueKind _kind;
-  Type* _type;
+  const Type* _type;
 };
 
 } // namespace caf

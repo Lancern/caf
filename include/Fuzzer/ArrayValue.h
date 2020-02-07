@@ -21,7 +21,7 @@ public:
    * @param type type of the array value.
    * @param elements elements contained in the array.
    */
-  explicit ArrayValue(CAFObjectPool* pool, ArrayType* type, std::vector<Value *> elements)
+  explicit ArrayValue(CAFObjectPool* pool, const ArrayType* type, std::vector<Value *> elements)
     : Value { pool, ValueKind::ArrayValue, type },
       _size(type->size()),
       _elements(std::move(elements))

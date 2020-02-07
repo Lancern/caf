@@ -1,6 +1,9 @@
 #ifndef CAF_SYMBOL_TABLE_H
 #define CAF_SYMBOL_TABLE_H
 
+#include "Infrastructure/Either.h"
+#include "FunctionSignatureGrouper.h"
+
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -19,6 +22,15 @@ class Constructor;
 
 class Type;
 class Function;
+
+namespace {
+class SymbolTableFreezeContext;
+} // namespace <anonymous>
+
+struct CAFSymbolTableFreezeResult {
+  std::unique_ptr<CAFStore> store;
+  std::vector<Either<llvm::Function *, LLVMFunctionSignature>> callbackFunctions;
+}; // struct CAFSymbolTableFreezeResult
 
 /**
  * @brief Symbol table definition used in CAF.
@@ -53,13 +65,12 @@ public:
   void AddConstructor(const std::string& typeName, llvm::Function* func);
 
   /**
-   * @brief Add a callback function to the symbol table.
+   * @brief Add a callback function candidate. A callback function candidate is a function that can
+   * be selected as the pointee of some function pointer.
    *
-   * A callback function is a function that can be the pointee of a function pointer.
-   *
-   * @param func the callback function to be added.
+   * @param candidate the candidate to add.
    */
-  void AddCallbackFunction(llvm::Function* func);
+  void AddCallbackFunctionCandidate(llvm::Function* candidate);
 
   /**
    * @brief Get the list of API definitions contained in the symbol table.
@@ -80,21 +91,12 @@ public:
   const std::vector<llvm::Function *>* GetConstructors(const std::string& typeName) const;
 
   /**
-   * @brief Get the list of callback functions.
+   * @brief Freeze this @see CAFSymbolTable and creates corresponding @see CAFStore and related data
+   * structures describing this @see CAFSymbolTable object.
    *
-   * A callback function is a function that can be the pointee of a function pointer.
-   *
-   * @return const std::vector<llvm::Function *>& the list of callback functions.
+   * @return CAFSymbolTableFreezeResult freeze result of this @see CAFSymbolTable object.
    */
-  const std::vector<llvm::Function *>& callbacks() const { return _callbacks; }
-
-  /**
-   * @brief Create a CAFStore instance holding CAF representation of the symbols
-   * in this symbol table.
-   *
-   * @return std::unique_ptr<CAFStore> the created CAFStore object.
-   */
-  std::unique_ptr<CAFStore> GetCAFStore() const;
+  CAFSymbolTableFreezeResult Freeze() const;
 
 private:
   // Fuzz-target APIs.
@@ -104,43 +106,46 @@ private:
   // List of constructors.
   std::unordered_map<std::string, std::vector<llvm::Function *>> _ctors;
 
-  // List of callback functions.
-  std::vector<llvm::Function *> _callbacks;
+  // Groups callback function candidates by their function signatures.
+  FunctionSignatureGrouper _callbackFunctionGrouper;
 
   /**
    * @brief Create an instance of @see Constructor from the given LLVM function.
    *
+   * @param context the current freeze context.
    * @param func the LLVM function.
    * @param constructingType the type the constructor constructs.
    * @return Constructor the created @see Constructor instance.
    */
   Constructor CreateConstructorFromLLVMFunction(
+      SymbolTableFreezeContext& context,
       const llvm::Function* func,
       CAFStoreRef<Type> constructingType) const;
 
   /**
-   * @brief Add the given LLVM type definition to the given CAFStore. The corresponding constructors
-   * (if the given type is a struct type) and all reachable types will be added to the CAFStore
-   * recursively.
+   * @brief Add the given LLVM type definition to the CAFStore contained in the given freeze
+   * context. The corresponding constructors (if the given type is a struct type) and all reachable
+   * types will be added to the CAFStore recursively.
    *
+   * @param context the freeze context.
    * @param type the type to add.
-   * @param store the store.
    * @return CAFStoreRef<Type> pointer to the added CAF type definition.
    */
-  CAFStoreRef<Type> AddLLVMTypeToStore(const llvm::Type* type, CAFStore& store) const;
+  CAFStoreRef<Type> AddLLVMTypeToStore(
+      SymbolTableFreezeContext& context, const llvm::Type* type) const;
 
   /**
-   * @brief Add the given LLVM function to the given CAFStore as an API definition. The types
-   * reachable from the given function will be added to the store recursively. Construction of type
-   * definitions will use the constructors defined in this symbol table.
+   * @brief Add the given LLVM function to the CAFStore contained in the given freeze context as an
+   * API definition. The types reachable from the given function will be added to the store
+   * recursively. Construction of type definitions will use the constructors defined in this symbol
+   * table.
    *
+   * @param context the freeze context.
    * @param func the function to be added.
-   * @param store the CAFStore.
-   * @return CAFStoreRef<Function> pointer to the added CAF function
-   * definition.
+   * @return CAFStoreRef<Function> pointer to the added CAF function definition.
    */
   CAFStoreRef<Function> AddLLVMApiFunctionToStore(
-      const llvm::Function* func, CAFStore& store) const;
+      SymbolTableFreezeContext& context, const llvm::Function* func) const;
 };
 
 } // namespace caf

@@ -1,6 +1,9 @@
+#include "Basic/CAFStore.h"
 #include "Fuzzer/Corpus.h"
 
 namespace caf {
+
+CAFCorpus::~CAFCorpus() = default;
 
 CAFObjectPool* CAFCorpus::GetObjectPool(uint64_t typeId) const {
   auto i = _pools.find(typeId);

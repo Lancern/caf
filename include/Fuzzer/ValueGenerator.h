@@ -2,7 +2,6 @@
 #define CAF_VALUE_GENERATOR_H
 
 #include "Infrastructure/Random.h"
-
 #include "Fuzzer/FunctionCall.h"
 
 namespace caf {
@@ -47,6 +46,14 @@ public:
    * @return Value* the generated value.
    */
   Value* GenerateNewPointerType(const PointerType* type);
+
+  /**
+   * @brief Generate a new function pointer type value.
+   *
+   * @param type type of the function pointer.
+   * @return Value* the generated value.
+   */
+  Value* GenerateNewFunctionPointerType(const PointerType* type);
 
   /**
    * @brief Generate a new array type value.

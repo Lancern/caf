@@ -1,6 +1,8 @@
 add_library(CAFMutator MODULE
     AFLExport.cpp
     Corpus.cpp
+    CorpusInitialize.h
+    CorpusInitialize.cpp
     TestCaseMutator.cpp
     ValueGenerator.cpp
     ${CAF_INCLUDE_DIR}/Fuzzer/ArrayValue.h

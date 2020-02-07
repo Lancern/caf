@@ -1,3 +1,4 @@
+#include "CorpusInitialize.h"
 #include "Fuzzer/TestCaseMutator.h"
 #include "Fuzzer/TestCaseSerializer.h"
 
@@ -7,7 +8,7 @@
 
 namespace {
 
-std::unique_ptr<caf::CAFCorpus> _corpus;
+std::unique_ptr<caf::CAFCorpus> corpus;
 
 std::vector<uint8_t> testcaseBuffer;
 
@@ -45,17 +46,17 @@ private:
 
 extern "C" {
 
-void caf_corpus_init() {
-  // TODO: Implement caf_corpus_init().
-}
-
 size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
                           size_t max_size, unsigned int seed) {
+  if (!corpus) {
+    corpus = caf::InitCorpus();
+  }
+
   auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = _corpus->GetTestCase(index);
+  auto testCase = corpus->GetTestCase(index);
 
   caf::Random<> rnd { };
-  caf::TestCaseMutator mutator { _corpus.get(), rnd };
+  caf::TestCaseMutator mutator { corpus.get(), rnd };
 
   auto mutatedTestCase = mutator.Mutate(testCase);
   *reinterpret_cast<size_t *>(mutated_out) = mutatedTestCase.index();
@@ -64,8 +65,10 @@ size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
 }
 
 size_t afl_pre_save_handler(uint8_t *data, size_t size, uint8_t **new_data) {
+  assert(corpus && "Corpus has not been loaded.");
+
   auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = _corpus->GetTestCase(index);
+  auto testCase = corpus->GetTestCase(index);
 
   caf::TestCaseSerializer serializer { };
   testcaseBuffer.clear();

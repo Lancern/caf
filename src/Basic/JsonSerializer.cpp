@@ -7,6 +7,7 @@
 #include "Basic/PointerType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
+#include "Basic/FunctionType.h"
 #include "Basic/Function.h"
 #include "Basic/Constructor.h"
 #include "Basic/JsonSerializer.h"
@@ -41,6 +42,8 @@ void JsonSerializer::Serialize(const Type& object, nlohmann::json& json) const {
     Serialize(caf::dyn_cast<PointerType>(object), json);
   } else if (caf::is_a<ArrayType>(object)) {
     Serialize(caf::dyn_cast<ArrayType>(object), json);
+  } else if (caf::is_a<FunctionType>(object)) {
+    Serialize(caf::dyn_cast<FunctionType>(object), json);
   } else {
     CAF_UNREACHABLE;
   }
@@ -84,6 +87,12 @@ void JsonSerializer::Serialize(const StructType& object, nlohmann::json& json) c
     ctorsJsonArr.push_back(std::move(ctorJson));
   }
   json["ctors"] = std::move(ctorsJsonArr);
+}
+
+void JsonSerializer::Serialize(const FunctionType& object, nlohmann::json& json) const {
+  auto signatureJson = nlohmann::json::object();
+  Serialize(object.signature(), signatureJson);
+  json["signature"] = std::move(signatureJson);
 }
 
 void JsonSerializer::Serialize(const FunctionSignature& object, nlohmann::json& json) const {

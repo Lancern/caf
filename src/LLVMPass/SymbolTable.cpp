@@ -6,6 +6,7 @@
 #include "Basic/PointerType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
+#include "Basic/FunctionType.h"
 #include "Basic/Constructor.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -116,15 +117,14 @@ std::unique_ptr<CAFStore> CAFSymbolTable::GetCAFStore() const {
   auto store = caf::make_unique<CAFStore>();
 
   for (const auto& func : _apis) {
-    AddLLVMFunctionToStore(func, *store);
+    AddLLVMApiFunctionToStore(func, *store);
   }
 
   return store;
 }
 
 Constructor CAFSymbolTable::CreateConstructorFromLLVMFunction(
-    const llvm::Function* func,
-    CAFStoreRef<Type> constructingType) const {
+    const llvm::Function* func, CAFStoreRef<Type> constructingType) const {
   auto& store = *constructingType.store();
 
   std::vector<CAFStoreRef<Type>> args { };
@@ -137,7 +137,8 @@ Constructor CAFSymbolTable::CreateConstructorFromLLVMFunction(
   return Constructor { std::move(signature) };
 }
 
-CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(const llvm::Type* type, CAFStore& store) const {
+CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(
+    const llvm::Type* type, CAFStore& store) const {
   if (type->isVoidTy()) {
     // Returns an empty CAFStoreRef instance to represent a void type.
     return CAFStoreRef<Type> { };
@@ -156,8 +157,8 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(const llvm::Type* type, CAF
     return store.CreateArrayType(type->getArrayNumElements(), element);
   } else if (type->isStructTy()) {
     // Add a StructType instance to the store.
-    // Is there already a struct with the same name in the store? If so, we
-    // return that struct definition directly.
+    // Is there already a struct with the same name in the store? If so, we return that struct
+    // definition directly.
     auto structType = llvm::dyn_cast<llvm::StructType>(type);
     if (structType->hasName()) {
       auto name = structType->getName().str();
@@ -183,6 +184,21 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(const llvm::Type* type, CAF
     }
 
     return cafStructType;
+  } else if (type->isFunctionTy()) {
+    // Add a FunctionType instance to the store.
+    auto funcTypeLLVM = llvm::dyn_cast<llvm::FunctionType>(type);
+
+    // Add the return type and argument types to the store.
+    auto retType = AddLLVMTypeToStore(funcTypeLLVM->getReturnType(), store);
+    std::vector<CAFStoreRef<Type>> argTypes { };
+    argTypes.reserve(funcTypeLLVM->getNumParams());
+    for (auto argTypeLLVM : funcTypeLLVM->params()) {
+      argTypes.push_back(AddLLVMTypeToStore(argTypeLLVM, store));
+    }
+
+    // Construct a new FunctionSignature that represents the signature of the current function type.
+    FunctionSignature signature { retType, std::move(argTypes) };
+    return store.CreateFunctionType(std::move(signature));
   } else {
     // Unrecognizable type. Returns an empty CAFStoreRef instance to
     // represent it.
@@ -194,7 +210,7 @@ CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(const llvm::Type* type, CAF
   }
 }
 
-CAFStoreRef<Function> CAFSymbolTable::AddLLVMFunctionToStore(
+CAFStoreRef<Function> CAFSymbolTable::AddLLVMApiFunctionToStore(
     const llvm::Function* func, CAFStore& store) const {
   // Add the types of arguments and return value to the store.
   std::vector<CAFStoreRef<Type>> argTypes { };

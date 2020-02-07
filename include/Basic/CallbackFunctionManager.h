@@ -41,7 +41,9 @@ public:
    * @see CallbackFunctionManager object.
    *
    * @param signature the signature of the callback function.
-   * @return CallbackFunctionIdentifier the identifier of the callback function.
+   * @return CallbackFunctionIdentifier the identifier of the callback function. The function
+   * identifiers are guaranteed to be distinct and within range [0, n) where n is the number of
+   * functions inserted into the @see CallbackFunctionManager object.
    */
   CallbackFunctionIdentifier Insert(const FunctionSignature& signature);
 

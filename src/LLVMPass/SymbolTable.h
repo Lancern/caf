@@ -119,8 +119,8 @@ private:
       CAFStoreRef<Type> constructingType) const;
 
   /**
-   * @brief Add the given LLVM type definition to the given CAFStore. The corresponding activators
-   * (constructors and factory functions) and all reachable types will be added to the CAFStore
+   * @brief Add the given LLVM type definition to the given CAFStore. The corresponding constructors
+   * (if the given type is a struct type) and all reachable types will be added to the CAFStore
    * recursively.
    *
    * @param type the type to add.
@@ -130,17 +130,17 @@ private:
   CAFStoreRef<Type> AddLLVMTypeToStore(const llvm::Type* type, CAFStore& store) const;
 
   /**
-   * @brief Add the given LLVM function to the given CAFStore as an API
-   * definition. The types reachable from the given function will be added
-   * to the store recursively. Construction of type definitions will use the
-   * constructors and factory functions defined in this symbol table.
+   * @brief Add the given LLVM function to the given CAFStore as an API definition. The types
+   * reachable from the given function will be added to the store recursively. Construction of type
+   * definitions will use the constructors defined in this symbol table.
    *
    * @param func the function to be added.
    * @param store the CAFStore.
    * @return CAFStoreRef<Function> pointer to the added CAF function
    * definition.
    */
-  CAFStoreRef<Function> AddLLVMFunctionToStore(const llvm::Function* func, CAFStore& store) const;
+  CAFStoreRef<Function> AddLLVMApiFunctionToStore(
+      const llvm::Function* func, CAFStore& store) const;
 };
 
 } // namespace caf

@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "Infrastructure/Hash.h"
 #include "Basic/Identity.h"
 #include "Basic/CAFStore.h"
 

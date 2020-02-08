@@ -254,6 +254,8 @@ Constructor CAFSymbolTable::CreateConstructorFromLLVMFunction(
 
 CAFStoreRef<Type> CAFSymbolTable::AddLLVMTypeToStore(
     SymbolTableFreezeContext& context, const llvm::Type* type) const {
+  assert(type && "Trying to add a nullptr of llvm::Type * to store.");
+
   auto store = context.store();
   if (type->isVoidTy()) {
     // Returns an empty CAFStoreRef instance to represent a void type.

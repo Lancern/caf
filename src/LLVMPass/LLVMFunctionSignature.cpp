@@ -11,14 +11,9 @@ LLVMFunctionSignature LLVMFunctionSignature::FromType(const llvm::Type* type) {
 }
 
 LLVMFunctionSignature LLVMFunctionSignature::FromType(const llvm::FunctionType* type) {
-  std::vector<llvm::Type *> paramTypes;
-  paramTypes.reserve(type->getNumParams());
-  for (auto t : type->params()) {
-    paramTypes.push_back(t);
-  }
-
   auto retType = type->getReturnType();
-  return LLVMFunctionSignature { retType, std::move(paramTypes) };
+  auto paramTypes = type->params();
+  return LLVMFunctionSignature { retType, paramTypes };
 }
 
 LLVMFunctionSignature LLVMFunctionSignature::FromFunction(const llvm::Function* func) {

@@ -203,11 +203,18 @@ bool isConstructor(const llvm::Function& fn) {
  * @return std::string the name of the type constructed by the given constructor.
  */
 std::string getConstructedTypeName(const llvm::Function& ctor) {
-  symbol::QualifiedName ctorName { caf::demangle(ctor.getName().str()) };
-  // The demangled name of the constructor should be something like
-  // `[<namespace>::]<className>::<funcName>`. We're interested in
-  // `[<namespace>::]<className>`.
-  return ctorName[-2];
+
+  auto AI = ctor.arg_begin();
+  const llvm::Argument *A0 = &*AI++;
+  auto thisPtrTy = A0->getType();
+  return thisPtrTy->getPointerElementType()->getStructName().str();
+
+
+  // symbol::QualifiedName ctorName { caf::demangle(ctor.getName().str()) };
+  // // The demangled name of the constructor should be something like
+  // // `[<namespace>::]<className>::<funcName>`. We're interested in
+  // // `[<namespace>::]<className>`.
+  // return ctorName[-2];
 }
 
 /**
@@ -241,10 +248,10 @@ std::string getProducingTypeName(const llvm::Function& factoryFunction) {
  */
 bool isTopLevelApi(const llvm::Function& fn) {
   // TODO: Uncomment the following if statement after the CafApi attribute patch has been applied.
-  // if(fn.hasFnAttribute(llvm::Attribute::CafApi)) {
-  //   fn.dump();
-  //   return true;
-  // }
+  if(fn.hasFnAttribute(llvm::Attribute::CafApi)) {
+    // fn.dump();
+    return true;
+  }
 
   if (fn.arg_size() != 1) {
     return false;
@@ -373,21 +380,25 @@ private:
       auto funcName = caf::demangle(func.getName().str());
       // funcName = removeParentheses(funcName);
 
+      if(func.isIntrinsic()) {
+        llvm::errs() << "CAFDriver.cpp: this is a intrinsic function: " << func.getName() << "\n";
+        continue;
+      }
       if (isConstructor(func)) {
         // This function is a constructor.
         auto typeName = getConstructedTypeName(func);
         _symbols.AddConstructor(typeName, &func);
-        llvm::errs() << "CAF: found constructor: " << func.getName().str()
-            << " for type: " << typeName
-            << "\n";
+        // llvm::errs() << "CAF: found constructor: " << func.getName().str()
+        //     << " for type: " << typeName
+        //     << "\n";
       } else if (isTopLevelApi(func)) {
         // This function is a top-level API.
         // _symbols.addApi(&func);
-        llvm::errs() << "CAF: found top-level API: " << func.getName().str()
-            << "\n";
+        // llvm::errs() << "CAF: found top-level API: " << func.getName().str()
+        //     << "\n";
         for (auto targetApi : getFunctionCallees(func)) {
-          llvm::errs() << "CAF: found fuzz-target API: "
-              << targetApi->getName().str() << "\n";
+          // llvm::errs() << "CAF: found fuzz-target API: "
+          //     << targetApi->getName().str() << "\n";
           _symbols.AddApi(targetApi);
         }
         _symbols.AddApi(&func);

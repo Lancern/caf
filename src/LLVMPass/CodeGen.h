@@ -27,8 +27,7 @@ public:
    */
   explicit CAFCodeGenerator()
     : _module(nullptr),
-      _symbols(nullptr),
-      _apiCounter(0)
+      _symbols(nullptr)
   { }
 
   /**
@@ -40,7 +39,6 @@ public:
   void SetContext(llvm::Module& module, const CAFSymbolTable& symbols) {
     _module = &module;
     _symbols = &symbols;
-    _apiCounter = 0;
   }
 
   /**
@@ -66,7 +64,17 @@ public:
 private:
   llvm::Module* _module;
   const CAFSymbolTable* _symbols;
-  int _apiCounter;
+
+  llvm::Value* value_zero;
+  llvm::Value* value_one;
+
+  llvm::Value* int32Size;
+
+  llvm::Value* int64Size;
+
+  llvm::CallInst* CreateNewCall(
+    llvm::IRBuilder<>& builder, llvm::Type ty, llvm::Value* value
+  );
 
   /**
    * @brief Create a call to `printf` to print the given value with the given format string.
@@ -79,6 +87,33 @@ private:
   llvm::CallInst* CreatePrintfCall(
       llvm::IRBuilder<>& builder, const std::string& format, llvm::Value* value);
 
+llvm::CallInst* CreateMemcpyCall(
+  llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value*src, llvm::Value* size);
+
+  llvm::CallInst* CreateMallocCall(
+      llvm::IRBuilder<>& builder, llvm::Value* size);
+
+  /**
+   * @brief Create a call of function "inputIntTo"
+   * 
+   * @param builder the IR builder to use.
+   * @param dest the destination of the input to
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* CreateInputIntToCall(
+    llvm::IRBuilder<>& builder, llvm::Value* dest);
+  
+  /**
+   * @brief Create a call of function "inputBytesTo"
+   * 
+   * @param builder the IR builder to use.
+   * @param dest the destination of the input to
+   * @param size the size of bytes to be input
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* CreateInputBtyesToCall(
+    llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value* size);
+    
   /**
    * @brief Create a call to `printf` to print the given string.
    *
@@ -105,7 +140,7 @@ private:
    *
    * @return llvm::Function* the function generated.
    */
-  llvm::Function* CreateDispatchFunction();
+  llvm::Function* CreateDispatchFunction(bool ctorDispatch = false, std::string structTypeName = std::string(""));
 
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.
@@ -115,7 +150,7 @@ private:
    * @param depth depth of the current generator.
    * @return llvm::Value* generated value.
    */
-  llvm::Value* AllocaStructValue(llvm::IRBuilder<>& builder, llvm::StructType* type, int depth);
+  llvm::Value* AllocaStructValue(llvm::IRBuilder<>& builder, llvm::StructType* type, int depth, bool init = true);
 
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.
@@ -126,7 +161,10 @@ private:
    * @return llvm::Value* allocated value.
    */
   llvm::Value* AllocaPointerType(
-      llvm::IRBuilder<>& builder, llvm::PointerType* type, int depth = 0);
+      llvm::IRBuilder<>& builder, llvm::PointerType* type, int depth = 0, bool init = true);
+
+    llvm::Value* AllocaVectorType(
+      llvm::IRBuilder<>& builder, llvm::VectorType* type, int depth = 0, bool init = true);
 
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.
@@ -137,7 +175,7 @@ private:
    * @return llvm::Value* the allocated value.
    */
   llvm::Value* AllocaArrayType(
-      llvm::IRBuilder<>& builder, llvm::ArrayType* type, int depth = 0);
+      llvm::IRBuilder<>& builder, llvm::ArrayType* type, int depth = 0, bool init = true);
 
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.
@@ -148,7 +186,7 @@ private:
    * @return llvm::Value* the allocated value.
    */
   llvm::Value* AllocaFunctionType(
-      llvm::IRBuilder<>& builder, llvm::FunctionType* type, int depth = 0);
+      llvm::IRBuilder<>& builder, llvm::FunctionType* type, int depth = 0, bool init = true);
 
   /**
    * @brief Allocate a value of the given type.
@@ -159,7 +197,7 @@ private:
    * @return llvm::Value* the allocated value.
    */
   llvm::Value* AllocaValueOfType(
-      llvm::IRBuilder<>& builder, llvm::Type* type, int depth = 0);
+      llvm::IRBuilder<>& builder, llvm::Type* type, int depth = 0, bool init = true);
 
   /**
    * @brief Create a switch case inside which a call to the API function specified by the switch
@@ -171,7 +209,7 @@ private:
    * switch case label and the basic block for the switch case.
    */
   std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CreateCallApiCase(
-      llvm::Function* callee, llvm::Function* caller);
+      llvm::Function* callee, llvm::Function* caller, int caseCounter, bool hasSret = false);
 };
 
 } // namespace caf

@@ -79,6 +79,7 @@ public:
    * table.
    */
   const std::vector<llvm::Function *>& apis() const { return _apis; }
+  const std::unordered_map<std::string, std::vector<llvm::Function *>> ctors() const { return _ctors; }
 
   /**
    * @brief Get a list of constructors contained in the symbol table.

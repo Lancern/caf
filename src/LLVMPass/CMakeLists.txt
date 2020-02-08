@@ -16,3 +16,5 @@ add_llvm_loadable_module(CAFPass
 
 target_link_libraries(CAFPass PUBLIC CAFInfrastructure)
 target_link_libraries(CAFPass PUBLIC CAFBasicLLVM)
+
+add_subdirectory(libCAF)

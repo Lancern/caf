@@ -205,7 +205,6 @@ private:
   llvm::Value* AllocaFunctionType(
       llvm::IRBuilder<>& builder, llvm::FunctionType* type, int depth = 0, bool init = true);
 
-  llvm::Function* generateMallocaValueOfKindDispatch();
   /**
    * @brief Allocate a value of the given type.
    *

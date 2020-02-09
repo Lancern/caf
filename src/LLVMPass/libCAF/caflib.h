@@ -1,7 +1,7 @@
 #ifndef CAFLIB
 #define CAFLIB
 
-#include<stdio.h>
+#include<cstdio>
 #include<vector>
 
 void inputIntTo(int *dest)
@@ -32,7 +32,7 @@ void saveToObjectList(long objPtr) // _Z16saveToObjectListl
     __caf_object_list.push_back(objPtr);
 }
 
-long getFromObjectList(long objIdx) // _Z17getFromObjectListl
+long getFromObjectList(int objIdx) // _Z17getFromObjectListi
 {
     if(objIdx >= __caf_object_list.size())return long(0);
     return __caf_object_list[objIdx];

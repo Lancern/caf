@@ -9,6 +9,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #ifndef CAF_RECURSIVE_MAX_DEPTH
 #define CAF_RECURSIVE_MAX_DEPTH 16
@@ -253,16 +254,16 @@ llvm::CallInst* CAFCodeGenerator::CreateGetFromObjectListCall(
 
     auto getFromObjectListFunc = llvm::cast<llvm::Function>(
         _module->getOrInsertFunction(
-            "_Z17getFromObjectListl",
+            "_Z17getFromObjectListi",
             builder.getInt64Ty(),
-            builder.getInt64Ty()
+            builder.getInt32Ty()
         )
     );
-    auto objIdxToInt64 = builder.CreateBitCast(
+    auto objIdxToInt32 = builder.CreateBitCast(
       objIdx,
-      builder.getInt64Ty()
+      builder.getInt32Ty()
     );
-    llvm::Value* params[] = { objIdxToInt64 };
+    llvm::Value* params[] = { objIdxToInt32 };
     return builder.CreateCall(getFromObjectListFunc, params);
 }
 
@@ -440,29 +441,9 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
     llvm::IRBuilder<>& builder, llvm::StructType* type, int depth, bool init) {
   // init = false;
   // llvm::Value* argAlloca = builder.CreateAlloca(type);
-  // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
-  // if (llvm::StructType *ST = dynamic_cast<llvm::StructType*>(type))
-  //   TypeSize = _module->getDataLayout().getStructLayout(type)->getSizeInBytes();
-  
-  // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a struct type\n");
-  // llvm::Value* argAlloca = llvm::CallInst::CreateMalloc(insertBefore,
-  //                                               builder.getInt32Ty(),
-  //                                               type,
-  //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-  //                                               nullptr,
-  //                                               nullptr,
-  //                                               "struct_malloc");
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
                            
   if(init == false)return argAlloca;
-
-  auto inputKind = builder.CreateAlloca(
-      llvm::IntegerType::getInt32Ty(_module->getContext()),
-      nullptr,
-      "input_kind");
-  CreateInputIntToCall(builder, inputKind);
-  auto inputKindValue = builder.CreateLoad(inputKind);
-  CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
 
   auto ctorId = builder.CreateAlloca(
     llvm::IntegerType::getInt32Ty(_module->getContext()),
@@ -501,15 +482,6 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
 llvm::Value* CAFCodeGenerator::AllocaPointerType(
     llvm::IRBuilder<>& builder, llvm::PointerType* type, int depth, bool init) {
   
-  // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
-  // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a pointer type\n");
-  // llvm::Value* argAlloca = llvm::CallInst::CreateMalloc(insertBefore,
-  //                                               builder.getInt32Ty(),
-  //                                               type,
-  //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-  //                                               nullptr,
-  //                                               nullptr,
-  //                                               "pointer_malloc");
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
   // auto argAlloca = builder.CreateAlloca(type); // 按类型分配地址空间
   // if(init == false)return argAlloca;
@@ -521,14 +493,6 @@ llvm::Value* CAFCodeGenerator::AllocaPointerType(
         llvm::dyn_cast<llvm::PointerType>(type));
     builder.CreateStore(nil, argAlloca);
   } else {
-    auto inputKind = builder.CreateAlloca(
-      llvm::IntegerType::getInt32Ty(_module->getContext()),
-      nullptr,
-      "input_kind");
-    CreateInputIntToCall(builder, inputKind);
-    auto inputKindValue = builder.CreateLoad(inputKind);
-    CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
-
     auto pointeeValue = AllocaValueOfType(builder, pointeeType, depth + 1, init);
     builder.CreateStore(pointeeValue, argAlloca);
   }
@@ -539,27 +503,10 @@ llvm::Value* CAFCodeGenerator::AllocaPointerType(
 llvm::Value* CAFCodeGenerator::AllocaArrayType(
     llvm::IRBuilder<>& builder, llvm::ArrayType* type, int depth, bool init) {
 
-  // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
-  // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a array type\n");
-  // llvm::Value* arrayAddr = llvm::CallInst::CreateMalloc(insertBefore,
-  //                                               builder.getInt32Ty(),
-  //                                               type,
-  //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-  //                                               nullptr,
-  //                                               nullptr,
-  //                                               "array_malloc");
   llvm::Value* arrayAddr = CreateMallocCall(builder, type);
   // auto arrayAddr = builder.CreateAlloca(type);
 
   if(init == true) {
-    auto inputKind = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()),
-        nullptr,
-        "input_kind");
-    CreateInputIntToCall(builder, inputKind);
-    auto inputKindValue = builder.CreateLoad(inputKind);
-    CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
-
     auto arraySize = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -587,27 +534,10 @@ llvm::Value* CAFCodeGenerator::AllocaArrayType(
 llvm::Value* CAFCodeGenerator::AllocaVectorType(
     llvm::IRBuilder<>& builder, llvm::VectorType* type, int depth, bool init) {
   // init = false;
-  // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
-  // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a vector type\n");
-  // llvm::Value* vectorAddr = llvm::CallInst::CreateMalloc(insertBefore,
-  //                                               builder.getInt32Ty(),
-  //                                               type,
-  //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-  //                                               nullptr,
-  //                                               nullptr,
-  //                                               "vector_malloc");
   llvm::Value* vectorAddr = CreateMallocCall(builder, type);
   // auto vectorAddr = builder.CreateAlloca(type);
 
   if(init == true) {
-    auto inputKind = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()),
-        nullptr,
-        "input_kind");
-    CreateInputIntToCall(builder, inputKind);
-    auto inputKindValue = builder.CreateLoad(inputKind);
-    CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
-
     auto vectorSize = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -637,26 +567,8 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
   // TODO: Add code here to allocate a value of a function type.
   auto pointerType = type->getPointerTo();
   // auto pointerAlloca = builder.CreateAlloca(pointerType);
-
-  // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(pointerType);
-  // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a function type\n");
-  // llvm::Value* pointerAlloca = llvm::CallInst::CreateMalloc(insertBefore,
-  //                                               builder.getInt32Ty(),
-  //                                               pointerType,
-  //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-  //                                               nullptr,
-  //                                               nullptr,
-  //                                               "function_malloc");
   llvm::Value* pointerAlloca = CreateMallocCall(builder, pointerType);
   if(init == true) {
-    auto inputKind = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()),
-        nullptr,
-        "input_kind");
-    CreateInputIntToCall(builder, inputKind);
-    auto inputKindValue = builder.CreateLoad(inputKind);
-    CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
-
     auto funcId = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -684,59 +596,96 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
 
 llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     llvm::IRBuilder<>& builder, llvm::Type* type, int depth, bool init) {
-      
-  if (type->isIntegerTy() || type->isFloatingPointTy()) {
-    // auto valueAddr = builder.CreateAlloca(type);
-    // unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
-    // auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a int or float type\n");
-    // llvm::Value* valueAddr = llvm::CallInst::CreateMalloc(insertBefore,
-    //                                               builder.getInt32Ty(),
-    //                                               type,
-    //                                               llvm::ConstantInt::get(builder.getInt32Ty(), TypeSize),
-    //                                               nullptr,
-    //                                               nullptr,
-    //                                               "int_or_float_malloc");
-    llvm::Value* valueAddr = CreateMallocCall(builder, type);
-    // insertBefore->eraseFromParent();
-    if(init == true) { // input_kind = 0
-      auto inputKind = builder.CreateAlloca(
+
+  // auto beginBlock = llvm::BasicBlock::Create(
+  //     builder.getContext(), "begin.malloc.object", 
+  //     builder.GetInsertBlock()->getParent());
+  // builder.CreateBr(beginBlock);
+  // builder.SetInsertPoint(beginBlock);
+
+  auto inputKind = builder.CreateAlloca(
           llvm::IntegerType::getInt32Ty(_module->getContext()),
           nullptr,
           "input_kind");
       CreateInputIntToCall(builder, inputKind);
       auto inputKindValue = builder.CreateLoad(inputKind);
       CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
+  
+  auto kindEQ4 = builder.CreateICmpEQ(inputKindValue, builder.getInt32(4), "kindEQ4");
 
-      auto inputSize = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()),
-        nullptr,
-        "input_size");
-      CreateInputIntToCall(builder, inputSize);
-      auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
-      CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
+  auto thenBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "reuse.object.then", 
+      builder.GetInsertBlock()->getParent());
+  auto elseBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "reuse.object.else",
+      builder.GetInsertBlock()->getParent());
+  auto afterBlock = llvm::BasicBlock::Create(
+      builder.getContext(),"after.malloc.object",
+      builder.GetInsertBlock()->getParent());
+  
+  builder.CreateCondBr(kindEQ4, thenBlock, elseBlock);
 
-      CreateInputBtyesToCall(builder, valueAddr, inputSizeValue);
-      CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(valueAddr));
+  builder.SetInsertPoint(afterBlock);
+  auto phiObj = builder.CreatePHI(type->getPointerTo(), 2);
+
+  builder.SetInsertPoint(thenBlock); 
+  // {
+    auto objectIdx = builder.CreateAlloca(
+          llvm::IntegerType::getInt32Ty(_module->getContext()),
+          nullptr,
+          "object_idx");
+    CreateInputIntToCall(builder, objectIdx);
+    auto objectIdxValue = builder.CreateLoad(objectIdx);
+    CreatePrintfCall(builder, "object_idx = %d\n", objectIdxValue);
+
+    auto ObjPtrToInt64 = CreateGetFromObjectListCall(builder, objectIdxValue);
+    auto thenRet = builder.CreateIntToPtr(ObjPtrToInt64, type->getPointerTo());
+    builder.CreateBr(afterBlock);
+    phiObj->addIncoming(thenRet, builder.GetInsertBlock());
+  // }
+  
+  llvm::Value* elseRet;
+  builder.SetInsertPoint(elseBlock);
+  // {
+    if (type->isIntegerTy() || type->isFloatingPointTy()) {
+      llvm::Value* valueAddr = CreateMallocCall(builder, type);
+      // insertBefore->eraseFromParent();
+      if(init == true) { // input_kind = 0
+        auto inputSize = builder.CreateAlloca(
+          llvm::IntegerType::getInt32Ty(_module->getContext()),
+          nullptr,
+          "input_size");
+        CreateInputIntToCall(builder, inputSize);
+        auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
+        CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
+
+        CreateInputBtyesToCall(builder, valueAddr, inputSizeValue);
+        CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(valueAddr));
+      }
+      elseRet = valueAddr;
+    } else if (type->isStructTy()) {  // input_kind = 1
+      elseRet = AllocaStructValue(builder, llvm::dyn_cast<llvm::StructType>(type), depth, init);
+    } else if (type->isPointerTy()) { // input_kind = 2
+      elseRet = AllocaPointerType(builder, llvm::dyn_cast<llvm::PointerType>(type), depth, init);
+    } else if (type->isArrayTy()) {  // input_kind = 3
+      elseRet = AllocaArrayType(builder, llvm::dyn_cast<llvm::ArrayType>(type), depth, init);
+    } else if(type->isVectorTy()) {  // input_kind = 3
+      elseRet = AllocaVectorType(builder, llvm::dyn_cast<llvm::VectorType>(type), depth, init);
+    } else if (type->isFunctionTy()) {  // input_kind = 5
+      elseRet = AllocaFunctionType(builder, llvm::dyn_cast<llvm::FunctionType>(type), depth, init);
+    } else {
+      llvm::errs() << "Trying to alloca unrecognized type: "
+          << type->getTypeID() << "\n";
+      type->dump();
+      elseRet = builder.CreateAlloca(type);
     }
-    return valueAddr;
-  } else if (type->isStructTy()) {  // input_kind = 1
-    // return AllocaStructValue(builder, llvm::dyn_cast<llvm::StructType>(type), depth, init);
-    return AllocaStructValue(builder, llvm::dyn_cast<llvm::StructType>(type), depth, init);
-  } else if (type->isPointerTy()) { // input_kind = 2
-    return AllocaPointerType(builder, llvm::dyn_cast<llvm::PointerType>(type), depth, init);
-    // return AllocaPointerType(builder, llvm::dyn_cast<llvm::PointerType>(type), depth, false);
-  } else if (type->isArrayTy()) {  // input_kind = 3
-    return AllocaArrayType(builder, llvm::dyn_cast<llvm::ArrayType>(type), depth, init);
-  } else if(type->isVectorTy()) {  // input_kind = 3
-    return AllocaVectorType(builder, llvm::dyn_cast<llvm::VectorType>(type), depth, init);
-  } else if (type->isFunctionTy()) {  // input_kind = 5
-    return AllocaFunctionType(builder, llvm::dyn_cast<llvm::FunctionType>(type), depth, init);
-  } else {
-    llvm::errs() << "Trying to alloca unrecognized type: "
-        << type->getTypeID() << "\n";
-    type->dump();
-    return builder.CreateAlloca(type);
-  }
+    // builder.SetInsertPoint(elseBlock);
+    builder.CreateBr(afterBlock);
+    phiObj->addIncoming(elseRet, builder.GetInsertBlock());
+  // }
+  builder.SetInsertPoint(afterBlock);
+
+  return phiObj;
 }
 
 std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallApiCase(
@@ -759,7 +708,7 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
   std::vector<llvm::Value *> calleeArgs { };
   int arg_num = 1;
   for (const auto& arg: callee->args()) {
-    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true);
+    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true); 
     CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
 
     auto argValue = builder.CreateLoad(argAlloca);
@@ -807,24 +756,6 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
       llvm::Type::getInt32Ty(context), caseCounter);
   return std::make_pair(caseId, invokeApiCase);
 }
-
-
-llvm::Function* CAFCodeGenerator::generateMallocaValueOfKindDispatch()
-{
-  llvm::IRBuilder<> builder { _module->getContext() };
-  auto MallocValueOfTypeDispatch = llvm::cast<llvm::Function>(
-      _module->getOrInsertFunction(
-          "__caf_dispatch_malloc_value_of_kind",
-          builder.getInt64Ty(), // malloc addr to int
-          builder.getInt32Ty() // kind
-      )
-  );
-  // auto EntryBlock = llvm::BasicBlock::Create(
-  //     MallocValueOfTypeDispatch->getContext(), "entry", MallocValueOfTypeDispatch);
-  
-  return MallocValueOfTypeDispatch;
-}
-
 
 void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
     const std::vector<Either<llvm::Function *, LLVMFunctionSignature>>& candidates) {

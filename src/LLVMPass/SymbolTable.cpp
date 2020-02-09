@@ -198,6 +198,10 @@ void CAFSymbolTable::clear() {
 
 void CAFSymbolTable::AddApi(llvm::Function* func) {
   auto funcName = func->getName().str();
+  if(func->isIntrinsic()) {
+    llvm::errs() << "AddApi failed: this is a intrinsic function: " << funcName << "\n";
+    return;
+  }
   if (_apiNames.find(funcName) != _apiNames.end()) {
     return;
   }
@@ -211,6 +215,11 @@ void CAFSymbolTable::AddConstructor(const std::string& typeName, llvm::Function*
 }
 
 void CAFSymbolTable::AddCallbackFunctionCandidate(llvm::Function* candidate) {
+  if(candidate->isIntrinsic()) {
+    llvm::errs() << "AddCallbackFunctionCandidate failed: this is a intrinsic function: "
+     << candidate->getName().str() << "\n";
+    return;
+  }
   _callbackFunctionGrouper.Register(candidate);
 }
 

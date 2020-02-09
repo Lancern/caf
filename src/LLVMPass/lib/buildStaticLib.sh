@@ -1,5 +1,5 @@
 #!/bin/bash
 
-clang caflib.c -c
-ar crv caflib.a caflib.o
+clang ./caflib.cpp -c
+ar crv ./caflib.a caflib.o
 

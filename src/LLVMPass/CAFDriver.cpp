@@ -375,15 +375,15 @@ private:
     // TODO: This function need to be refactored to allow end users to define
     // TODO: custom filters for top-level APIs.
     for (auto& func : module) {
+      if(func.isIntrinsic()) {
+        llvm::errs() << "AddApi failed: this is a intrinsic function: " << func.getName().str() << "\n";
+        continue;
+      }
       _symbols.AddCallbackFunctionCandidate(&func);
 
       auto funcName = caf::demangle(func.getName().str());
       // funcName = removeParentheses(funcName);
 
-      if(func.isIntrinsic()) {
-        llvm::errs() << "CAFDriver.cpp: this is a intrinsic function: " << func.getName() << "\n";
-        continue;
-      }
       if (isConstructor(func)) {
         // This function is a constructor.
         auto typeName = getConstructedTypeName(func);

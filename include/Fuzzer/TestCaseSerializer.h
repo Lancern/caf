@@ -95,11 +95,11 @@ public:
     details::TestCaseSerializationContext context;
 
     // Write the number of function calls to the output stream.
-    WriteTrivial<4>(o, testCase.calls().size());
+    WriteTrivial<8>(o, testCase.calls().size());
 
     // Write each function call to the output stream.
     for (const auto& funcCall : testCase.calls()) {
-      Write(o, funcCall);
+      Write(o, funcCall, context);
     }
   }
 
@@ -136,7 +136,7 @@ private:
         // Write the number of bytes followed by the raw binary data of the value to the output
         // stream.
         const auto& bitsValue = caf::dyn_cast<BitsValue>(value);
-        WriteTrivial<4>(o, bitsValue.size());
+        WriteTrivial<8>(o, bitsValue.size());
         o.write(bitsValue.data(), bitsValue.size());
         break;
       }
@@ -155,7 +155,7 @@ private:
       case ValueKind::ArrayValue: {
         // Write the number of elements and each element into the output stream.
         const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
-        WriteTrivial<4>(o, arrayValue.size());
+        WriteTrivial<8>(o, arrayValue.size());
         for (auto el : arrayValue.elements()) {
           Write(o, *el);
         }
@@ -172,7 +172,7 @@ private:
       }
       case ValueKind::PlaceholderValue: {
         const auto& placeholderValue = caf::dyn_cast<PlaceholderValue>(value);
-        WriteTrivial<4>(o, placeholderValue.valueIndex());
+        WriteTrivial<8>(o, placeholderValue.valueIndex());
         break;
       }
       default: CAF_UNREACHABLE;
@@ -194,14 +194,14 @@ private:
     WriteTrivial<8>(o, funcCall.func()->id());
 
     // Write arguments.
-    for (const auto& arg : funcCall.args()) {
-      if (context.HasValue(arg.get())) {
+    for (auto arg : funcCall.args()) {
+      if (context.HasValue(arg)) {
         // This argument has already been serialized into the underlying stream.
         // Use a PlaceholderValue referencing that object instead to reduce data size.
-        PlaceholderValue ph { arg->type(), context.GetValueIndex(arg.get()) };
+        PlaceholderValue ph { arg->type(), context.GetValueIndex(arg) };
         Write(o, ph);
       } else {
-        context.AddValue(arg.get());
+        context.AddValue(arg);
         Write(o, *arg);
       }
     }

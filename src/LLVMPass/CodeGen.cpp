@@ -603,13 +603,28 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   // builder.CreateBr(beginBlock);
   // builder.SetInsertPoint(beginBlock);
 
-  auto inputKind = builder.CreateAlloca(
+  llvm::Value* inputKindValue;
+  if(init == true) {
+    auto inputKind = builder.CreateAlloca(
           llvm::IntegerType::getInt32Ty(_module->getContext()),
           nullptr,
           "input_kind");
       CreateInputIntToCall(builder, inputKind);
-      auto inputKindValue = builder.CreateLoad(inputKind);
+      inputKindValue = builder.CreateLoad(inputKind);
       CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
+  } else {
+    if(type->isIntegerTy() || type->isFloatingPointTy()) {
+      inputKindValue = builder.getInt32(0);
+    } else if(type->isPointerTy()) {
+      inputKindValue = builder.getInt32(1);
+    } else if(type->isArrayTy() || type->isVectorTy()) {
+      inputKindValue = builder.getInt32(2);
+    } else if(type->isStructTy()) {
+      inputKindValue = builder.getInt32(3);
+    } else if(type->isFunctionTy()) {
+      inputKindValue = builder.getInt32(5);
+    }
+  }
   
   auto kindEQ4 = builder.CreateICmpEQ(inputKindValue, builder.getInt32(4), "kindEQ4");
 

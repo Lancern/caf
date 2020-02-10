@@ -7,28 +7,37 @@
 
 namespace caf {
 
+class Value;
+
 /**
- * @brief Represent a test case, a.k.a. a sequence of function calls described
- * by FunctionCall instances.
+ * @brief Represent a test case, a.k.a. a sequence of API function calls and a pool of objects used
+ * as arguments and return values of these function calls.
  *
  */
 class TestCase {
 public:
   /**
-   * @brief Construct a new TestCase object.
-   *
-   */
-  explicit TestCase() noexcept
-    : _sequence { }
-  { }
-
-  /**
    * @brief Add a function call to the test case.
    *
+   * @param call the API function call to add.
    */
-  void AddFunctionCall(FunctionCall call) {
-    _sequence.push_back(std::move(call));
-  }
+  void AddFunctionCall(FunctionCall call);
+
+  /**
+   * @brief Get the function call at the given index.
+   *
+   * @param index the index of the function call.
+   * @return FunctionCall& the function call at the given index.
+   */
+  FunctionCall& GetFunctionCall(size_t index) { return _calls[index]; }
+
+  /**
+   * @brief Get the function call at the given index.
+   *
+   * @param index the index of the function call.
+   * @return const FunctionCall& the function call at the given index.
+   */
+  const FunctionCall& GetFunctionCall(size_t index) const { return _calls[index]; }
 
   /**
    * @brief Get the sequence of function calls carried out by the test case.
@@ -36,10 +45,10 @@ public:
    * @return const std::vector<FunctionCall> & the sequence of function calls carried out by the
    * test case.
    */
-  const std::vector<FunctionCall>& calls() const noexcept { return _sequence; }
+  const std::vector<FunctionCall>& calls() const { return _calls; }
 
 private:
-  std::vector<FunctionCall> _sequence;
+  std::vector<FunctionCall> _calls;
 }; // class TestCase
 
 } // namespace caf

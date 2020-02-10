@@ -49,7 +49,7 @@ public:
   /**
    * @brief Get the arguments to the function being called.
    *
-   * @return const std::vector<Argument>& arguments to the function being called.
+   * @return const std::vector<Value *>& arguments to the function being called.
    */
   const std::vector<Value *>& args() const { return _args; }
 

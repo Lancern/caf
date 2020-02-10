@@ -4,7 +4,7 @@
 #include "Basic/PointerType.h"
 #include "Fuzzer/Value.h"
 
-#include <cstddef>
+#include <cstdint>
 
 namespace caf {
 
@@ -21,7 +21,7 @@ public:
    * @param functionId the ID of the pointee function.
    * @param type the type of the function pointer.
    */
-  explicit FunctionPointerValue(CAFObjectPool* pool, size_t functionId, const PointerType* type)
+  explicit FunctionPointerValue(CAFObjectPool* pool, uint64_t functionId, const PointerType* type)
     : Value { pool, ValueKind::FunctionPointerValue, type },
       _functionId(functionId)
   { }
@@ -29,12 +29,12 @@ public:
   /**
    * @brief Get the ID of the pointee function.
    *
-   * @return size_t ID of the pointee function.
+   * @return uint64_t ID of the pointee function.
    */
-  size_t functionId() const { return _functionId; }
+  uint64_t functionId() const { return _functionId; }
 
 private:
-  size_t _functionId;
+  uint64_t _functionId;
 }; // class FunctionPointerValue
 
 } // namespace caf

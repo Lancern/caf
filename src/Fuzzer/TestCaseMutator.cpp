@@ -1,3 +1,4 @@
+#include "Infrastructure/Memory.h"
 #include "Basic/BitsType.h"
 #include "Basic/FunctionType.h"
 #include "Fuzzer/BitsValue.h"

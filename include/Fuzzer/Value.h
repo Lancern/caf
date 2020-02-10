@@ -39,7 +39,13 @@ enum class ValueKind : int {
    * @brief The value is an instance of `StructType`.
    *
    */
-  StructValue
+  StructValue,
+
+  /**
+   * @brief The value is an instance of `PlaceholderValue`.
+   *
+   */
+  PlaceholderValue,
 };
 
 /**

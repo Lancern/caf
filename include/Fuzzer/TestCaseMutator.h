@@ -13,6 +13,7 @@ class PointerValue;
 class FunctionPointerValue;
 class ArrayValue;
 class StructValue;
+class PlaceholderValue;
 
 /**
  * @brief Provide mutation strategy for test cases.
@@ -47,26 +48,22 @@ public:
    */
   CAFCorpusTestCaseRef Mutate(CAFCorpusTestCaseRef testCase);
 
-  /**
-   * @brief Mutate the given value.
-   *
-   * @param value the value to be mutated.
-   * @return Value* pointer to the mutated value.
-   */
-  Value* MutateValue(const Value* value);
-
 private:
+  class MutationContext;
+
   CAFCorpus* _corpus;
   Random<>& _rnd;
   ValueGenerator _valueGen;
 
-  CAFCorpusTestCaseRef Splice(CAFCorpusTestCaseRef previous);
+  CAFCorpusTestCaseRef Splice(MutationContext& context);
 
-  CAFCorpusTestCaseRef InsertCall(CAFCorpusTestCaseRef previous);
+  CAFCorpusTestCaseRef InsertCall(MutationContext& context);
 
-  CAFCorpusTestCaseRef RemoveCall(CAFCorpusTestCaseRef previous);
+  CAFCorpusTestCaseRef RemoveCall(MutationContext& context);
 
-  CAFCorpusTestCaseRef MutateSequence(CAFCorpusTestCaseRef previous);
+  CAFCorpusTestCaseRef MutateSequence(MutationContext& context);
+
+  void FixPlaceholderValuesAfterSequenceMutation(CAFCorpusTestCaseRef tc);
 
   void FlipBits(uint8_t* buffer, size_t size, size_t width);
 
@@ -76,15 +73,26 @@ private:
 
   Value* MutateBitsValue(const BitsValue* value);
 
-  Value* MutatePointerValue(const PointerValue* value);
+  Value* MutatePointerValue(const PointerValue* value, MutationContext& context);
 
   Value* MutateFunctionPointerValue(const FunctionPointerValue* value);
 
-  Value* MutateArrayValue(const ArrayValue* value);
+  Value* MutateArrayValue(const ArrayValue* value, MutationContext& context);
 
-  Value* MutateStructValue(const StructValue* value);
+  Value* MutateStructValue(const StructValue* value, MutationContext& context);
 
-  CAFCorpusTestCaseRef MutateArgument(CAFCorpusTestCaseRef previous);
+  Value* MutatePlaceholderValue(const PlaceholderValue* value, MutationContext& context);
+
+  /**
+   * @brief Mutate the given value.
+   *
+   * @param value the value to be mutated.
+   * @param context the mutation context.
+   * @return Value* pointer to the mutated value.
+   */
+  Value* MutateValue(const Value* value, MutationContext& context);
+
+  CAFCorpusTestCaseRef MutateArgument(MutationContext& context);
 }; // class TestCaseMutator
 
 

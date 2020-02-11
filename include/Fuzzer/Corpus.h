@@ -23,6 +23,15 @@ class CAFCorpus;
 class CAFCorpusTestCaseRef {
 public:
   /**
+   * @brief Construct a new CAFCorpusTestCaseRef object that represents an empty reference.
+   *
+   */
+  explicit CAFCorpusTestCaseRef()
+    : _corpus(nullptr),
+      _index(0)
+  { }
+
+  /**
    * @brief Construct a new CAFCorpusTestCaseRef object.
    *
    * @param corpus the corpus owning the referenced `TestCase` object.
@@ -46,6 +55,17 @@ public:
    * @return index_type the index of the referenced `TestCase` instance.
    */
   size_t index() const { return _index; }
+
+  /**
+   * @brief Determine whether this reference is valid, a.k.a. it actually references to a valid
+   * object.
+   *
+   * @return true if this reference is valid.
+   * @return false if this reference is not valid.
+   */
+  bool valid() const { return static_cast<bool>(_corpus); }
+
+  operator bool() const { return valid(); }
 
   TestCase& operator*() const { return *get(); }
 
@@ -157,6 +177,13 @@ public:
   CAFObjectPool* GetOrCreateObjectPool(uint64_t typeId);
 
   /**
+   * @brief Get a special object pool that owns all placeholder values.
+   *
+   * @return CAFObjectPool* pointer to a special object pool that owns all placeholder values.
+   */
+  CAFObjectPool* GetPlaceholderObjectPool();
+
+  /**
    * @brief Randomly select a test case from this corpus, using the given random number generator.
    *
    * @tparam RNG the type of the random number generator.
@@ -171,6 +198,7 @@ public:
 private:
   std::unique_ptr<CAFStore> _store;
   std::unordered_map<uint64_t, std::unique_ptr<CAFObjectPool>> _pools;
+  std::unique_ptr<CAFObjectPool> _placeholderPool;
   std::vector<TestCase> _testCases;
 };
 

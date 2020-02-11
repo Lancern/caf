@@ -13,6 +13,13 @@ class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
+class BitsValue;
+class PointerValue;
+class FunctionPointerValue;
+class ArrayValue;
+class StructValue;
+class PlaceholderValue;
+class TestCase;
 
 /**
  * @brief Generate test case values.
@@ -35,41 +42,41 @@ public:
    * @brief Generate a new bits type value.
    *
    * @param type type of the bits type value to be generated.
-   * @return Value* the generated value.
+   * @return BitsValue* the generated value.
    */
-  Value* GenerateNewBitsType(const BitsType* type);
+  BitsValue* GenerateNewBitsType(const BitsType* type);
 
   /**
    * @brief Generate a new pointer type value.
    *
    * @param type type of the pointer type value to be generated.
-   * @return Value* the generated value.
+   * @return PointerValue* the generated value.
    */
-  Value* GenerateNewPointerType(const PointerType* type);
+  PointerValue* GenerateNewPointerType(const PointerType* type);
 
   /**
    * @brief Generate a new function pointer type value.
    *
    * @param type type of the function pointer.
-   * @return Value* the generated value.
+   * @return FunctionPointerValue* the generated value.
    */
-  Value* GenerateNewFunctionPointerType(const PointerType* type);
+  FunctionPointerValue* GenerateNewFunctionPointerType(const PointerType* type);
 
   /**
    * @brief Generate a new array type value.
    *
    * @param type type of the array type value to be generated.
-   * @return Value* the generated value.
+   * @return ArrayValue* the generated value.
    */
-  Value* GenerateNewArrayType(const ArrayType* type);
+  ArrayValue* GenerateNewArrayType(const ArrayType* type);
 
   /**
    * @brief Generate a new struct type value.
    *
    * @param type type of the struct type value to be generated.
-   * @return Value* the generated value.
+   * @return StructValue* the generated value.
    */
-  Value* GenerateNewStructType(const StructType* type);
+  StructValue* GenerateNewStructType(const StructType* type);
 
   /**
    * @brief Generate a new value of the given type.
@@ -92,6 +99,19 @@ public:
    * @return Value* pointer to the generated `Value` instance wrapping around the argument.
    */
   Value* GenerateValue(const Type* type);
+
+  /**
+   * @brief Generate the argument at the given test case location.
+   *
+   * This function may also generate a placeholder referencing a previous function call return
+   * value, with a specific probability.
+   *
+   * @param testCase the test case.
+   * @param callIndex the index of the call.
+   * @param argIndex the index of the argument of the specified call.
+   * @return Value* the generated value.
+   */
+  Value* GenerateValueOrPlaceholder(const TestCase* testCase, size_t callIndex, size_t argIndex);
 
   /**
    * @brief Generate a function call. The callee is selected randomly within the `CAFStore` instance

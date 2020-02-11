@@ -60,6 +60,21 @@ public:
    */
   const std::vector<CAFStoreRef<Type>>& args() const { return _args; }
 
+  /**
+   * @brief Get the number of arguments.
+   *
+   * @return size_t the number of arguments.
+   */
+  size_t GetArgCount() const { return _args.size(); }
+
+  /**
+   * @brief Get the type of the argument at the given index.
+   *
+   * @param index the index of the argument.
+   * @return CAFStoreRef<Type> the type of the argument.
+   */
+  CAFStoreRef<Type> GetArgType(size_t index) const { return _args[index]; }
+
 private:
   CAFStoreRef<Type> _returnType;
   std::vector<CAFStoreRef<Type>> _args;

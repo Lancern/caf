@@ -40,6 +40,13 @@ public:
   const FunctionCall& GetFunctionCall(size_t index) const { return _calls[index]; }
 
   /**
+   * @brief Get the number of function calls.
+   *
+   * @return size_t the number of function calls.
+   */
+  size_t GetFunctionCallCount() const { return _calls.size(); }
+
+  /**
    * @brief Get the sequence of function calls carried out by the test case.
    *
    * @return const std::vector<FunctionCall> & the sequence of function calls carried out by the

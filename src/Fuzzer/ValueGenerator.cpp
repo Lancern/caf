@@ -1,4 +1,5 @@
 #include "Infrastructure/Intrinsic.h"
+#include "Infrastructure/Casting.h"
 #include "Basic/Type.h"
 #include "Basic/BitsType.h"
 #include "Basic/PointerType.h"
@@ -11,28 +12,43 @@
 #include "Fuzzer/FunctionPointerValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
+#include "Fuzzer/PlaceholderValue.h"
 #include "Fuzzer/Corpus.h"
 #include "Fuzzer/ValueGenerator.h"
 
 namespace caf {
 
-Value* ValueGenerator::GenerateNewBitsType(const BitsType* type) {
-  auto objectPool = _corpus->GetObjectPool(type->id());
-  if (!objectPool) {
-    // TODO: Refactor here to reject current value generation request.
-    return nullptr;
-  }
+namespace {
 
-  return _rnd.Select(objectPool->values()).get();
+size_t GetValuesCount(const Function* func) {
+  size_t ret = func->signature().GetArgCount();
+  if (func->signature().returnType()) {
+    ++ret;
+  }
+  return ret;
 }
 
-Value* ValueGenerator::GenerateNewPointerType(const PointerType* type) {
+}; // namespace <anonymous>
+
+BitsValue* ValueGenerator::GenerateNewBitsType(const BitsType* type) {
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  if (!objectPool->empty()) {
+    auto selected = _rnd.Select(objectPool->values()).get();
+    return caf::dyn_cast<BitsValue>(selected);
+  }
+
+  auto value = objectPool->CreateValue<BitsValue>(type);
+  _rnd.NextBuffer(value->data(), type->size());
+  return value;
+}
+
+PointerValue* ValueGenerator::GenerateNewPointerType(const PointerType* type) {
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
   auto pointeeValue = GenerateValue(type->pointeeType().get());
   return objectPool->CreateValue<PointerValue>(objectPool, pointeeValue, type);
 }
 
-Value* ValueGenerator::GenerateNewArrayType(const ArrayType* type) {
+ArrayValue* ValueGenerator::GenerateNewArrayType(const ArrayType* type) {
   std::vector<Value *> elements { };
   elements.reserve(type->size());
   for (size_t i = 0; i < type->size(); ++i) {
@@ -43,7 +59,7 @@ Value* ValueGenerator::GenerateNewArrayType(const ArrayType* type) {
   return objectPool->CreateValue<ArrayValue>(objectPool, type, std::move(elements));
 }
 
-Value* ValueGenerator::GenerateNewStructType(const StructType* type) {
+StructValue* ValueGenerator::GenerateNewStructType(const StructType* type) {
   // Choose an constructor.
   auto& constructor = _rnd.Select(type->ctors());
   const auto& constructorArgs = constructor.signature().args();
@@ -60,7 +76,7 @@ Value* ValueGenerator::GenerateNewStructType(const StructType* type) {
   return objectPool->CreateValue<StructValue>(objectPool, type, &constructor, std::move(args));
 }
 
-Value* ValueGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
+FunctionPointerValue* ValueGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
   assert(type->isFunctionPointer() && "The given pointer type is not a function pointer type.");
 
   auto functionType = type->pointeeType().unchecked_dyn_cast<FunctionType>();
@@ -116,6 +132,31 @@ Value* ValueGenerator::GenerateValue(const Type* type) {
     }
     default: CAF_UNREACHABLE;
   }
+}
+
+Value* ValueGenerator::GenerateValueOrPlaceholder(
+    const TestCase *testCase, size_t callIndex, size_t argIndex) {
+  auto type = testCase->GetFunctionCall(callIndex).func()->signature().GetArgType(argIndex).get();
+
+  // Calculate possible placeholder index candidates.
+  std::vector<size_t> placeholderIndexCandidates;
+  size_t valueIndex = 0;
+  for (size_t i = 0; i < callIndex; ++i) {
+    const auto& call = testCase->GetFunctionCall(i);
+    auto retType = call.func()->signature().returnType();
+    if (retType && retType.get() == type) {
+      placeholderIndexCandidates.push_back(valueIndex);
+    }
+    valueIndex += GetValuesCount(call.func());
+  }
+
+  if (placeholderIndexCandidates.empty() || _rnd.WithProbability(0.5)) {
+    return GenerateNewValue(type);
+  }
+
+  // Generate a placeholder.
+  auto placeholderIndex = _rnd.Select(placeholderIndexCandidates);
+  return _corpus->GetPlaceholderObjectPool()->CreateValue<PlaceholderValue>(type, placeholderIndex);
 }
 
 FunctionCall ValueGenerator::GenerateCall() {

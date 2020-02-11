@@ -1,6 +1,7 @@
 #ifndef CAF_RANDOM_H
 #define CAF_RANDOM_H
 
+#include <cstdint>
 #include <random>
 #include <limits>
 #include <type_traits>
@@ -58,6 +59,24 @@ public:
   T Next(T min = 0, T max = 1) {
     std::uniform_real_distribution<T> dist { min, max };
     return dist(_rng);
+  }
+
+  /**
+   * @brief Generate random bytes to fill the given buffer.
+   *
+   * @param buffer pointer to the first byte of the buffer.
+   * @param size size of the buffer, in bytes.
+   */
+  void NextBuffer(uint8_t* buffer, size_t size) {
+    while (size >= sizeof(int)) {
+      *reinterpret_cast<int *>(buffer) = Next<int>();
+      buffer += sizeof(int);
+      size -= sizeof(int);
+    }
+    while (size > 0) {
+      --size;
+      *buffer++ = Next<uint8_t>();
+    }
   }
 
   /**

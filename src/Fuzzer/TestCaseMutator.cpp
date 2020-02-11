@@ -1,4 +1,5 @@
 #include "Infrastructure/Memory.h"
+#include "Infrastructure/Casting.h"
 #include "Basic/BitsType.h"
 #include "Basic/FunctionType.h"
 #include "Fuzzer/BitsValue.h"
@@ -6,11 +7,24 @@
 #include "Fuzzer/FunctionPointerValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
+#include "Fuzzer/PlaceholderValue.h"
 #include "Fuzzer/TestCaseMutator.h"
 
 #include <climits>
 
 namespace caf {
+
+class TestCaseMutator::MutationContext {
+public:
+  explicit MutationContext(CAFCorpusTestCaseRef testCase)
+    : _testCase(testCase)
+  { }
+
+  CAFCorpusTestCaseRef testCase() const { return _testCase; }
+
+private:
+  CAFCorpusTestCaseRef _testCase;
+}; // class TestCaseMutator::MutationContext
 
 CAFCorpusTestCaseRef TestCaseMutator::Mutate(CAFCorpusTestCaseRef testCase) {
   enum MutationStrategy : int {
@@ -20,17 +34,19 @@ CAFCorpusTestCaseRef TestCaseMutator::Mutate(CAFCorpusTestCaseRef testCase) {
   };
   auto strategy = static_cast<MutationStrategy>(
       _rnd.Next<int>(0, static_cast<int>(_MutationStrategyMax)));
+  MutationContext context { testCase };
   switch (strategy) {
     case Sequence:
-      return MutateSequence(testCase);
+      return MutateSequence(context);
     case Argument:
-      return MutateArgument(testCase);
+      return MutateArgument(context);
     default:
       CAF_UNREACHABLE;
   }
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::Splice(CAFCorpusTestCaseRef previous) {
+CAFCorpusTestCaseRef TestCaseMutator::Splice(MutationContext& context) {
+  auto previous = context.testCase();
   auto source = _corpus->SelectTestCase(_rnd);
   auto previousLen = previous->calls().size();
   auto sourceLen = source->calls().size();
@@ -48,7 +64,8 @@ CAFCorpusTestCaseRef TestCaseMutator::Splice(CAFCorpusTestCaseRef previous) {
   return mutated;
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::InsertCall(CAFCorpusTestCaseRef previous) {
+CAFCorpusTestCaseRef TestCaseMutator::InsertCall(MutationContext& context) {
+  auto previous = context.testCase();
   auto insertIndex = _rnd.Index(previous->calls());
   auto mutated = _corpus->CreateTestCase();
   for (size_t i = 0; i < insertIndex; ++i) {
@@ -62,7 +79,8 @@ CAFCorpusTestCaseRef TestCaseMutator::InsertCall(CAFCorpusTestCaseRef previous) 
   return mutated;
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::RemoveCall(CAFCorpusTestCaseRef previous) {
+CAFCorpusTestCaseRef TestCaseMutator::RemoveCall(MutationContext& context) {
+  auto previous = context.testCase();
   auto mutated = _corpus->CreateTestCase();
   auto previousSequenceLen = previous->calls().size();
   if (previousSequenceLen == 1) {
@@ -83,7 +101,7 @@ CAFCorpusTestCaseRef TestCaseMutator::RemoveCall(CAFCorpusTestCaseRef previous) 
   return mutated;
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::MutateSequence(CAFCorpusTestCaseRef previous) {
+CAFCorpusTestCaseRef TestCaseMutator::MutateSequence(MutationContext& context) {
   enum SequenceMutationStrategy : int {
     Splice,
     InsertCall,
@@ -95,13 +113,25 @@ CAFCorpusTestCaseRef TestCaseMutator::MutateSequence(CAFCorpusTestCaseRef previo
       _rnd.Next(0, static_cast<int>(_SequenceMutationStrategyMax)));
   switch (strategy) {
     case Splice:
-      return this->Splice(previous);
+      return this->Splice(context);
     case InsertCall:
-      return this->InsertCall(previous);
+      return this->InsertCall(context);
     case RemoveCall:
-      return this->RemoveCall(previous);
+      return this->RemoveCall(context);
     default:
       CAF_UNREACHABLE;
+  }
+}
+
+void TestCaseMutator::FixPlaceholderValuesAfterSequenceMutation(CAFCorpusTestCaseRef tc) {
+  for (size_t ci = 0; ci < tc->GetFunctionCallCount(); ++ci) {
+    auto& call = tc->GetFunctionCall(ci);
+    for (size_t ai = 0; ai < call.GetArgCount(); ++ai) {
+      auto arg = call.GetArg(ai);
+      if (caf::is_a<PlaceholderValue>(arg)) {
+        call.SetArg(ai, _valueGen.GenerateValue(arg->type()));
+      }
+    }
   }
 }
 
@@ -223,9 +253,9 @@ Value* TestCaseMutator::MutateBitsValue(const BitsValue* value) {
   return mutated;
 }
 
-Value* TestCaseMutator::MutatePointerValue(const PointerValue* value) {
+Value* TestCaseMutator::MutatePointerValue(const PointerValue* value, MutationContext& context) {
   auto objectPool = value->pool();
-  auto mutatedPointee = MutateValue(value->pointee());
+  auto mutatedPointee = MutateValue(value->pointee(), context);
   return objectPool->CreateValue<PointerValue>(objectPool, mutatedPointee,
       caf::dyn_cast<PointerType>(value->type()));
 }
@@ -246,9 +276,9 @@ Value* TestCaseMutator::MutateFunctionPointerValue(const FunctionPointerValue* v
   return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, pointerType);
 }
 
-Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value) {
+Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value, MutationContext& context) {
   auto elementIndex = _rnd.Index(value->elements());
-  auto mutatedElement = MutateValue(value->elements()[elementIndex]);
+  auto mutatedElement = MutateValue(value->elements()[elementIndex], context);
 
   auto objectPool = value->pool();
   auto mutated = objectPool->CreateValue<ArrayValue>(*value);
@@ -257,7 +287,7 @@ Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value) {
   return mutated;
 }
 
-Value* TestCaseMutator::MutateStructValue(const StructValue* value) {
+Value* TestCaseMutator::MutateStructValue(const StructValue* value, MutationContext& context) {
   enum StructValueMutationStrategy : int {
     MutateConstructor,
     MutateArgument,
@@ -276,7 +306,7 @@ Value* TestCaseMutator::MutateStructValue(const StructValue* value) {
     }
     case MutateArgument: {
       auto argIndex = _rnd.Index(value->args());
-      auto mutatedArg = MutateValue(value->args()[argIndex]);
+      auto mutatedArg = MutateValue(value->args()[argIndex], context);
       auto objectPool = value->pool();
       auto mutated = objectPool->CreateValue<StructValue>(*value);
       mutated->SetArg(argIndex, mutatedArg);
@@ -286,28 +316,46 @@ Value* TestCaseMutator::MutateStructValue(const StructValue* value) {
   }
 }
 
-Value* TestCaseMutator::MutateValue(const Value* value) {
+Value* TestCaseMutator::MutatePlaceholderValue(
+    const PlaceholderValue* value, MutationContext& context) {
+  auto tc = context.testCase();
+  auto pool = value->pool();
+
+  if (_rnd.WithProbability(0.5)) {
+    // Noop.
+    return pool->CreateValue<PlaceholderValue>(*value);
+  }
+
+  // Generate a Value of the corresponding type to the placeholder.
+  return _valueGen.GenerateValue(value->type());
+}
+
+Value* TestCaseMutator::MutateValue(const Value* value, MutationContext& context) {
   switch (value->kind()) {
     case ValueKind::BitsValue: {
       return MutateBitsValue(caf::dyn_cast<BitsValue>(value));
     }
     case ValueKind::PointerValue: {
-      return MutatePointerValue(caf::dyn_cast<PointerValue>(value));
+      return MutatePointerValue(caf::dyn_cast<PointerValue>(value), context);
     }
     case ValueKind::FunctionPointerValue: {
       return MutateFunctionPointerValue(caf::dyn_cast<FunctionPointerValue>(value));
     }
     case ValueKind::ArrayValue: {
-      return MutateArrayValue(caf::dyn_cast<ArrayValue>(value));
+      return MutateArrayValue(caf::dyn_cast<ArrayValue>(value), context);
     }
     case ValueKind::StructValue: {
-      return MutateStructValue(caf::dyn_cast<StructValue>(value));
+      return MutateStructValue(caf::dyn_cast<StructValue>(value), context);
+    }
+    case ValueKind::PlaceholderValue: {
+      return MutatePlaceholderValue(caf::dyn_cast<PlaceholderValue>(value), context);
     }
     default: CAF_UNREACHABLE;
   }
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::MutateArgument(CAFCorpusTestCaseRef previous) {
+CAFCorpusTestCaseRef TestCaseMutator::MutateArgument(MutationContext& context) {
+  auto previous = context.testCase();
   auto functionCallIndex = _rnd.Index(previous->calls());
   auto mutated = _corpus->CreateTestCase();
   for (size_t i = 0; i < functionCallIndex; ++i) {
@@ -321,7 +369,7 @@ CAFCorpusTestCaseRef TestCaseMutator::MutateArgument(CAFCorpusTestCaseRef previo
   } else {
     auto argIndex = _rnd.Index(targetCall.args());
     auto value = targetCall.args()[argIndex];
-    value = MutateValue(value);
+    value = MutateValue(value, context);
     targetCall.SetArg(argIndex, value);
   }
 

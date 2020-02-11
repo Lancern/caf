@@ -32,6 +32,14 @@ public:
   const Function* func() const { return _func; }
 
   /**
+   * @brief Get the argument at the given index.
+   *
+   * @param index the index.
+   * @return Value* the argument at the given index.
+   */
+  Value* GetArg(size_t index) const { return _args[index]; }
+
+  /**
    * @brief Add an argument to the function call.
    *
    * @param arg argument to the function call.
@@ -45,6 +53,13 @@ public:
    * @param value the value of the argument.
    */
   void SetArg(size_t index, Value* value) { _args[index] = value; }
+
+  /**
+   * @brief Get the number of arguments.
+   *
+   * @return size_t the number of arguments.
+   */
+  size_t GetArgCount() const { return _args.size(); }
 
   /**
    * @brief Get the arguments to the function being called.

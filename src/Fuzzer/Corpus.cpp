@@ -24,4 +24,11 @@ CAFObjectPool* CAFCorpus::GetOrCreateObjectPool(uint64_t typeId) {
   return _pools.emplace(typeId, std::move(createdPool)).first->second.get();
 }
 
+CAFObjectPool* CAFCorpus::GetPlaceholderObjectPool() {
+  if (!_placeholderPool) {
+    _placeholderPool = caf::make_unique<CAFObjectPool>();
+  }
+  return _placeholderPool.get();
+}
+
 } // namespace caf

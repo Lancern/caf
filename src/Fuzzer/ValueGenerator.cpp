@@ -37,7 +37,7 @@ BitsValue* ValueGenerator::GenerateNewBitsType(const BitsType* type) {
     return caf::dyn_cast<BitsValue>(selected);
   }
 
-  auto value = objectPool->CreateValue<BitsValue>(type);
+  auto value = objectPool->CreateValue<BitsValue>(objectPool, type);
   _rnd.NextBuffer(value->data(), type->size());
   return value;
 }
@@ -156,7 +156,8 @@ Value* ValueGenerator::GenerateValueOrPlaceholder(
 
   // Generate a placeholder.
   auto placeholderIndex = _rnd.Select(placeholderIndexCandidates);
-  return _corpus->GetPlaceholderObjectPool()->CreateValue<PlaceholderValue>(type, placeholderIndex);
+  auto pool = _corpus->GetPlaceholderObjectPool();
+  return pool->CreateValue<PlaceholderValue>(pool, type, placeholderIndex);
 }
 
 FunctionCall ValueGenerator::GenerateCall() {

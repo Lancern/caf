@@ -64,13 +64,7 @@ public:
 private:
   llvm::Module* _module;
   const CAFSymbolTable* _symbols;
-
-  llvm::Value* value_zero;
-  llvm::Value* value_one;
-
-  llvm::Value* int32Size;
-
-  llvm::Value* int64Size;
+  int callbackFunctionCandidatesNum;
 
   llvm::CallInst* CreateNewCall(
     llvm::IRBuilder<>& builder, llvm::Type ty, llvm::Value* value
@@ -87,11 +81,14 @@ private:
   llvm::CallInst* CreatePrintfCall(
       llvm::IRBuilder<>& builder, const std::string& format, llvm::Value* value);
 
-llvm::CallInst* CreateMemcpyCall(
-  llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value*src, llvm::Value* size);
+  llvm::CallInst* CreateMemcpyCall(
+    llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value*src, llvm::Value* size);
 
-  llvm::CallInst* CreateMallocCall(
-      llvm::IRBuilder<>& builder, llvm::Value* size);
+  llvm::Function* generateEmptyFunctionWithSignature(
+    LLVMFunctionSignature* funcSignature);
+
+  llvm::Value* CreateMallocCall(
+    llvm::IRBuilder<>& builder, llvm::Type* type);
 
   /**
    * @brief Create a call of function "inputIntTo"
@@ -114,6 +111,26 @@ llvm::CallInst* CreateMemcpyCall(
   llvm::CallInst* CreateInputBtyesToCall(
     llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value* size);
     
+  /**
+   * @brief Create a Save To Object List Call
+   * 
+   * @param builder 
+   * @param objPtr : the object trying to save, with int64ty.
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* CreateSaveToObjectListCall(
+    llvm::IRBuilder<>& builder, llvm::Value* objPtr);
+
+  /**
+   * @brief Create a Get From Object List Call
+   * 
+   * @param builder 
+   * @param objIdx 
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* CreateGetFromObjectListCall(
+    llvm::IRBuilder<>& builder, llvm::Value* objIdx);
+
   /**
    * @brief Create a call to `printf` to print the given string.
    *

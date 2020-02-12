@@ -18,9 +18,10 @@ public:
    * @param store the store holding the object.
    * @param size the number of elements in the array.
    * @param elementType the type of the elements in the array.
+   * @param id the ID of this type.
    */
-  explicit ArrayType(CAFStore* store, size_t size, CAFStoreRef<Type> elementType)
-    : Type { store, TypeKind::Array },
+  explicit ArrayType(CAFStore* store, size_t size, CAFStoreRef<Type> elementType, uint64_t id)
+    : Type { store, TypeKind::Array, id },
       _size(size),
       _elementType(elementType)
   { }
@@ -53,17 +54,6 @@ public:
 #endif
 
 private:
-  /**
-   * @brief Construct a new ArrayType object.
-   *
-   * @param store CAFStore instance holding this object.
-   */
-  explicit ArrayType(CAFStore* store) noexcept
-    : Type { store, TypeKind::Array },
-      _size(0),
-      _elementType { }
-  { }
-
   size_t _size;
   CAFStoreRef<Type> _elementType;
 };

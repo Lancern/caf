@@ -17,9 +17,10 @@ public:
    *
    * @param store the store holding the object.
    * @param name the name of the struct.
+   * @param id the ID of the type.
    */
-  explicit StructType(CAFStore* store, std::string name)
-    : NamedType { store, std::move(name), TypeKind::Struct },
+  explicit StructType(CAFStore* store, std::string name, uint64_t id)
+    : NamedType { store, std::move(name), TypeKind::Struct, id },
       _ctors { }
   { }
 
@@ -29,9 +30,11 @@ public:
    * @param store the @see CAFStore object owning this @see StructType object.
    * @param name the name of this @see CAFStore object.
    * @param ctors constructors of this struct type.
+   * @param id the ID of this type.
    */
-  explicit StructType(CAFStore* store, std::string name, std::vector<Constructor> ctors)
-    : NamedType { store, std::move(name), TypeKind::Struct },
+  explicit StructType(
+      CAFStore* store, std::string name, std::vector<Constructor> ctors, uint64_t id)
+    : NamedType { store, std::move(name), TypeKind::Struct, id },
       _ctors(std::move(ctors))
   { }
 
@@ -65,16 +68,6 @@ public:
 #endif
 
 private:
-  /**
-   * @brief Construct a new StructType object.
-   *
-   * @param store CAFStore holding this object.
-   */
-  explicit StructType(CAFStore* store) noexcept
-    : NamedType { store, std::string(), TypeKind::Struct },
-      _ctors { }
-  { }
-
   std::vector<Constructor> _ctors;
 };
 

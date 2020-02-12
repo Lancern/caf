@@ -22,9 +22,10 @@ public:
    *
    * @param store the @see CAFStore object holding this type definition.
    * @param signatureId the ID of the function signature.
+   * @param id the ID of this type.
    */
-  explicit FunctionType(CAFStore* store, uint64_t signatureId)
-    : Type { store, TypeKind::Function },
+  explicit FunctionType(CAFStore* store, uint64_t signatureId, uint64_t id)
+    : Type { store, TypeKind::Function, id },
       _signature { },
       _signatureId(signatureId)
   { }
@@ -35,9 +36,11 @@ public:
    * @param store the @see CAFStore object holding this type definition.
    * @param signature the signature of the function type.
    * @param signatureId the ID of the signature.
+   * @param id the ID of this type.
    */
-  explicit FunctionType(CAFStore* store, FunctionSignature signature, uint64_t signatureId)
-    : Type { store, TypeKind::Function },
+  explicit FunctionType(
+      CAFStore* store, FunctionSignature signature, uint64_t signatureId, uint64_t id)
+    : Type { store, TypeKind::Function, id },
       _signature { std::move(signature) },
       _signatureId(signatureId)
   { }

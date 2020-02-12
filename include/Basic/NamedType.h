@@ -3,6 +3,8 @@
 
 #include "Basic/Type.h"
 
+#include <string>
+
 namespace caf {
 
 /**
@@ -41,9 +43,10 @@ protected:
    * @param store the store holding the object.
    * @param name the name of the type.
    * @param kind the kind of the type.
+   * @param id the ID of the type.
    */
-  explicit NamedType(CAFStore* store, std::string name, TypeKind kind)
-    : Type { store, kind },
+  explicit NamedType(CAFStore* store, std::string name, TypeKind kind, uint64_t id)
+    : Type { store, kind, id },
       _name(std::move(name))
   { }
 

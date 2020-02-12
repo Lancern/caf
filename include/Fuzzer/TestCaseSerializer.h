@@ -3,7 +3,7 @@
 
 #include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Casting.h"
-#include "Basic/Identity.h"
+#include "Infrastructure/Identity.h"
 #include "Fuzzer/TestCase.h"
 #include "Fuzzer/Value.h"
 #include "Fuzzer/BitsValue.h"

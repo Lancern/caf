@@ -12,6 +12,7 @@ set(CAF_INFRASTRUCTURE_SOURCES
     ${CAF_INCLUDE_DIR}/Infrastructure/Casting.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Either.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Hash.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Identity.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Intrinsic.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h
@@ -22,5 +23,6 @@ target_sources(CAFInfrastructure INTERFACE
     ${CAF_INFRASTRUCTURE_SOURCES})
 
 add_subdirectory(Basic)
-add_subdirectory(LLVMPass)
+# add_subdirectory(LLVMPass)
 add_subdirectory(Fuzzer)
+add_subdirectory(Extractor)

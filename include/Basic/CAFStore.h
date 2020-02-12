@@ -65,6 +65,12 @@ public:
       _slot(another.slot())
   { }
 
+  template <typename U, typename std::enable_if<std::is_base_of<T, U>::value, int>::type = 0>
+  CAFStoreRef<T>& operator=(const CAFStoreRef<U>& another) {
+    _store = another.store();
+    _slot = another.slot();
+  }
+
   /**
    * @brief Get the store containing the object pointed to by this pointer.
    *
@@ -174,27 +180,30 @@ public:
    *
    * @param name the name of the bits type.
    * @param size the size of the bits type, in bytes.
+   * @param id the ID of this type.
    * @return CAFStoreRef<BitsType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<BitsType> CreateBitsType(std::string name, size_t size);
+  CAFStoreRef<BitsType> CreateBitsType(std::string name, size_t size, uint64_t id);
 
   /**
    * @brief Create a PointerType object managed by this store.
    *
    * @param pointeeType the type of the pointee, a.k.a. the type of the value pointed to by the
    * pointer.
+   * @param id the ID of this type.
    * @return CAFStoreRef<PointerType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<PointerType> CreatePointerType(CAFStoreRef<Type> pointeeType);
+  CAFStoreRef<PointerType> CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id);
 
   /**
    * @brief Create an ArrayType object managed by this store.
    *
    * @param size the number of elements in the array.
    * @param elementType the type of the elements in the array.
+   * @param id the ID of this type.
    * @return CAFStoreRef<ArrayType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<ArrayType> CreateArrayType(size_t size, CAFStoreRef<Type> elementType);
+  CAFStoreRef<ArrayType> CreateArrayType(size_t size, CAFStoreRef<Type> elementType, uint64_t id);
 
   /**
    * @brief Create a StructType object managed by this store. If the name of the given struct type
@@ -202,24 +211,27 @@ public:
    * existed instance will be returned.
    *
    * @param name the name of the struct.
+   * @param id the ID of this type.
    * @return CAFStoreRef<StructType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<StructType> CreateStructType(std::string name);
+  CAFStoreRef<StructType> CreateStructType(std::string name, uint64_t id);
 
   /**
    * @brief Create an unnamed struct type and add it to this store.
    *
+   * @param id the ID of this type.
    * @return CAFStoreRef<StructType> the created unnamed struct type.
    */
-  CAFStoreRef<StructType> CreateUnnamedStructType();
+  CAFStoreRef<StructType> CreateUnnamedStructType(uint64_t id);
 
   /**
    * @brief Create a FunctionType object managed by this store.
    *
    * @param signatureId ID of the function signature.
+   * @param id the ID of this type.
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
-  CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId);
+  CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId, uint64_t id);
 
   /**
    * @brief Test whether a type with the given name exists in the store.
@@ -254,9 +266,10 @@ public:
    *
    * @param name the name of the function.
    * @param signature the signature of the function.
+   * @param id the ID of this API function.
    * @return CAFStoreRef<Function> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<Function> CreateApi(std::string name, FunctionSignature signature);
+  CAFStoreRef<Function> CreateApi(std::string name, FunctionSignature signature, uint64_t id);
 
   /**
    * @brief Add a new type to this @see CAFStore object.
@@ -318,10 +331,10 @@ private:
   std::vector<std::unique_ptr<Function>> _funcs;
   std::unordered_map<uint64_t, std::vector<size_t>> _callbackFunctions;
 
-  std::unordered_map<int, size_t> _typeIds;
+  std::unordered_map<uint64_t, size_t> _typeIds;
   std::unordered_map<std::string, size_t> _typeNames;
   std::unordered_map<uint64_t, size_t> _funcTypeSignatures;
-  std::unordered_map<int, size_t> _apiIds;
+  std::unordered_map<uint64_t, size_t> _apiIds;
   std::unordered_map<std::string, size_t> _apiNames;
 
   /**

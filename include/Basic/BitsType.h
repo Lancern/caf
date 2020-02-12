@@ -19,9 +19,10 @@ public:
    * @param store store that holds this instance.
    * @param name the name of the type.
    * @param size the size of the type, in bytes.
+   * @param id the ID of the type, in bytes.
    */
-  explicit BitsType(CAFStore* store, std::string name, size_t size)
-    : NamedType { store, std::move(name), TypeKind::Bits },
+  explicit BitsType(CAFStore* store, std::string name, size_t size, uint64_t id)
+    : NamedType { store, std::move(name), TypeKind::Bits, id },
       _size(size)
   { }
 
@@ -52,9 +53,10 @@ private:
    * @brief Construct a new BitsType object.
    *
    * @param store the store holding this object.
+   * @param id the ID of this type.
    */
-  explicit BitsType(CAFStore* store)
-    : NamedType { store, std::string(), TypeKind::Bits },
+  explicit BitsType(CAFStore* store, uint64_t id)
+    : NamedType { store, std::string(), TypeKind::Bits, id },
       _size(0)
   { }
 

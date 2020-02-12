@@ -17,9 +17,10 @@ public:
    *
    * @param store the store holding the object.
    * @param pointeeType the pointee's type, a.k.a. the type of the value pointed to by the pointer.
+   * @param id the ID of this type.
    */
-  explicit PointerType(CAFStore* store, CAFStoreRef<Type> pointeeType)
-    : Type { store, TypeKind::Pointer },
+  explicit PointerType(CAFStore* store, CAFStoreRef<Type> pointeeType, uint64_t id)
+    : Type { store, TypeKind::Pointer, id },
       _pointeeType(pointeeType)
   { }
 
@@ -55,16 +56,6 @@ public:
 #endif
 
 private:
-  /**
-   * @brief Construct a new PointerType object.
-   *
-   * @param store the CAFStore instance holding this object.
-   */
-  explicit PointerType(CAFStore* store)
-    : Type { store, TypeKind::Pointer },
-      _pointeeType { }
-  { }
-
   CAFStoreRef<Type> _pointeeType;
 };
 

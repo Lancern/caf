@@ -2,7 +2,6 @@ set(CAF_BASIC_SOURCES
     CAFStore.cpp
     JsonSerializer.cpp
     JsonDeserializer.cpp
-    ${CAF_INCLUDE_DIR}/Basic/Identity.h
     ${CAF_INCLUDE_DIR}/Basic/Type.h
     ${CAF_INCLUDE_DIR}/Basic/NamedType.h
     ${CAF_INCLUDE_DIR}/Basic/BitsType.h

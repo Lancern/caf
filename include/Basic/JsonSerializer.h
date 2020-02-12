@@ -7,7 +7,6 @@ namespace caf {
 
 class CAFStore;
 template <typename T> class CAFStoreRef;
-template <typename Concrete, typename Id, typename IdAllocator> class Identity;
 class Type;
 class NamedType;
 class BitsType;

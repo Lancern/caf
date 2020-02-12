@@ -1,15 +1,7 @@
 #ifndef CAF_TYPE_H
 #define CAF_TYPE_H
 
-#include <string>
-
-#ifndef CAF_LLVM
-#include <stdexcept>
-#endif
-
-#include "Basic/Identity.h"
-
-#include "json/json.hpp"
+#include <cstdint>
 
 namespace caf {
 
@@ -82,14 +74,14 @@ public:
    *
    * @return uint64_t ID of this type.
    */
-  uint64_t id() const { return _id.id(); }
+  uint64_t id() const { return _id; }
 
   /**
    * @brief Set ID of this type.
    *
    * @param id ID of this type.
    */
-  void SetId(uint64_t id) { _id.SetId(id); }
+  void SetId(uint64_t id) { _id = id; }
 
 protected:
   /**
@@ -97,16 +89,17 @@ protected:
    *
    * @param store the store that holds the instance.
    * @param kind the kind of the type.
+   * @param id the ID of the type.
    */
-  explicit Type(CAFStore* store, TypeKind kind)
+  explicit Type(CAFStore* store, TypeKind kind, uint64_t id)
     : _store(store),
-      _id { },
+      _id(id),
       _kind(kind)
   { }
 
 private:
   CAFStore* _store;
-  Identity<Type, uint64_t> _id;
+  uint64_t _id;
   TypeKind _kind;
 };
 

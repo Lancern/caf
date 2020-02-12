@@ -13,43 +13,44 @@ namespace caf {
 
 CAFStore::~CAFStore() = default;
 
-CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size) {
+CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size, uint64_t id) {
   auto i = _typeNames.find(name);
   if (i != _typeNames.end()) {
     return CAFStoreRef<BitsType> { this, i->second };
   }
 
-  auto type = caf::make_unique<BitsType>(this, std::move(name), size);
+  auto type = caf::make_unique<BitsType>(this, std::move(name), size, id);
   return AddType(std::move(type)).unchecked_dyn_cast<BitsType>();
 }
 
-CAFStoreRef<PointerType> CAFStore::CreatePointerType(CAFStoreRef<Type> pointeeType) {
-  auto type = caf::make_unique<PointerType>(this, pointeeType);
+CAFStoreRef<PointerType> CAFStore::CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id) {
+  auto type = caf::make_unique<PointerType>(this, pointeeType, id);
   return AddType(std::move(type)).unchecked_dyn_cast<PointerType>();
 }
 
-CAFStoreRef<ArrayType> CAFStore::CreateArrayType(size_t size, CAFStoreRef<Type> elementType) {
-  auto type = caf::make_unique<ArrayType>(this, size, elementType);
+CAFStoreRef<ArrayType> CAFStore::CreateArrayType(
+    size_t size, CAFStoreRef<Type> elementType, uint64_t id) {
+  auto type = caf::make_unique<ArrayType>(this, size, elementType, id);
   return AddType(std::move(type)).unchecked_dyn_cast<ArrayType>();
 }
 
-CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name) {
+CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name, uint64_t id) {
   auto i = _typeNames.find(name);
   if (i != _typeNames.end()) {
     return CAFStoreRef<StructType> { this, i->second };
   }
 
-  auto type = caf::make_unique<StructType>(this, std::move(name));
+  auto type = caf::make_unique<StructType>(this, std::move(name), id);
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType() {
-  auto type = caf::make_unique<StructType>(this, "");
+CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType(uint64_t id) {
+  auto type = caf::make_unique<StructType>(this, "", id);
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId) {
-  auto type = caf::make_unique<FunctionType>(this, signatureId);
+CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId, uint64_t id) {
+  auto type = caf::make_unique<FunctionType>(this, signatureId, id);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
 }
 
@@ -74,13 +75,14 @@ CAFStoreRef<FunctionType> CAFStore::GetFunctionType(uint64_t signatureId) {
   return CAFStoreRef<FunctionType> { this, i->second };
 }
 
-CAFStoreRef<Function> CAFStore::CreateApi(std::string name, FunctionSignature signature) {
+CAFStoreRef<Function> CAFStore::CreateApi(
+    std::string name, FunctionSignature signature, uint64_t id) {
   auto i = _apiNames.find(name);
   if (i != _apiNames.end()) {
     return CAFStoreRef<Function> { this, i->second };
   }
 
-  auto api = caf::make_unique<Function>(this, std::move(name), std::move(signature));
+  auto api = caf::make_unique<Function>(this, std::move(name), std::move(signature), id);
   return AddApi(std::move(api));
 }
 

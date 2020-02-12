@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "Infrastructure/Hash.h"
-#include "Basic/Identity.h"
 #include "Basic/CAFStore.h"
 
 #include "json/json.hpp"
@@ -92,10 +91,11 @@ public:
    * @param store the store holding the Function object.
    * @param name the name of the function.
    * @param signature the signature of the function.
+   * @param id the ID of the function.
    */
-  explicit Function(CAFStore* store, std::string name, FunctionSignature signature)
+  explicit Function(CAFStore* store, std::string name, FunctionSignature signature, uint64_t id)
     : _store(store),
-      _id { },
+      _id(id),
       _name(std::move(name)),
       _signature(std::move(signature))
   { }
@@ -112,14 +112,14 @@ public:
    *
    * @return uint64_t ID of this API function.
    */
-  uint64_t id() const { return _id.id(); }
+  uint64_t id() const { return _id; }
 
   /**
    * @brief Set ID of this function.
    *
    * @param id new ID of this function.
    */
-  void SetId(uint64_t id) { _id.SetId(id); }
+  void SetId(uint64_t id) { _id = id; }
 
   /**
    * @brief Get the name of the function.
@@ -136,20 +136,8 @@ public:
   const FunctionSignature& signature() const { return _signature; }
 
 private:
-  /**
-   * @brief Construct a new Function object.
-   *
-   * @param store the CAFStore object holding this object.
-   */
-  explicit Function(CAFStore* store)
-    : _store(store),
-      _id { },
-      _name { },
-      _signature { }
-  { }
-
   CAFStore* _store;
-  Identity<Function, uint64_t> _id;
+  uint64_t _id;
   std::string _name;
   FunctionSignature _signature;
 };

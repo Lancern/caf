@@ -2,6 +2,7 @@
 #define CAF_OPTIONAL_H
 
 #include <utility>
+#include <type_traits>
 
 namespace caf {
 
@@ -33,6 +34,7 @@ public:
     emplace(std::move(value));
   }
 
+  template <typename std::enable_if<std::is_copy_constructible<T>::value, int>::type = 0>
   Optional(const Optional<T>& another)
     : _hasValue(another._hasValue)
   {
@@ -41,6 +43,7 @@ public:
     }
   }
 
+  template <typename std::enable_if<std::is_move_constructible<T>::value, int>::type = 0>
   Optional(Optional<T>&& another) noexcept
     : _hasValue(another._hasValue)
   {
@@ -54,6 +57,7 @@ public:
     drain();
   }
 
+  template <typename std::enable_if<std::is_copy_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(const Optional<T>& another) {
     _hasValue = another._hasValue;
     if (_hasValue) {
@@ -61,6 +65,7 @@ public:
     }
   }
 
+  template <typename std::enable_if<std::is_move_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(Optional<T>&& another) {
     _hasValue = another._hasValue;
     if (_hasValue) {
@@ -117,6 +122,17 @@ public:
   }
 
   /**
+   * @brief Take out the contained value, leave an empty Optional object behind.
+   *
+   * @return T the contained value.
+   */
+  T take() {
+    auto ret = std::move(value());
+    _hasValue = false;
+    return ret;
+  }
+
+  /**
    * @brief Get a reference to the contained value.
    *
    * @return T& a reference to the contained value.
@@ -137,6 +153,27 @@ public:
   T* operator->() { return &value(); }
 
   const T* operator->() const { return &value(); }
+
+  /**
+   * @brief Applies the given functor to the contained value, if any, and store the result in a new
+   * Optional object.
+   *
+   * @tparam Mapper type of the functor.
+   * @param mapper the functor.
+   * @return an Optional object that may contain the result of the mapper functor.
+   */
+  template <typename Mapper>
+  auto map(Mapper mapper) ->
+      Optional<typename std::remove_reference<
+          decltype(mapper(std::declval<T>()))
+        >::type> {
+    using ImageType = typename std::remove_reference<decltype(mapper(std::declval<T>()))>::type;
+    if (!_hasValue) {
+      return Optional<ImageType> { };
+    } else {
+      return Optional<ImageType> { mapper(value()) };
+    }
+  }
 
 private:
   bool _hasValue;

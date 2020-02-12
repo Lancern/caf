@@ -4,6 +4,7 @@ add_llvm_loadable_module(CAFExtractor
     ExtractorUtils.cpp
     ExtractorUtils.h
     LLVMFunctionSignature.cpp
+    ${CAF_INCLUDE_DIR}/Extractor/ExtractorPass.h
     ${CAF_INCLUDE_DIR}/Extractor/ExtractorContext.h
     ${CAF_INCLUDE_DIR}/Extractor/LLVMFunctionSignature.h
 

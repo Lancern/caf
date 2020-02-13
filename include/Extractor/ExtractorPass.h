@@ -34,6 +34,9 @@ public:
   const ExtractorContext& context() const { return _context; }
 
   bool runOnModule(llvm::Module& module) override;
+  void getAnalysisUsage(llvm::AnalysisUsage& usage) const override;
+
+  static char ID;
 
 private:
   ExtractorContext _context;

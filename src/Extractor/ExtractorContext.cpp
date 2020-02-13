@@ -122,6 +122,7 @@ public:
     _ctorToId.emplace(ctor, id);
     _idToCtor.emplace(id, ctor);
     _typeToCtors.emplace(type, ctor);
+    _ctorToType.emplace(ctor, type);
   }
 
   bool HasType(const llvm::Type* type) const {
@@ -206,6 +207,24 @@ public:
       }
       return Optional<std::vector<const llvm::Function *>> { std::move(ret) };
     }
+  }
+
+  Optional<const llvm::Type *> GetConstructingType(const llvm::Function* ctor) const {
+    auto i = _ctorToType.find(ctor);
+    if (i == _ctorToType.end()) {
+      return Optional<const llvm::Type *> { };
+    } else {
+      return Optional<const llvm::Type *> { i->second };
+    }
+  }
+
+  std::vector<const llvm::Function *> GetConstructors() const {
+    std::vector<const llvm::Function *> ctors;
+    ctors.reserve(_ctors.size());
+    for (const auto& c : _ctors) {
+      ctors.push_back(c.first);
+    }
+    return ctors;
   }
 
   auto GetCallbackFunctions() const ->
@@ -358,6 +377,7 @@ private:
   std::unordered_map<uint64_t, const llvm::Type *> _idToType;
 
   std::unordered_multimap<const llvm::Type *, const llvm::Function *> _typeToCtors;
+  std::unordered_map<const llvm::Function *, const llvm::Type *> _ctorToType;
 
   std::unordered_set<LLVMFunctionSignature, Hasher<LLVMFunctionSignature>>
       _callbackSignatures;
@@ -475,6 +495,11 @@ Optional<const llvm::Function *> ExtractorContext::GetApiFunctionById(uint64_t i
   return _frozen->GetApiFunctionById(id);
 }
 
+const std::vector<const llvm::Function *>& ExtractorContext::GetApiFunctions() const {
+  EnsureFrozen();
+  return _apis;
+}
+
 Optional<const llvm::Function *> ExtractorContext::GetConstructorById(uint64_t id) const {
   EnsureFrozen();
   return _frozen->GetConstructorById(id);
@@ -489,6 +514,17 @@ Optional<std::vector<const llvm::Function *>> ExtractorContext::GetConstructorsO
     const llvm::Type *type) const {
   EnsureFrozen();
   return _frozen->GetConstructorsOfType(type);
+}
+
+Optional<const llvm::Type *> ExtractorContext::GetConstructingType(
+    const llvm::Function *ctor) const {
+  EnsureFrozen();
+  return _frozen->GetConstructingType(ctor);
+}
+
+std::vector<const llvm::Function *> ExtractorContext::GetConstructors() const {
+  EnsureFrozen();
+  return _frozen->GetConstructors();
 }
 
 const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>> &

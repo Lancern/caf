@@ -1,6 +1,5 @@
-#include "CodeGen.h"
-#include "SymbolTable.h"
-#include "ABI.h"
+#include "Extractor/ExtractorContext.h"
+#include "CAFCodeGenerator.h"
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Module.h"
@@ -11,6 +10,8 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include <cxxabi.h>
+
 #ifndef CAF_RECURSIVE_MAX_DEPTH
 #define CAF_RECURSIVE_MAX_DEPTH 16
 #endif
@@ -18,6 +19,19 @@
 namespace caf {
 
 namespace {
+
+std::string demangle(const std::string& name) {
+  auto demangled = abi::__cxa_demangle(name.c_str(), nullptr, nullptr, nullptr);
+  if (!demangled) {
+    // Demangling failed. Return the original name.
+    return name;
+  }
+
+  std::string ret(demangled);
+  free(demangled);
+
+  return ret;
+}
 
 /**
  * @brief Determine whether instances of the given type can be allocated on the stack.
@@ -38,14 +52,15 @@ bool CanAlloca(const llvm::Type* type) {
 } // namespace anonymous
 
 void CAFCodeGenerator::GenerateStub() {
-  auto ctors = _symbols->ctors();
+  auto ctors = _extraction->GetConstructors();
   for(auto iter: ctors) {
-    auto structTypeName = iter.first;
-    CreateDispatchFunction(true, structTypeName);
+    auto constructingType = _extraction->GetConstructingType(iter).take();
+    auto typeId = _extraction->GetTypeId(constructingType);
+    CreateDispatchFunction(true, typeId);
   }
-  
 
-  auto dispatchFunc = CreateDispatchFunction(); 
+
+  auto dispatchFunc = CreateDispatchFunction();
   //
   // ============= insert my new main function. =======================
   //
@@ -201,7 +216,7 @@ llvm::CallInst* CAFCodeGenerator::CreateInputIntToCall(
         )
     );
     auto destToInt32Ptr = builder.CreateBitCast(
-      dest, 
+      dest,
       llvm::PointerType::getUnqual(
         llvm::IntegerType::getInt32Ty(_module->getContext())
     ));
@@ -223,7 +238,7 @@ llvm::CallInst* CAFCodeGenerator::CreateInputBtyesToCall(
         )
     );
     auto destToInt8Ptr = builder.CreateBitCast(
-      dest, 
+      dest,
       llvm::PointerType::getUnqual(
         llvm::IntegerType::getInt8Ty(_module->getContext())
     ));
@@ -341,11 +356,10 @@ llvm::CallInst* CAFCodeGenerator::CreateScanfCall(
   return scanfRes;
 }
 
-llvm::Function* CAFCodeGenerator::CreateDispatchFunction(
-  bool ctorDispatch, std::string structTypeName) {
+llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint64_t typeId) {
   std::string dispatchType("api");
   if(ctorDispatch == true)dispatchType = std::string("ctor");
-  
+
   llvm::Function* dispatchFunc;
   if(ctorDispatch == false) {
     dispatchFunc = llvm::cast<llvm::Function>(
@@ -359,7 +373,7 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(
   } else {
     dispatchFunc = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
-          "__caf_dispatch_ctor_" + structTypeName,
+          "__caf_dispatch_ctor_" + std::to_string(typeId),
           llvm::Type::getInt8PtrTy(_module->getContext()),
           // llvm::Type::getVoidTy(_module->getContext()),
           llvm::Type::getInt32Ty(_module->getContext())
@@ -379,21 +393,25 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(
 
   std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> cases { };
   if(ctorDispatch == false) {
-    llvm::errs() << "apis num: " << _symbols->apis().size() << "\n";
+    const auto& apis = _extraction->GetApiFunctions();
+    llvm::errs() << "apis num: " << apis.size() << "\n";
     int caseCounter = 0;
-    for (const auto& func: _symbols->apis()) {
+    for (auto func: apis) {
       if(func->isIntrinsic()){
         llvm::errs() << "CodeGen.cpp: this is a intrinsic function: " << func->getName() << "\n";
         continue;
       }
-      cases.push_back(CreateCallApiCase(func, dispatchFunc, caseCounter++));
+      cases.push_back(CreateCallApiCase(
+          const_cast<llvm::Function *>(func), dispatchFunc, caseCounter++));
       // llvm::errs() << caseCounter << " cases have been created successfully.\n";
     }
   } else {
-    auto ctors = _symbols->GetConstructors(structTypeName);
+    auto type = _extraction->GetTypeById(typeId).take();
+    auto ctors = _extraction->GetConstructorsOfType(type).take();
     int caseCounter = 0;
-    for (const auto& ctor: *ctors) {
-      cases.push_back(CreateCallApiCase(ctor, dispatchFunc, caseCounter++, true));
+    for (auto ctor: ctors) {
+      cases.push_back(CreateCallApiCase(
+          const_cast<llvm::Function *>(ctor), dispatchFunc, caseCounter++, true));
     }
   }
   llvm::errs() << dispatchFunc->getName().str() << " - callee num: " << cases.size() << "\n";
@@ -427,7 +445,7 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(
   builder.SetInsertPoint(invokeApiDefault);
   builder.CreateBr(invokeApiEnd);
   builder.SetInsertPoint(invokeApiEnd);
-  // if(ctorDispatch == true) 
+  // if(ctorDispatch == true)
   {
     auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
     builder.CreateStore(builder.getInt8(0), retObjPtr);
@@ -442,7 +460,7 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
   // init = false;
   // llvm::Value* argAlloca = builder.CreateAlloca(type);
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
-                           
+
   if(init == false)return argAlloca;
 
   auto ctorId = builder.CreateAlloca(
@@ -481,7 +499,7 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
 
 llvm::Value* CAFCodeGenerator::AllocaPointerType(
     llvm::IRBuilder<>& builder, llvm::PointerType* type, int depth, bool init) {
-  
+
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
   // auto argAlloca = builder.CreateAlloca(type); // 按类型分配地址空间
   // if(init == false)return argAlloca;
@@ -578,7 +596,7 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
     CreatePrintfCall(builder, "func_id = %d\n", funcIdValue);
 
     auto callbackFuncArray = llvm::cast<llvm::Value>(
-                            _module->getOrInsertGlobal("callbackfunc_candidates", 
+                            _module->getOrInsertGlobal("callbackfunc_candidates",
                               llvm::ArrayType::get(
                                 builder.getInt64Ty(),
                                 callbackFunctionCandidatesNum
@@ -598,7 +616,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     llvm::IRBuilder<>& builder, llvm::Type* type, int depth, bool init) {
 
   // auto beginBlock = llvm::BasicBlock::Create(
-  //     builder.getContext(), "begin.malloc.object", 
+  //     builder.getContext(), "begin.malloc.object",
   //     builder.GetInsertBlock()->getParent());
   // builder.CreateBr(beginBlock);
   // builder.SetInsertPoint(beginBlock);
@@ -625,11 +643,11 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
       inputKindValue = builder.getInt32(5);
     }
   }
-  
+
   auto kindEQ4 = builder.CreateICmpEQ(inputKindValue, builder.getInt32(4), "kindEQ4");
 
   auto thenBlock = llvm::BasicBlock::Create(
-      builder.getContext(), "reuse.object.then", 
+      builder.getContext(), "reuse.object.then",
       builder.GetInsertBlock()->getParent());
   auto elseBlock = llvm::BasicBlock::Create(
       builder.getContext(), "reuse.object.else",
@@ -637,13 +655,13 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   auto afterBlock = llvm::BasicBlock::Create(
       builder.getContext(),"after.malloc.object",
       builder.GetInsertBlock()->getParent());
-  
+
   builder.CreateCondBr(kindEQ4, thenBlock, elseBlock);
 
   builder.SetInsertPoint(afterBlock);
   auto phiObj = builder.CreatePHI(type->getPointerTo(), 2);
 
-  builder.SetInsertPoint(thenBlock); 
+  builder.SetInsertPoint(thenBlock);
   // {
     auto objectIdx = builder.CreateAlloca(
           llvm::IntegerType::getInt32Ty(_module->getContext()),
@@ -658,7 +676,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     builder.CreateBr(afterBlock);
     phiObj->addIncoming(thenRet, builder.GetInsertBlock());
   // }
-  
+
   llvm::Value* elseRet;
   builder.SetInsertPoint(elseBlock);
   // {
@@ -723,7 +741,7 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
   std::vector<llvm::Value *> calleeArgs { };
   int arg_num = 1;
   for (const auto& arg: callee->args()) {
-    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true); 
+    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true);
     CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
 
     auto argValue = builder.CreateLoad(argAlloca);
@@ -773,10 +791,10 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
 }
 
 void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
-    const std::vector<Either<llvm::Function *, LLVMFunctionSignature>>& candidates) {
+    const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>>& candidates) {
   llvm::IRBuilder<> builder { _module->getContext() };
 
-  _module->getOrInsertGlobal("callbackfunc_candidates", 
+  _module->getOrInsertGlobal("callbackfunc_candidates",
     llvm::ArrayType::get(
       builder.getInt64Ty(),
       candidates.size()
@@ -787,9 +805,9 @@ void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
   callbackFuncArray->setInitializer(
     llvm::ConstantArray::get(
       llvm::ArrayType::get(
-        llvm::Type::getInt64Ty(_module->getContext()), 
+        llvm::Type::getInt64Ty(_module->getContext()),
         candidates.size()
-      ), 
+      ),
       builder.getInt64(0)
     ));
 
@@ -805,14 +823,14 @@ void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
       callbackFuncArrDispatch->getContext(), "end", callbackFuncArrDispatch);
 
   builder.SetInsertPoint(EntryBlock);
-  
+
   callbackFunctionCandidatesNum = candidates.size();
   llvm::errs() << "candidates.size: " << callbackFunctionCandidatesNum << "\n";
   int curId = 0;
   for(auto iter: candidates) {
     llvm::Function* func;
     if(iter.isLhs()) {
-      func = dynamic_cast<llvm::Function*>(*iter.GetLhs());
+      func = const_cast<llvm::Function *>(iter.AsLhs());
     } else {
       auto funcSig = dynamic_cast<LLVMFunctionSignature*>(iter.GetRhs());
       func = generateEmptyFunctionWithSignature(funcSig);

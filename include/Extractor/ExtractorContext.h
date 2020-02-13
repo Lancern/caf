@@ -141,6 +141,16 @@ public:
   Optional<const llvm::Function *> GetApiFunctionById(uint64_t id) const;
 
   /**
+   * @brief Get all registered API functions.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return const std::vector<const llvm::Function *>& all registered API functions.
+   */
+  const std::vector<const llvm::Function *>& GetApiFunctions() const;
+
+  /**
    * @brief Get the constructor that has the given ID.
    *
    * This function should only be called after this context has been frozen. Otherwise this function
@@ -177,6 +187,28 @@ public:
    * but no constructors are associated with it.
    */
   Optional<std::vector<const llvm::Function *>> GetConstructorsOfType(const llvm::Type* type) const;
+
+  /**
+   * @brief Get the constructing type of the given constructor.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @param ctor the constructor.
+   * @return Optional<const llvm::Type *> the constructing type of the given constructor. If the
+   * given function is not a registered constructor, returns an empty Optional object.
+   */
+  Optional<const llvm::Type *> GetConstructingType(const llvm::Function* ctor) const;
+
+  /**
+   * @brief Get all constructors.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return std::vector<const llvm::Function *> all constructors.
+   */
+  std::vector<const llvm::Function *> GetConstructors() const;
 
   /**
    * @brief Get the callback function candidates.

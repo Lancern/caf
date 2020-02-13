@@ -24,13 +24,16 @@ llvm::cl::opt<std::string> CAFStoreOutputFileName(
     llvm::cl::desc("Specify the path to which the CAF store data will be serialized."),
     llvm::cl::value_desc("path"));
 
-char PassId;
+llvm::RegisterPass<ExtractorPass> RegisterExtractor {
+    "cafextractor", "CAF Metadata Extractor Pass", false, true };
 
 } // namespace <anonymous>
 
 ExtractorPass::ExtractorPass()
-  : llvm::ModulePass { PassId }
+  : llvm::ModulePass { ID }
 { }
+
+char ExtractorPass::ID = 0;
 
 bool ExtractorPass::runOnModule(llvm::Module &module) {
   for (auto& func : module) {
@@ -72,6 +75,10 @@ bool ExtractorPass::runOnModule(llvm::Module &module) {
   }
 
   return false;
+}
+
+void ExtractorPass::getAnalysisUsage(llvm::AnalysisUsage& usage) const {
+  usage.setPreservesAll();
 }
 
 } // namespace caf

@@ -1,8 +1,8 @@
-#ifndef CAF_CODE_GEN_H
-#define CAF_CODE_GEN_H
+#ifndef CAF_CODE_GENERATOR
+#define CAF_CODE_GENERATOR
 
 #include "Infrastructure/Either.h"
-#include "LLVMFunctionSignature.h"
+#include "Extractor/LLVMFunctionSignature.h"
 
 #include "llvm/IR/IRBuilder.h"
 
@@ -13,7 +13,7 @@ class CallInst;
 
 namespace caf {
 
-class CAFSymbolTable;
+class ExtractorContext;
 
 /**
  * @brief Provide logic for generate CAF code stub.
@@ -27,18 +27,18 @@ public:
    */
   explicit CAFCodeGenerator()
     : _module(nullptr),
-      _symbols(nullptr)
+      _extraction(nullptr)
   { }
 
   /**
    * @brief Set the context of the code generator.
    *
    * @param module the module into which the code stub will be generated.
-   * @param symbols the symbol table containing target APIs.
+   * @param extraction the extracted data by the extractor pass.
    */
-  void SetContext(llvm::Module& module, const CAFSymbolTable& symbols) {
+  void SetContext(llvm::Module& module, const ExtractorContext& extraction) {
     _module = &module;
-    _symbols = &symbols;
+    _extraction = &extraction;
   }
 
   /**
@@ -59,11 +59,11 @@ public:
    * @param candidates the callback function candidates.
    */
   void GenerateCallbackFunctionCandidateArray(
-      const std::vector<Either<llvm::Function *, LLVMFunctionSignature>>& candidates);
+      const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>>& candidates);
 
 private:
   llvm::Module* _module;
-  const CAFSymbolTable* _symbols;
+  const ExtractorContext* _extraction;
   int callbackFunctionCandidatesNum;
 
   llvm::CallInst* CreateNewCall(
@@ -92,41 +92,41 @@ private:
 
   /**
    * @brief Create a call of function "inputIntTo"
-   * 
+   *
    * @param builder the IR builder to use.
    * @param dest the destination of the input to
-   * @return llvm::CallInst* 
+   * @return llvm::CallInst*
    */
   llvm::CallInst* CreateInputIntToCall(
     llvm::IRBuilder<>& builder, llvm::Value* dest);
-  
+
   /**
    * @brief Create a call of function "inputBytesTo"
-   * 
+   *
    * @param builder the IR builder to use.
    * @param dest the destination of the input to
    * @param size the size of bytes to be input
-   * @return llvm::CallInst* 
+   * @return llvm::CallInst*
    */
   llvm::CallInst* CreateInputBtyesToCall(
     llvm::IRBuilder<>& builder, llvm::Value* dest, llvm::Value* size);
-    
+
   /**
    * @brief Create a Save To Object List Call
-   * 
-   * @param builder 
+   *
+   * @param builder
    * @param objPtr : the object trying to save, with int64ty.
-   * @return llvm::CallInst* 
+   * @return llvm::CallInst*
    */
   llvm::CallInst* CreateSaveToObjectListCall(
     llvm::IRBuilder<>& builder, llvm::Value* objPtr);
 
   /**
    * @brief Create a Get From Object List Call
-   * 
-   * @param builder 
-   * @param objIdx 
-   * @return llvm::CallInst* 
+   *
+   * @param builder
+   * @param objIdx
+   * @return llvm::CallInst*
    */
   llvm::CallInst* CreateGetFromObjectListCall(
     llvm::IRBuilder<>& builder, llvm::Value* objIdx);
@@ -157,7 +157,7 @@ private:
    *
    * @return llvm::Function* the function generated.
    */
-  llvm::Function* CreateDispatchFunction(bool ctorDispatch = false, std::string structTypeName = std::string(""));
+  llvm::Function* CreateDispatchFunction(bool ctorDispatch = false, uint64_t typeId = 0);
 
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.

@@ -9,7 +9,7 @@ namespace llvm {
 class Type;
 class FunctionType;
 class Function;
-}; // namespace llvm
+} // namespace llvm
 
 namespace caf {
 
@@ -89,6 +89,6 @@ struct Hasher<LLVMFunctionSignature> {
   }
 }; // struct Hasher<LLVMFunctionSignature>
 
-}; // namespace caf
+} // namespace caf
 
 #endif

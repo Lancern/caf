@@ -1,0 +1,5 @@
+add_library(NLOHMANN_JSON INTERFACE)
+target_include_directories(NLOHMANN_JSON INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/..")
+target_sources(NLOHMANN_JSON INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/json.hpp")

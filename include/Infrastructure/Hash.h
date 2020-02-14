@@ -83,6 +83,6 @@ inline size_t GetContainerHashCode(const Container& container) {
   return GetRangeHashCode(std::begin(container), std::end(container));
 }
 
-}; // namespace caf
+} // namespace caf
 
 #endif

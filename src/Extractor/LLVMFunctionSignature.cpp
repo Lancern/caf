@@ -43,4 +43,4 @@ bool operator!=(const LLVMFunctionSignature& lhs, const LLVMFunctionSignature& r
   return !(operator==(lhs, rhs));
 }
 
-}; // namespace caf
+} // namespace caf

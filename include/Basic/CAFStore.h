@@ -69,6 +69,7 @@ public:
   CAFStoreRef<T>& operator=(const CAFStoreRef<U>& another) {
     _store = another.store();
     _slot = another.slot();
+    return *this;
   }
 
   /**

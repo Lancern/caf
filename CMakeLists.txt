@@ -10,6 +10,8 @@ set(CMAKE_MODULE_PATH
 set(CAF_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
 set(CAF_DEP_DIR "${CMAKE_SOURCE_DIR}/deps")
 
+enable_testing()
+
 # Configure LLVM related environments.
 include(ConfigureLLVM)
 
@@ -19,4 +21,6 @@ include(ConfigureLLVM)
 # Configure AFL++ related environments.
 # include(ConfigureAFLpp)
 
+add_subdirectory(deps)
 add_subdirectory(src)
+add_subdirectory(tests)

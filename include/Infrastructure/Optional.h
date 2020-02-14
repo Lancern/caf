@@ -181,6 +181,6 @@ private:
   // _value contains raw data of an object of T which might be uninitialized.
 }; // class Optional
 
-}; // namespace caf
+} // namespace caf
 
 #endif

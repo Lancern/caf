@@ -22,16 +22,9 @@ add_library(CAFBasicLLVM STATIC
 add_library(CAFBasicPIC STATIC
     ${CAF_BASIC_SOURCES})
 
-target_compile_definitions(CAFBasicLLVM
-    PUBLIC CAF_LLVM ${LLVM_DEFINITIONS})
-target_include_directories(CAFBasicLLVM
-    PUBLIC "${LLVM_INCLUDE_DIRS}")
+target_link_libraries(CAFBasicLLVM  PUBLIC LLVM)
 
-# CAFBasicLLVM should be compiled as PIC since it will be linked against LLVM loadable modules.
-target_compile_options(CAFBasicLLVM PRIVATE "-fPIC")
-
-target_compile_options(CAFBasicPIC
-    PUBLIC "-fPIC")
+target_compile_options(CAFBasicPIC  PUBLIC "-fPIC")
 
 target_link_libraries(CAFBasic      PUBLIC NLOHMANN_JSON)
 target_link_libraries(CAFBasicLLVM  PUBLIC NLOHMANN_JSON)

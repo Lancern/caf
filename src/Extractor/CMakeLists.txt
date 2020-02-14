@@ -8,11 +8,8 @@ set(CAF_EXTRACTOR_SOURCES
     ${CAF_INCLUDE_DIR}/Extractor/ExtractorContext.h
     ${CAF_INCLUDE_DIR}/Extractor/LLVMFunctionSignature.h)
 
-add_llvm_loadable_module(CAFExtractor
-    ${CAF_EXTRACTOR_SOURCES}
-
-    PLUGIN_TOOL
-    opt)
+add_library(CAFExtractor MODULE
+    ${CAF_EXTRACTOR_SOURCES})
 
 add_library(CAFExtractorStatic STATIC
     ${CAF_EXTRACTOR_SOURCES})
@@ -20,8 +17,10 @@ add_library(CAFExtractorStatic STATIC
 target_compile_definitions(CAFExtractor PUBLIC CAF_LLVM)
 target_link_libraries(CAFExtractor PUBLIC CAFInfrastructure)
 target_link_libraries(CAFExtractor PUBLIC CAFBasicLLVM)
+target_link_libraries(CAFExtractor PUBLIC LLVM)
 
 target_compile_definitions(CAFExtractorStatic PUBLIC CAF_LLVM)
 target_compile_options(CAFExtractorStatic PUBLIC "-fPIC")
 target_link_libraries(CAFExtractorStatic PUBLIC CAFInfrastructure)
 target_link_libraries(CAFExtractorStatic PUBLIC CAFBasicLLVM)
+target_link_libraries(CAFExtractorStatic PUBLIC LLVM)

@@ -281,6 +281,6 @@ private:
   bool _isLhs;
 }; // class Either
 
-}; // namespace caf
+} // namespace caf
 
 #endif

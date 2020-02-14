@@ -151,6 +151,16 @@ public:
   const std::vector<const llvm::Function *>& GetApiFunctions() const;
 
   /**
+   * @brief Get the number of API functions.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return size_t the number of API functions.
+   */
+  size_t GetApiFunctionsCount() const;
+
+  /**
    * @brief Get the constructor that has the given ID.
    *
    * This function should only be called after this context has been frozen. Otherwise this function
@@ -173,6 +183,16 @@ public:
    * an empty Optional object.
    */
   Optional<const llvm::Type *> GetTypeById(uint64_t id) const;
+
+  /**
+   * @brief Get the number of types.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return size_t the number of types.
+   */
+  size_t GetTypesCount() const;
 
   /**
    * @brief Get the constructors of the given type.
@@ -211,6 +231,16 @@ public:
   std::vector<const llvm::Function *> GetConstructors() const;
 
   /**
+   * @brief Get the number of constructors.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return size_t the number of constructors.
+   */
+  size_t GetConstructorsCount() const;
+
+  /**
    * @brief Get the callback function candidates.
    *
    * This function should only be called after this context has been frozen. Otherwise this function
@@ -222,6 +252,16 @@ public:
    */
   auto GetCallbackFunctionCandidates() const ->
       const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>> &;
+
+  /**
+   * @brief Get the number of callback functions.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return size_t the number of callback functions.
+   */
+  size_t GetCallbackFunctionsCount() const;
 
 private:
   class FrozenContext;

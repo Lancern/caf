@@ -195,6 +195,10 @@ public:
     return find(_idToType, id);
   }
 
+  size_t GetTypesCount() const {
+    return _types.size();
+  }
+
   Optional<std::vector<const llvm::Function *>> GetConstructorsOfType(
       const llvm::Type* type) const {
     if (!exist(_typeToCtors, type)) {
@@ -227,6 +231,10 @@ public:
     return ctors;
   }
 
+  size_t GetConstructorsCount() const {
+    return _ctors.size();
+  }
+
   auto GetCallbackFunctions() const ->
       const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>> & {
     return _callbackFuncs;
@@ -239,6 +247,10 @@ public:
       ret.push_back(i->second);
     }
     return ret;
+  }
+
+  size_t GetCallbackFunctionsCount() const {
+    return _callbackFuncs.size();
   }
 
   std::unique_ptr<CAFStore> CreateCAFStore() const {
@@ -500,6 +512,11 @@ const std::vector<const llvm::Function *>& ExtractorContext::GetApiFunctions() c
   return _apis;
 }
 
+size_t ExtractorContext::GetApiFunctionsCount() const {
+  EnsureFrozen();
+  return _apis.size();
+}
+
 Optional<const llvm::Function *> ExtractorContext::GetConstructorById(uint64_t id) const {
   EnsureFrozen();
   return _frozen->GetConstructorById(id);
@@ -508,6 +525,11 @@ Optional<const llvm::Function *> ExtractorContext::GetConstructorById(uint64_t i
 Optional<const llvm::Type *> ExtractorContext::GetTypeById(uint64_t id) const {
   EnsureFrozen();
   return _frozen->GetTypeById(id);
+}
+
+size_t ExtractorContext::GetTypesCount() const {
+  EnsureFrozen();
+  return _frozen->GetTypesCount();
 }
 
 Optional<std::vector<const llvm::Function *>> ExtractorContext::GetConstructorsOfType(
@@ -527,10 +549,20 @@ std::vector<const llvm::Function *> ExtractorContext::GetConstructors() const {
   return _frozen->GetConstructors();
 }
 
+size_t ExtractorContext::GetConstructorsCount() const {
+  EnsureFrozen();
+  return _frozen->GetConstructorsCount();
+}
+
 const std::vector<Either<const llvm::Function *, LLVMFunctionSignature>> &
 ExtractorContext::GetCallbackFunctionCandidates() const {
   EnsureFrozen();
   return _frozen->GetCallbackFunctions();
+}
+
+size_t ExtractorContext::GetCallbackFunctionsCount() const {
+  EnsureFrozen();
+  return _frozen->GetCallbackFunctionsCount();
 }
 
 } // namespace caf

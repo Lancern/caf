@@ -3,7 +3,10 @@
 #include "Extractor/ExtractorPass.h"
 #include "ExtractorUtils.h"
 
+#define DEBUG_TYPE "CAFExtractor"
+
 #include "llvm/Pass.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
@@ -27,6 +30,15 @@ llvm::cl::opt<std::string> CAFStoreOutputFileName(
 llvm::RegisterPass<ExtractorPass> RegisterExtractor {
     "cafextractor", "CAF Metadata Extractor Pass", false, true };
 
+STATISTIC(ApiFunctionsCount, "Number of API functions available as fuzz target");
+
+STATISTIC(ConstructorsCount, "Number of constructors found in the module");
+STATISTIC(CallbackCandidatesCount, "Number of callback function candidates in the module");
+
+STATISTIC(FrozenTypesCount, "Number of frozen types");
+STATISTIC(FrozenConstructorsCount, "Number of frozen constructors");
+STATISTIC(FrozenCallbackCandidatesCount, "Number of frozen callback function candidates");
+
 } // namespace <anonymous>
 
 ExtractorPass::ExtractorPass()
@@ -38,16 +50,23 @@ char ExtractorPass::ID = 0;
 bool ExtractorPass::runOnModule(llvm::Module &module) {
   for (auto& func : module) {
     if (caf::IsApiFunction(func)) {
+      ++ApiFunctionsCount;
       _context.AddApiFunction(&func);
     } else if (caf::IsConstructor(func)) {
+      ++ConstructorsCount;
       auto name = caf::GetConstructingTypeName(func);
       _context.AddConstructor(std::move(name), &func);
     }
 
+    ++CallbackCandidatesCount;
     _context.AddCallbackFunctionCandidate(&func);
   }
 
   _context.Freeze();
+
+  FrozenTypesCount = _context.GetTypesCount();
+  FrozenConstructorsCount = _context.GetConstructorsCount();
+  FrozenCallbackCandidatesCount = _context.GetCallbackFunctionsCount();
 
   auto outputFileName = CAFStoreOutputFileName.c_str();
   if (outputFileName && strlen(outputFileName)) {

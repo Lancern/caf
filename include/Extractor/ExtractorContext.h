@@ -146,9 +146,9 @@ public:
    * This function should only be called after this context has been frozen. Otherwise this function
    * will trigger an assertion failure.
    *
-   * @return const std::vector<const llvm::Function *>& all registered API functions.
+   * @return std::vector<const llvm::Function *> all registered API functions.
    */
-  const std::vector<const llvm::Function *>& GetApiFunctions() const;
+  std::vector<const llvm::Function *> GetApiFunctions() const;
 
   /**
    * @brief Get the number of API functions.

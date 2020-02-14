@@ -1,3 +1,4 @@
+#include "Infrastructure/Casting.h"
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Identity.h"
 #include "Basic/CAFStore.h"
@@ -51,6 +52,30 @@ bool IsValidType(const llvm::Type* type) {
          type->isFunctionTy() ||
          type->isArrayTy() ||
          type->isStructTy();
+}
+
+size_t GetTypeSize(const llvm::Type* type) {
+  assert((type->isIntegerTy() || type->isFloatingPointTy()) &&
+      "type is not an integer type nor a floating point type.");
+
+  if (type->isIntegerTy()) {
+    return type->getIntegerBitWidth() / 8;
+  } else if (type->isFloatingPointTy()) {
+    if (type->isHalfTy()) {
+      return 2;
+    } else if (type->isFloatTy()) {
+      return 4;
+    } else if (type->isDoubleTy()) {
+      return 8;
+    } else if (type->isX86_FP80Ty()) {
+      return 10;
+    } else if (type->isFP128Ty() || type->isPPC_FP128Ty()) {
+      return 16;
+    }
+  }
+
+  assert(false && "Unreachable code.");
+  return 0;
 }
 
 std::string GetTypeName(const llvm::Type* type) {
@@ -183,8 +208,21 @@ public:
     return find(_typeToId, type);
   }
 
+  std::vector<const llvm::Function *> GetApiFunctions() const {
+    std::vector<const llvm::Function *> funcs;
+    funcs.reserve(_apis.size());
+    for (const auto& i : _apis) {
+      funcs.push_back(i.first);
+    }
+    return funcs;
+  }
+
   Optional<const llvm::Function *> GetApiFunctionById(uint64_t id) const {
     return find(_idToApi, id);
+  }
+
+  size_t GetApiFunctionsCount() const {
+    return _apis.size();
   }
 
   Optional<const llvm::Function *> GetConstructorById(uint64_t id) const {
@@ -310,7 +348,7 @@ private:
 
       CAFStoreRef<Type> cafType;
       if (type->isIntegerTy() || type->isFloatingPointTy()) {
-        cafType = _store->CreateBitsType(GetTypeName(type), type->getIntegerBitWidth() / 8, typeId);
+        cafType = _store->CreateBitsType(GetTypeName(type), GetTypeSize(type), typeId);
       } else if (type->isPointerTy()) {
         auto pointeeType = AddLLVMType(type->getPointerElementType());
         cafType = _store->CreatePointerType(pointeeType, typeId);
@@ -466,6 +504,12 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
 
   _frozen->AddType(type);
   if (type->isStructTy()) {
+    auto structType = caf::dyn_cast<llvm::StructType>(type);
+    if (!structType->hasName()) {
+      // Unnamed struct type does not have constructors for sure.
+      return;
+    }
+
     auto name = type->getStructName().str();
     auto r = _ctors.equal_range(name);
     if (r.first == r.second) {
@@ -507,14 +551,14 @@ Optional<const llvm::Function *> ExtractorContext::GetApiFunctionById(uint64_t i
   return _frozen->GetApiFunctionById(id);
 }
 
-const std::vector<const llvm::Function *>& ExtractorContext::GetApiFunctions() const {
+std::vector<const llvm::Function *> ExtractorContext::GetApiFunctions() const {
   EnsureFrozen();
-  return _apis;
+  return _frozen->GetApiFunctions();
 }
 
 size_t ExtractorContext::GetApiFunctionsCount() const {
   EnsureFrozen();
-  return _apis.size();
+  return _frozen->GetApiFunctionsCount();
 }
 
 Optional<const llvm::Function *> ExtractorContext::GetConstructorById(uint64_t id) const {

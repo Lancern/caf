@@ -1,7 +1,9 @@
+#include "Infrastructure/Casting.h"
 #include "ExtractorUtils.h"
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <cxxabi.h>
 
@@ -150,6 +152,30 @@ private:
 
 bool IsApiFunction(const llvm::Function& func) {
   return func.hasFnAttribute(llvm::Attribute::CafApi);
+}
+
+bool IsV8ApiFunction(const llvm::Function& func) {
+  auto funcType = func.getFunctionType();
+  if (funcType->getNumParams() != 1) {
+    return false;
+  }
+
+  auto paramType = funcType->getParamType(0);
+  if (!paramType->isPointerTy()) {
+    return false;
+  }
+
+  auto pointeeType = paramType->getPointerElementType();
+  if (!pointeeType->isStructTy()) {
+    return false;
+  }
+
+  auto structType = caf::dyn_cast<llvm::StructType>(pointeeType);
+  if (!structType->hasName()) {
+    return false;
+  }
+
+  return pointeeType->getStructName() == "class.v8::FunctionCallbackInfo";
 }
 
 bool IsConstructor(const llvm::Function& func) {

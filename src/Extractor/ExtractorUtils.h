@@ -19,6 +19,19 @@ namespace caf {
 bool IsApiFunction(const llvm::Function& func);
 
 /**
+ * @brief Determine whether the given function is a V8 API function.
+ *
+ * This function returns true if the given LLVM function match the following signature:
+ *
+ * `T (%"class.v8::FunctionCallbackInfo"*)`
+ *
+ * @param func
+ * @return true
+ * @return false
+ */
+bool IsV8ApiFunction(const llvm::Function& func);
+
+/**
  * @brief Determine whether the given function is a constructor of some struct type.
  *
  * @param func the function.

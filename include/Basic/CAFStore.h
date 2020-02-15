@@ -235,32 +235,6 @@ public:
   CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId, uint64_t id);
 
   /**
-   * @brief Test whether a type with the given name exists in the store.
-   *
-   * @param name the name of the type to find.
-   * @return true if the type with the given name exists in the store.
-   * @return false if the type with the given name does not exist in the store.
-   */
-  bool ContainsType(const std::string& name) const;
-
-  /**
-   * @brief Get the type with the given name in the store.
-   *
-   * @param name the name of the type.
-   * @return CAFStoreRef<Type> pointer to the type, or empty if the name cannot be found.
-   */
-  CAFStoreRef<Type> GetType(const std::string& name);
-
-  /**
-   * @brief Get the function type with the given signature ID.
-   *
-   * @param signatureId the signature ID.
-   * @return CAFStoreRef<FunctionType> pointer to the function type, or empty if the signature ID
-   * does not exist.
-   */
-  CAFStoreRef<FunctionType> GetFunctionType(uint64_t signatureId);
-
-  /**
    * @brief Create a Function object representing an API in this store. If the name of the API
    * already exists in the store, then no Function object will be created and the already existed
    * Function object will be returned.
@@ -332,12 +306,6 @@ private:
   std::vector<std::unique_ptr<Function>> _funcs;
   std::unordered_map<uint64_t, std::vector<size_t>> _callbackFunctions;
 
-  std::unordered_map<uint64_t, size_t> _typeIds;
-  std::unordered_map<std::string, size_t> _typeNames;
-  std::unordered_map<uint64_t, size_t> _funcTypeSignatures;
-  std::unordered_map<uint64_t, size_t> _apiIds;
-  std::unordered_map<std::string, size_t> _apiNames;
-
   /**
    * @brief Get the object at the specified slot. The type of the object should derive from
    * @see Type.
@@ -369,6 +337,7 @@ private:
 
 template <typename T>
 T* CAFStoreRef<T>::get() const {
+  assert(valid() && "Trying to dereference an invalid CAFStoreRef.");
   return _store->get<T>(_slot);
 }
 

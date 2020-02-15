@@ -5,6 +5,7 @@
 #include "llvm/Support/Casting.h"
 #endif
 
+#include <cassert>
 #include <type_traits>
 
 namespace caf {
@@ -42,7 +43,7 @@ struct propergate_cv<const volatile From, To> {
  * @tparam From the source type.
  * @param from the source pointer.
  * @return propergate_cv<From, To>::Type* the output pointer. If `From` cannot be casted to `To`,
- * returns nullptr.
+ * this function will trigger an assertion failure.
  */
 template <typename To, typename From>
 inline auto dyn_cast(From* from) -> typename propergate_cv<From, To>::Type * {
@@ -50,9 +51,11 @@ inline auto dyn_cast(From* from) -> typename propergate_cv<From, To>::Type * {
   static_assert(std::is_base_of<From, To>::value, "To does not derive from From.");
 
 #ifdef CAF_LLVM
-  return llvm::dyn_cast<To>(from);
+  return llvm::cast<To>(from);
 #else
-  return dynamic_cast<typename propergate_cv<From, To>::Type *>(from);
+  auto ret = dynamic_cast<typename propergate_cv<From, To>::Type *>(from);
+  assert(ret && "Cannot cast from From to To.");
+  return ret;
 #endif
 }
 

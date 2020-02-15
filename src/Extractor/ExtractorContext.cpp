@@ -237,17 +237,17 @@ public:
     return _types.size();
   }
 
-  Optional<std::vector<const llvm::Function *>> GetConstructorsOfType(
+  std::vector<const llvm::Function *> GetConstructorsOfType(
       const llvm::Type* type) const {
     if (!exist(_typeToCtors, type)) {
-      return Optional<std::vector<const llvm::Function *>> { };
+      return std::vector<const llvm::Function *> { };
     } else {
       std::vector<const llvm::Function *> ret;
       auto r = _typeToCtors.equal_range(type);
       for (auto i = r.first; i != r.second; ++i) {
         ret.push_back(i->second);
       }
-      return Optional<std::vector<const llvm::Function *>> { std::move(ret) };
+      return ret;
     }
   }
 
@@ -356,24 +356,29 @@ private:
         auto elementType = AddLLVMType(type->getArrayElementType());
         cafType = _store->CreateArrayType(type->getArrayNumElements(), elementType, typeId);
       } else if (type->isStructTy()) {
-        auto structType = _store->CreateStructType(type->getStructName(), typeId);
+        auto structType = caf::dyn_cast<llvm::StructType>(type);
+        if (structType->isLiteral() || !structType->hasName()) {
+          cafType = _store->CreateUnnamedStructType(typeId);
+        } else {
+          auto structType = _store->CreateStructType(type->getStructName(), typeId);
 
-        auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type).take();
-        for (auto c : ctorsLLVM) {
-          auto funcType = c->getFunctionType();
-          auto ctorId = _frozenContext->GetConstructorId(c);
+          auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type);
+          for (auto c : ctorsLLVM) {
+            auto funcType = c->getFunctionType();
+            auto ctorId = _frozenContext->GetConstructorId(c);
 
-          std::vector<CAFStoreRef<Type>> paramTypes;
-          paramTypes.reserve(funcType->getNumParams());
-          for (auto paramType : funcType->params()) {
-            paramTypes.push_back(AddLLVMType(paramType));
+            std::vector<CAFStoreRef<Type>> paramTypes;
+            paramTypes.reserve(funcType->getNumParams());
+            for (auto paramType : funcType->params()) {
+              paramTypes.push_back(AddLLVMType(paramType));
+            }
+
+            FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };
+            structType->AddConstructor(Constructor { std::move(ctorSignature), ctorId });
           }
 
-          FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };
-          structType->AddConstructor(Constructor { std::move(ctorSignature), ctorId });
+          cafType = structType;
         }
-
-        cafType = structType;
       } else if (type->isFunctionTy()) {
         auto signatureLLVM = LLVMFunctionSignature::FromType(type);
         auto i = _funcTypes.find(signatureLLVM);
@@ -576,7 +581,7 @@ size_t ExtractorContext::GetTypesCount() const {
   return _frozen->GetTypesCount();
 }
 
-Optional<std::vector<const llvm::Function *>> ExtractorContext::GetConstructorsOfType(
+std::vector<const llvm::Function *> ExtractorContext::GetConstructorsOfType(
     const llvm::Type *type) const {
   EnsureFrozen();
   return _frozen->GetConstructorsOfType(type);

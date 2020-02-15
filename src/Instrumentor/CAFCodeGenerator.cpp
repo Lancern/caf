@@ -407,7 +407,7 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint
     }
   } else {
     auto type = _extraction->GetTypeById(typeId).take();
-    auto ctors = _extraction->GetConstructorsOfType(type).take();
+    auto ctors = _extraction->GetConstructorsOfType(type);
     int caseCounter = 0;
     for (auto ctor: ctors) {
       cases.push_back(CreateCallApiCase(

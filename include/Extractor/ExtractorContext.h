@@ -201,12 +201,9 @@ public:
    * will trigger an assertion failure.
    *
    * @param type the type.
-   * @return Optional<std::vector<const llvm::Function *>> constructors of the given type. If the
-   * given type is not a struct type or does not exist, returns an empty Optional object. Note that
-   * an empty std::vector might be returned if the type is a struct type and has been registered,
-   * but no constructors are associated with it.
+   * @return std::vector<const llvm::Function *> constructors of the given type.
    */
-  Optional<std::vector<const llvm::Function *>> GetConstructorsOfType(const llvm::Type* type) const;
+  std::vector<const llvm::Function *> GetConstructorsOfType(const llvm::Type* type) const;
 
   /**
    * @brief Get the constructing type of the given constructor.

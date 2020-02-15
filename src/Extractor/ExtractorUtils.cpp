@@ -151,10 +151,18 @@ private:
 } // namespace <anonymous>
 
 bool IsApiFunction(const llvm::Function& func) {
+  if (func.isDeclaration()) {
+    return false;
+  }
+
   return func.hasFnAttribute(llvm::Attribute::CafApi);
 }
 
 bool IsV8ApiFunction(const llvm::Function& func) {
+  if (func.isDeclaration()) {
+    return false;
+  }
+
   auto funcType = func.getFunctionType();
   if (funcType->getNumParams() != 1) {
     return false;

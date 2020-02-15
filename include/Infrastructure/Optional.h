@@ -1,6 +1,8 @@
 #ifndef CAF_OPTIONAL_H
 #define CAF_OPTIONAL_H
 
+#include <cassert>
+#include <new>
 #include <utility>
 #include <type_traits>
 
@@ -30,26 +32,25 @@ public:
    * @param value the object to be contained in the constructed @see Optional<T> object.
    */
   explicit Optional(T value)
-    : _hasValue(true) {
+    : _hasValue(false) {
     emplace(std::move(value));
   }
 
   template <typename std::enable_if<std::is_copy_constructible<T>::value, int>::type = 0>
   Optional(const Optional<T>& another)
-    : _hasValue(another._hasValue)
+    : _hasValue(false)
   {
-    if (_hasValue) {
+    if (another.hasValue()) {
       emplace(another.value());
     }
   }
 
   template <typename std::enable_if<std::is_move_constructible<T>::value, int>::type = 0>
   Optional(Optional<T>&& another) noexcept
-    : _hasValue(another._hasValue)
+    : _hasValue(false)
   {
-    if (_hasValue) {
-      another._hasValue = false;
-      emplace(std::move(another.value()));
+    if (another.hasValue()) {
+      emplace(another.take());
     }
   }
 
@@ -59,18 +60,20 @@ public:
 
   template <typename std::enable_if<std::is_copy_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(const Optional<T>& another) {
-    _hasValue = another._hasValue;
-    if (_hasValue) {
+    drain();
+    if (another.hasValue()) {
       emplace(another.value());
     }
+    return *this;
   }
 
   template <typename std::enable_if<std::is_move_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(Optional<T>&& another) {
-    _hasValue = another._hasValue;
-    if (_hasValue) {
-      emplace(std::move(another.value()));
+    drain();
+    if (another.hasValue()) {
+      emplace(another.take());
     }
+    return *this;
   }
 
   /**
@@ -106,7 +109,6 @@ public:
    */
   void set(T value) {
     emplace(std::move(value));
-    _hasValue = true;
   }
 
   /**
@@ -127,6 +129,7 @@ public:
    * @return T the contained value.
    */
   T take() {
+    assert(_hasValue && "Trying to take an empty Optional object.");
     auto ret = std::move(value());
     _hasValue = false;
     return ret;
@@ -176,8 +179,8 @@ public:
   }
 
 private:
-  bool _hasValue;
   alignas(alignof(T)) char _value[sizeof(T)];
+  bool _hasValue;
   // _value contains raw data of an object of T which might be uninitialized.
 }; // class Optional
 

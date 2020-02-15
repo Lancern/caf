@@ -343,7 +343,9 @@ public:
 
     _codeGen.SetContext(module, _symbols);
     _codeGen.GenerateCallbackFunctionCandidateArray(symbolTableFreeze.callbackFunctions);
-    _codeGen.GenerateStub();
+    countSimpleCtors(_symbols.ctors());
+    // _codeGen.GenerateStub();
+    countSimoleCtorCalls(module);
 
     return false;
   }
@@ -352,6 +354,95 @@ private:
   // Symbol table.
   caf::CAFSymbolTable _symbols;
   caf::CAFCodeGenerator _codeGen;
+
+  bool isSimpleCtor(llvm::Function* ctor) {
+    if(ctor->arg_size() == 1)return false; // only has one arg: this*.
+    bool isSimple = true;
+    bool passThisptr = false;
+    for(auto &param: ctor->args()) {
+      if(passThisptr == false) {
+        passThisptr = true;
+        continue;
+      }
+      auto type = param.getType();
+      if(type->isIntegerTy() || type->isFloatingPointTy()) continue;
+      if(type->isStructTy())continue;
+      if(type->isPointerTy() && type->getPointerElementType()->isStructTy())continue; 
+      if(type->isFunctionTy())continue;
+      if(type->isPointerTy() && type->getPointerElementType()->isFunctionTy())continue;
+      // type->dump();
+      isSimple = false;
+      break;
+    }
+    return isSimple;
+  }
+
+  void countSimoleCtorCalls(llvm::Module& module) {
+    long long allCtorCalls = 0, simpleCtorCalls = 0, ctorCallwithAllConstantParams = 0;
+    for(auto &Function: module.functions()) {
+      for(auto &BB: Function) {
+        for(auto &I: BB) {
+          if(llvm::isa<llvm::CallInst>(I) || llvm::isa<llvm::InvokeInst>(I)) {
+            std::vector<llvm::Value*>params;
+            for(auto &operand: I.operands()) {
+              params.push_back(&*operand);
+              if(llvm::isa<llvm::Function>(operand)) {
+                auto callee = llvm::cast<llvm::Function>(operand);
+                if(callee->hasFnAttribute(llvm::Attribute::CafCxxCtor)) { 
+                  allCtorCalls += 1;
+                  if(isSimpleCtor(callee)) {
+                    simpleCtorCalls += 1;
+                    bool allParamIsConstant = true;
+                    for(auto param: params) {
+                      auto type = param->getType();
+                      if(llvm::isa<llvm::Constant>(operand)) {
+                        // operand->dump();
+                        continue;
+                      }
+                      allParamIsConstant = false;
+                      break;
+                    }
+                    if(allParamIsConstant == true) {
+                      // I.dump();
+                      ctorCallwithAllConstantParams += 1;
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    llvm::errs() << " *** *** *** *** *** *** *** *** \n";
+    llvm::errs() << "allCtorCalls: " << allCtorCalls << "\n";
+    llvm::errs() << "simpleCtorCalls: " << simpleCtorCalls << "\n";
+    llvm::errs() << "ctorCallwithAllConstantParams: " << ctorCallwithAllConstantParams << "\n";
+  }
+
+  void countSimpleCtors(const std::unordered_map<std::string, std::vector<llvm::Function *>> allCtors) {
+    int allCtorsNum = 0, simpleCtorsNum = 0;
+    int allStructType = allCtors.size(), structTypeWithSimpleCtor = 0;
+    for(auto iter: allCtors) {
+      bool withSimpleCtor = false;
+      auto ctors = iter.second;
+      allCtorsNum += ctors.size();
+      for(auto ctor: ctors) {
+        if(isSimpleCtor(ctor) == true) {
+          // ctor->dump();
+          simpleCtorsNum += 1;
+          withSimpleCtor = true;
+        }
+      }
+      structTypeWithSimpleCtor += withSimpleCtor;
+    }
+    llvm::errs() << "allCtorsNum: " << allCtorsNum << "\n";
+    llvm::errs() << "simpleCtorsNum: " << simpleCtorsNum << "\n";
+    llvm::errs() << " *** *** *** *** *** *** *** *** \n";
+    llvm::errs() << "allStructTypeNum: " << allStructType << "\n";
+    llvm::errs() << "structTypeWithSimpleCtor: " << structTypeWithSimpleCtor << "\n";
+  }
 
   /**
    * @brief Extracts all `interesting` functions from the given LLVM module and add them to the

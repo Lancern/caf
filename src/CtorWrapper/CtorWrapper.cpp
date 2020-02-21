@@ -1,7 +1,11 @@
 #include "CtorWrapperASTConsumer.h"
+#include "CtorWrapperOpts.h"
 
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+
+#include <cstdlib>
+#include <cstring>
 
 namespace clang {
 class CompilerInstance;
@@ -17,7 +21,16 @@ class CtorWrapper : public clang::PluginASTAction {
 protected:
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
       clang::CompilerInstance& compiler, llvm::StringRef) override {
-    return llvm::make_unique<CtorWrapperASTConsumer>(compiler);
+    CtorWrapperOpts opts;
+    opts.DumpAST = true;
+
+    // auto dumpASTEnv = std::getenv("CAF_DUMP_AST");
+    // if (dumpASTEnv && std::strcmp(dumpASTEnv, "TRUE")) {
+    //   llvm::errs() << "CAF constructor wrapper will dump AST after finish.\n";
+    //   opts.DumpAST = true;
+    // }
+
+    return llvm::make_unique<CtorWrapperASTConsumer>(compiler, opts);
   }
 
   bool ParseArgs(const clang::CompilerInstance &, const std::vector<std::string> &) override {

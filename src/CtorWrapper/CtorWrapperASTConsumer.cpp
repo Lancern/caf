@@ -1,5 +1,6 @@
 #include "CtorWrapperASTConsumer.h"
 #include "CtorWrapperCodeGen.h"
+#include "CtorWrapperOpts.h"
 
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -11,7 +12,8 @@ namespace {
 
 class CtorWrapperASTVisitor : public clang::RecursiveASTVisitor<CtorWrapperASTVisitor> {
 public:
-  explicit CtorWrapperASTVisitor(clang::CompilerInstance& compiler, CtorWrapperCodeGen& cg)
+  explicit CtorWrapperASTVisitor(
+      clang::CompilerInstance& compiler, CtorWrapperCodeGen& cg)
     : _compiler(compiler),
       _cg(cg)
   { }
@@ -48,6 +50,11 @@ private:
       return false;
     }
 
+    // We are not instrested in template class declarations that are not fully specialized.
+    if (decl->getDescribedClassTemplate()) {
+      return false;
+    }
+
     return true;
   }
 
@@ -68,8 +75,12 @@ void CtorWrapperASTConsumer::HandleTranslationUnit(clang::ASTContext& context) {
   CtorWrapperCodeGen cg { _compiler, context };
   CtorWrapperASTVisitor visitor { _compiler, cg };
   visitor.TraverseTranslationUnitDecl(context.getTranslationUnitDecl());
-
   cg.GenerateCode();
+
+  if (_opts.DumpAST) {
+    llvm::errs() << "CAF constructor wrapper has finished generating code.\n";
+    context.getTranslationUnitDecl()->dump();
+  }
 }
 
 } // namespace caf

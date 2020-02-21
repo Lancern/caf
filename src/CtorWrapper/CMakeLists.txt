@@ -1,4 +1,8 @@
 add_library(CAFCtorWrapper MODULE
-    # Source files)
+    CtorWrapper.cpp
+    CtorWrapperASTConsumer.cpp
+    CtorWrapperASTConsumer.h
+    CtorWrapperCodeGen.cpp
+    CtorWrapperCodeGen.h)
 
 target_link_libraries(CAFCtorWrapper PUBLIC Clang)

@@ -22,6 +22,21 @@ namespace caf {
 
 namespace {
 
+class PopFunctionDeclContextGuard {
+public:
+  explicit PopFunctionDeclContextGuard(clang::Sema& sema)
+    : _sema(sema)
+  { }
+
+  ~PopFunctionDeclContextGuard() {
+    _sema.PopFunctionScopeInfo();
+    _sema.PopDeclContext();
+  }
+
+private:
+  clang::Sema& _sema;
+}; // class PopFunctionDeclContextGuard
+
 } // namespace <anonymous>
 
 void CtorWrapperCodeGen::RegisterConstructor(clang::CXXConstructorDecl* ctor) {
@@ -49,10 +64,15 @@ clang::CXXMethodDecl* CtorWrapperCodeGen::GenerateWrapperFuncMemberDeclFor(
 
 clang::CXXMethodDecl* CtorWrapperCodeGen::GenerateWrapperFuncDefinitionFor(
     clang::CXXConstructorDecl* ctor, clang::CXXMethodDecl* decl) {
-  auto def = CreateWrapperFuncDecl(ctor);
+  auto def = CreateWrapperFuncDecl(ctor, _context.getTranslationUnitDecl());
   def->setPreviousDecl(decl);
+  _context.getTranslationUnitDecl()->addDecl(def);
 
   GenerateWrapperFunctionBody(def, ctor);
+
+  llvm::errs() << "CAF: Generated wrapper function: \n";
+  def->dump();
+
   return def;
 }
 
@@ -61,6 +81,17 @@ void CtorWrapperCodeGen::GenerateWrapperFunctionBody(
   auto record = ctor->getParent();
   auto recordType = _context.getRecordType(record);
   auto& sema = _compiler.getSema();
+
+  while (sema.CurContext != _context.getTranslationUnitDecl()) {
+    sema.PopDeclContext();
+  }
+
+  auto tuScope = sema.getScopeForContext(_context.getTranslationUnitDecl());
+  clang::Scope wrapperFuncScope { tuScope, clang::Scope::FnScope, sema.getDiagnostics() };
+
+  sema.PushDeclContext(tuScope, func);
+  sema.PushFunctionScope();
+  PopFunctionDeclContextGuard _popDeclContextGuard { sema };
 
   std::vector<clang::Expr *> constructArgs;
   constructArgs.reserve(ctor->getNumParams());
@@ -83,9 +114,13 @@ void CtorWrapperCodeGen::GenerateWrapperFunctionBody(
       /* SourceRange ParenOrBranceRange = */ clang::SourceRange { });
   assert(constructExpr && "Create CXXConstrcutExpr failed.");
 
+  // Clang hack: we need a valid DirectInitRange to make sema.BuildCXXNew think that the
+  // initialization style is "DirectInitialization".
+  auto& sourceManager = _compiler.getSourceManager();
+  auto directInitLoc = sourceManager.getLocForEndOfFile(sourceManager.getMainFileID());
   auto newExpr = sema.BuildCXXNew(
       /* SourceRange Range = */ clang::SourceRange { },
-      /* bool UseGlobal = */ true,
+      /* bool UseGlobal = */ false,
       /* SourceLocation PlacementLParen = */ clang::SourceLocation { },
       /* MultiExprArg PlacementArgs = */ clang::MultiExprArg { },
       /* SourceLocation PlacementRParen = */ clang::SourceLocation { },
@@ -93,7 +128,7 @@ void CtorWrapperCodeGen::GenerateWrapperFunctionBody(
       /* QualType AllocType = */ recordType,
       /* TypeSourceInfo* AllocTypeInfo = */ _context.getTrivialTypeSourceInfo(recordType),
       /* Expr* ArraySize = */ nullptr,
-      /* SourceRange DirectInitRange = */ clang::SourceRange { },
+      /* SourceRange DirectInitRange = */ directInitLoc,
       /* Expr* Initializer = */ constructExpr).get();
   assert(newExpr && "Create CXXNewExpr failed.");
 
@@ -114,7 +149,7 @@ void CtorWrapperCodeGen::GenerateWrapperFunctionBody(
 
 clang::Expr* CtorWrapperCodeGen::GenerateConstructArgument(
     clang::CXXMethodDecl* func, clang::CXXConstructorDecl* ctor, size_t argIndex) {
-  assert(argIndex >= 0 && argIndex < static_cast<size_t>(func->getNumParams()) &&
+  assert(argIndex < static_cast<size_t>(func->getNumParams()) &&
       "Invalid argument index.");
   assert(func->getNumParams() == ctor->getNumParams() &&
       "Numbers of parameters of the given function and constructor do not match.");
@@ -122,27 +157,33 @@ clang::Expr* CtorWrapperCodeGen::GenerateConstructArgument(
   auto& sema = _compiler.getSema();
 
   auto funcParamDecl = func->getParamDecl(argIndex);
+  auto funcParamQualType = funcParamDecl->getType();
   auto ctorParamDecl = ctor->getParamDecl(argIndex);
   auto ctorParamQualType = ctorParamDecl->getType();
   auto ctorParamType = ctorParamQualType.getTypePtr();
 
-  auto funcParamDeclRefExpr = sema.BuildDeclRefExpr(
+  auto paramRefExprType = funcParamQualType;
+  if (paramRefExprType->isReferenceType()) {
+    paramRefExprType = llvm::cast<clang::ReferenceType>(paramRefExprType.getTypePtr())
+        ->getPointeeType();
+  }
+  auto paramRefExpr = sema.BuildDeclRefExpr(
       /* ValueDecl* D = */ funcParamDecl,
-      /* QualType Ty = */ funcParamDecl->getType(),
+      /* QualType Ty = */ paramRefExprType,
       /* ExprValueKind VK = */ clang::VK_LValue,
       /* SourceLocation Loc = */ clang::SourceLocation { }).get();
-  assert(funcParamDeclRefExpr && "Create DeclRefExpr failed.");
+  assert(paramRefExpr && "Create DeclRefExpr failed.");
 
   if (ctorParamType->isStructureOrClassType() || ctorParamType->isRValueReferenceType()) {
-    auto movedFuncParamDeclType = _context.getRValueReferenceType(funcParamDecl->getType());
+    auto moveExprWrittenType = _context.getRValueReferenceType(funcParamQualType);
     auto moveExpr = clang::CXXStaticCastExpr::Create(
         /* const ASTContext& Context = */ _context,
-        /* QualType T = */ movedFuncParamDeclType,
+        /* QualType T = */ funcParamQualType,
         /* ExprValueKind VK = */ clang::VK_XValue,
         /* CastKind K = */ clang::CK_LValueToRValue,
-        /* Expr* Op = */ funcParamDeclRefExpr,
+        /* Expr* Op = */ paramRefExpr,
         /* const CXXCastPath* Path = */ nullptr,
-        /* TypeSourceInfo* Written = */ _context.getTrivialTypeSourceInfo(movedFuncParamDeclType),
+        /* TypeSourceInfo* Written = */ _context.getTrivialTypeSourceInfo(moveExprWrittenType),
         /* SourceLocation L = */ clang::SourceLocation { },
         /* SourceLocation RParenLoc = */ clang::SourceLocation { },
         /* SourceRange AngleBrackets = */ clang::SourceRange { });
@@ -174,22 +215,23 @@ clang::Expr* CtorWrapperCodeGen::GenerateConstructArgument(
 
     return constructExpr;
   } else if (ctorParamType->isLValueReferenceType()) {
-    return funcParamDeclRefExpr;
+    return paramRefExpr;
   } else {
     auto castExpr = clang::ImplicitCastExpr::Create(
         /* const ASTContext& Context = */ _context,
         /* QualType T = */ ctorParamQualType,
         /* CastKind Kind = */ clang::CK_LValueToRValue,
-        /* Expr* Operand = */ funcParamDeclRefExpr,
+        /* Expr* Operand = */ paramRefExpr,
         /* const CXXCastPath* BasePath = */ nullptr,
-        /* ExprValueKind Cat = */ clang::VK_XValue);
+        /* ExprValueKind Cat = */ clang::VK_RValue);
     assert(castExpr && "Create ImplicitCastExpr failed.");
 
     return castExpr;
   }
 }
 
-clang::CXXMethodDecl* CtorWrapperCodeGen::CreateWrapperFuncDecl(clang::CXXConstructorDecl* ctor) {
+clang::CXXMethodDecl* CtorWrapperCodeGen::CreateWrapperFuncDecl(
+    clang::CXXConstructorDecl* ctor, clang::DeclContext* lexicalContext) {
   auto funcQualType = GetWrapperFunctionType(ctor);
   auto funcName = GetDeclarationNameInfo(CAF_WRAPPER_FUNC_NAME);
 
@@ -205,6 +247,10 @@ clang::CXXMethodDecl* CtorWrapperCodeGen::CreateWrapperFuncDecl(clang::CXXConstr
       /* bool isConstexpr = */ false,
       /* SourceLocation EndLocation = */ clang::SourceLocation { });
   assert(decl && "Create CXXMethodDecl failed.");
+
+  if (lexicalContext) {
+    decl->setLexicalDeclContext(lexicalContext);
+  }
 
   // Generate parameter declarations.
   auto funcType = llvm::cast<clang::FunctionProtoType>(funcQualType.getTypePtr());
@@ -243,7 +289,7 @@ clang::QualType CtorWrapperCodeGen::GetWrapperFunctionType(clang::CXXConstructor
     paramTypes.push_back(pr->getType());
   }
 
-  auto retType = _context.getRecordType(ctor->getParent());
+  auto retType = _context.getPointerType(_context.getRecordType(ctor->getParent()));
   return _context.getFunctionType(retType, paramTypes, clang::FunctionProtoType::ExtProtoInfo { });
 }
 
@@ -267,7 +313,7 @@ clang::CXXConstructorDecl* CtorWrapperCodeGen::LookupMoveConstructor(clang::CXXR
     }
   }
 
-  auto ctor = llvm::cast<clang::CXXConstructorDecl>(sema.DeclareImplicitMoveAssignment(record));
+  auto ctor = llvm::cast<clang::CXXConstructorDecl>(sema.DeclareImplicitMoveConstructor(record));
   sema.DefineImplicitMoveConstructor(clang::SourceLocation { }, ctor);
   return ctor;
 }

@@ -1,6 +1,7 @@
 #include "CtorWrapperASTConsumer.h"
 
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendPluginRegistry.h"
 
 namespace clang {
 class CompilerInstance;
@@ -27,5 +28,12 @@ protected:
     return clang::PluginASTAction::AddBeforeMainAction;
   }
 }; // class CtorWrappper
+
+namespace {
+
+clang::FrontendPluginRegistry::Add<CtorWrapper> RegisterAction {
+    "caf-ctor-wrappper", "CAF Constructor Wrapper Action" };
+
+} // namespace <anonymous>
 
 } // namespace caf

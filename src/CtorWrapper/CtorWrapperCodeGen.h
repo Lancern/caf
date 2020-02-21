@@ -11,6 +11,7 @@ class CXXMethodDecl;
 class CXXConstructorDecl;
 class DeclarationName;
 class DeclarationNameInfo;
+class DeclContext;
 class Expr;
 class IdentifierInfo;
 class QualType;
@@ -63,7 +64,8 @@ private:
   clang::Expr* GenerateConstructArgument(
       clang::CXXMethodDecl* func, clang::CXXConstructorDecl* ctor, size_t argIndex);
 
-  clang::CXXMethodDecl* CreateWrapperFuncDecl(clang::CXXConstructorDecl* ctor);
+  clang::CXXMethodDecl* CreateWrapperFuncDecl(
+      clang::CXXConstructorDecl* ctor, clang::DeclContext* lexicalContext = nullptr);
 
   clang::QualType GetWrapperFunctionType(clang::CXXConstructorDecl* ctor);
 

@@ -21,25 +21,26 @@ class CtorWrapper : public clang::PluginASTAction {
 protected:
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
       clang::CompilerInstance& compiler, llvm::StringRef) override {
-    CtorWrapperOpts opts;
-    opts.DumpAST = true;
-
-    // auto dumpASTEnv = std::getenv("CAF_DUMP_AST");
-    // if (dumpASTEnv && std::strcmp(dumpASTEnv, "TRUE")) {
-    //   llvm::errs() << "CAF constructor wrapper will dump AST after finish.\n";
-    //   opts.DumpAST = true;
-    // }
-
-    return llvm::make_unique<CtorWrapperASTConsumer>(compiler, opts);
+    return llvm::make_unique<CtorWrapperASTConsumer>(compiler, _opts);
   }
 
-  bool ParseArgs(const clang::CompilerInstance &, const std::vector<std::string> &) override {
+  bool ParseArgs(const clang::CompilerInstance &, const std::vector<std::string>& args) override {
+    for (const auto& arg : args) {
+      if (arg == "-caf-ast-dump") {
+        llvm::errs() << "CAF constructor wrapper plugin will dump AST after finishes.\n";
+        _opts.DumpAST = true;
+      }
+    }
+
     return true;
   }
 
   clang::PluginASTAction::ActionType getActionType() override {
     return clang::PluginASTAction::AddBeforeMainAction;
   }
+
+private:
+  CtorWrapperOpts _opts;
 }; // class CtorWrappper
 
 namespace {

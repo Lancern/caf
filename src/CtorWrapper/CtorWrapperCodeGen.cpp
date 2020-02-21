@@ -29,8 +29,8 @@ public:
   { }
 
   ~PopFunctionDeclContextGuard() {
-    _sema.PopFunctionScopeInfo();
     _sema.PopDeclContext();
+    _sema.PopFunctionScopeInfo();
   }
 
 private:
@@ -70,9 +70,6 @@ clang::CXXMethodDecl* CtorWrapperCodeGen::GenerateWrapperFuncDefinitionFor(
 
   GenerateWrapperFunctionBody(def, ctor);
 
-  llvm::errs() << "CAF: Generated wrapper function: \n";
-  def->dump();
-
   return def;
 }
 
@@ -82,15 +79,14 @@ void CtorWrapperCodeGen::GenerateWrapperFunctionBody(
   auto recordType = _context.getRecordType(record);
   auto& sema = _compiler.getSema();
 
+  // Jump to translation unit scope.
   while (sema.CurContext != _context.getTranslationUnitDecl()) {
     sema.PopDeclContext();
   }
 
-  auto tuScope = sema.getScopeForContext(_context.getTranslationUnitDecl());
-  clang::Scope wrapperFuncScope { tuScope, clang::Scope::FnScope, sema.getDiagnostics() };
-
-  sema.PushDeclContext(tuScope, func);
+  // sema.PushDeclContext(tuScope, func);
   sema.PushFunctionScope();
+  sema.PushDeclContext(sema.getCurScope(), func);
   PopFunctionDeclContextGuard _popDeclContextGuard { sema };
 
   std::vector<clang::Expr *> constructArgs;

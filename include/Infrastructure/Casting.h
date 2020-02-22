@@ -6,6 +6,8 @@
 #endif
 
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <type_traits>
 
 namespace caf {
@@ -115,6 +117,74 @@ inline bool is_a(From* from) {
 template <typename To, typename From>
 inline bool is_a(From& from) {
   return is_a<To>(&from);
+}
+
+template <size_t OutputSize, bool IsSigned>
+struct MakeIntegralType { }; // struct MakeIntegralType
+
+template <>
+struct MakeIntegralType<1, false> {
+  using Type = uint8_t;
+}; // struct MakeIntegralType<1, false>
+
+template <>
+struct MakeIntegralType<1, true> {
+  using Type = int8_t;
+}; // struct MakeIntegralType<1, true>
+
+template <>
+struct MakeIntegralType<2, false> {
+  using Type = uint16_t;
+}; // struct MakeIntegralType<2, false>
+
+template <>
+struct MakeIntegralType<2, true> {
+  using Type = int16_t;;
+}; // struct MakeIntegralType<2, true>
+
+template <>
+struct MakeIntegralType<4, false> {
+  using Type = uint32_t;
+}; // struct MakeIntegralType<4, false>
+
+template <>
+struct MakeIntegralType<4, true> {
+  using Type = int32_t;
+}; // struct MakeIntegralType<4, true>
+
+template <>
+struct MakeIntegralType<8, false> {
+  using Type = uint64_t;
+}; // struct MakeIntegralType<8, false>
+
+template <>
+struct MakeIntegralType<8, true> {
+  using Type = int64_t;
+}; // struct MakeIntegralType<8, true>
+
+namespace details {
+
+template <size_t OutputSize, typename Input>
+struct IntCastHelper {
+  using OutputType = typename MakeIntegralType<OutputSize, std::is_signed<Input>::value>::Type;
+}; // struct IntCastHelper
+
+} // namespace details
+
+/**
+ * @brief Cast the given integer type Input to the integer type of the given size. The sign of the
+ * integer type will be kept.
+ *
+ * @tparam OutputSize the size of the output integer type.
+ * @tparam Input type of the input integer type.
+ * @param in the input integer value.
+ * @return details::IntCastHelper<OutputSize, Input>::OutputType the input integer value casted to
+ * the desired output integer type.
+ */
+template <size_t OutputSize, typename Input>
+auto int_cast(Input in) -> typename details::IntCastHelper<OutputSize, Input>::OutputType {
+  static_assert(std::is_integral<Input>::value, "Input is not an integral type.");
+  return static_cast<typename details::IntCastHelper<OutputSize, Input>::OutputType>(in);
 }
 
 } // namespace caf

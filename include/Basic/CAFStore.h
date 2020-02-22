@@ -274,6 +274,22 @@ public:
   void AddCallbackFunction(uint64_t signatureId, size_t functionId);
 
   /**
+   * @brief Get the Type object that has the given ID.
+   *
+   * @param id the ID of the type.
+   * @return CAFStoreRef<Type> pointer to the Type object.
+   */
+  CAFStoreRef<Type> GetType(uint64_t id);
+
+  /**
+   * @brief Get the Function object that has the given ID.
+   *
+   * @param id the ID of the API function.
+   * @return CAFStoreRef<Function> pointer to the Function object.
+   */
+  CAFStoreRef<Function> GetApi(uint64_t id);
+
+  /**
    * @brief Get all registered callback functions that matches the given signature.
    *
    * @param signatureId the ID of the function signature.
@@ -305,6 +321,9 @@ private:
   std::vector<std::unique_ptr<Type>> _types;
   std::vector<std::unique_ptr<Function>> _funcs;
   std::unordered_map<uint64_t, std::vector<size_t>> _callbackFunctions;
+
+  std::unordered_map<uint64_t, size_t> _typeIds;
+  std::unordered_map<uint64_t, size_t> _funcIds;
 
   /**
    * @brief Get the object at the specified slot. The type of the object should derive from

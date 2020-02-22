@@ -51,14 +51,22 @@ CAFStoreRef<Function> CAFStore::CreateApi(
 }
 
 CAFStoreRef<Type> CAFStore::AddType(std::unique_ptr<Type> type) {
+  assert(type && "type is null.");
+  auto id = type->id();
+  assert(_typeIds.find(id) == _typeIds.end() && "The same type ID already exists.");
   auto slot = static_cast<size_t>(_types.size());
   _types.push_back(std::move(type));
+  _typeIds[id] = slot;
   return CAFStoreRef<Type> { this, slot };
 }
 
 CAFStoreRef<Function> CAFStore::AddApi(std::unique_ptr<Function> api) {
+  assert(api && "api is null.");
+  auto id = api->id();
+  assert(_funcIds.find(id) == _funcIds.end() && "The same function ID already exists.");
   auto slot = static_cast<size_t>(_funcs.size());
   _funcs.push_back(std::move(api));
+  _funcIds[id] = slot;
   return CAFStoreRef<Function> { this, slot };
 }
 
@@ -69,6 +77,22 @@ void CAFStore::AddCallbackFunction(uint64_t signatureId, size_t functionId) {
     return;
   }
   i->second.push_back(functionId);
+}
+
+CAFStoreRef<Type> CAFStore::GetType(uint64_t id) {
+  auto i = _typeIds.find(id);
+  if (i == _typeIds.end()) {
+    return CAFStoreRef<Type> { };
+  }
+  return CAFStoreRef<Type> { this, i->second };
+}
+
+CAFStoreRef<Function> CAFStore::GetApi(uint64_t id) {
+  auto i = _funcIds.find(id);
+  if (i == _funcIds.end()) {
+    return CAFStoreRef<Function> { };
+  }
+  return CAFStoreRef<Function> { this, i->second };
 }
 
 const std::vector<size_t>* CAFStore::GetCallbackFunctions(uint64_t signatureId) {

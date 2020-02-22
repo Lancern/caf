@@ -139,7 +139,7 @@ struct MakeIntegralType<2, false> {
 
 template <>
 struct MakeIntegralType<2, true> {
-  using Type = int16_t;;
+  using Type = int16_t;
 }; // struct MakeIntegralType<2, true>
 
 template <>

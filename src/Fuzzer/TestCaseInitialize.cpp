@@ -33,13 +33,28 @@ void FatalError(const char* msg, int errCode) {
 
 TestCaseDeserializer* tcReader;
 
+class StdInputStreamAdapter {
+public:
+  explicit StdInputStreamAdapter(std::istream* inner)
+    : _inner(inner)
+  { }
+
+  void read(void* buffer, size_t size) {
+    _inner->read(reinterpret_cast<typename std::istream::char_type *>(buffer), size);
+  }
+
+private:
+  std::istream* _inner;
+}; // class StdInputStreamAdapter
+
 void LoadSeedFromFile(const char* path) {
   std::ifstream stream { path };
   if (stream.fail()) {
     FatalError("Failed to open seed file", errno);
   }
 
-  tcReader->Read(stream);
+  StdInputStreamAdapter adapter { &stream };
+  tcReader->Read(adapter);
 }
 
 extern "C" {

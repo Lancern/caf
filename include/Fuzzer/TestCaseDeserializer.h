@@ -51,7 +51,7 @@ public:
    * called by the following signature:
    *
    * @code
-   * void read(uint8_t* buffer, size_t size);
+   * void read(void* buffer, size_t size);
    * @endcode
    *
    * @param in the input stream.
@@ -89,7 +89,7 @@ private:
     static_assert(std::is_integral<T>::value, "T is not a trivial type.");
 
     uint8_t buffer[Size];
-    in.read(buffer, Size);
+    in.read(reinterpret_cast<void *>(static_cast<uint8_t *>(buffer)), Size);
 
     using RawIntType = typename MakeIntegralType<Size, std::is_signed<T>::value>::Type;
     return static_cast<T>(*reinterpret_cast<RawIntType *>(static_cast<uint8_t *>(buffer)));
@@ -115,7 +115,7 @@ private:
     // current function.
     values.push_back(nullptr);
 
-    for (auto argType : func->args()) {
+    for (auto argType : func->signature().args()) {
       auto value = ReadValue(in, argType.get(), values);
       fc.AddArg(value);
       values.push_back(value);
@@ -147,7 +147,7 @@ private:
       }
       case ValueKind::PointerValue: {
         auto ptrType = caf::dyn_cast<PointerType>(type);
-        auto pointee = ReadValue(in, ptrType->pointeeType(), values);
+        auto pointee = ReadValue(in, ptrType->pointeeType().get(), values);
         return pool->CreateValue<PointerValue>(pool, pointee, ptrType);
       }
       case ValueKind::FunctionPointerValue: {
@@ -161,7 +161,7 @@ private:
         std::vector<Value *> elements;
         elements.reserve(size);
         for (size_t ei = 0; ei < size; ++ei) {
-          elements.push_back(ReadValue(in, arrayType->elementType(), values));
+          elements.push_back(ReadValue(in, arrayType->elementType().get(), values));
         }
         return pool->CreateValue<ArrayValue>(pool, arrayType, std::move(elements));
       }

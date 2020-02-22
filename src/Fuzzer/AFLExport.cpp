@@ -30,9 +30,10 @@ public:
    * @param size size of the buffer pointed to by `data`.
    * @return MemoryStream& return `this`.
    */
-  MemoryStream& write(const uint8_t* data, size_t size) noexcept {
+  MemoryStream& write(const void* data, size_t size) noexcept {
+    auto ptr = reinterpret_cast<const uint8_t *>(data);
     while (size--) {
-      _mem.push_back(*data++);
+      _mem.push_back(*ptr++);
     }
 
     return *this;

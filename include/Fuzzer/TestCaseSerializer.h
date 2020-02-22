@@ -93,7 +93,7 @@ public:
    * can be called with the following signature:
    *
    * @code
-   * void write(const uint8_t* buffer, size_t size);
+   * void write(const void* buffer, size_t size);
    * @endcode
    *
    * @param o the output stream.
@@ -129,7 +129,8 @@ private:
   void WriteInt(Output& o, ValueType value) const {
     static_assert(std::is_integral<ValueType>::value,
         "Type argument ValueType is not a trivial type.");
-    o.write(int_cast<ValueSize>(value));
+    auto casted = int_cast<ValueSize>(value);
+    o.write(reinterpret_cast<void *>(&casted), sizeof(casted));
   }
 
   /**

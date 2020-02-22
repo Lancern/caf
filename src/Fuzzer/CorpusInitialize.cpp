@@ -1,12 +1,15 @@
 #include "CorpusInitialize.h"
+
 #include "Basic/CAFStore.h"
 #include "Basic/JsonDeserializer.h"
 #include "Fuzzer/Corpus.h"
+#include "TestCaseInitialize.h"
 
 #include "json/json.hpp"
 
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
 #include <fstream>
 
 namespace caf {
@@ -38,10 +41,16 @@ std::unique_ptr<CAFStore> InitStore() {
 
 std::unique_ptr<CAFCorpus> InitCorpus() {
   auto store = InitStore();
+  if (!store) {
+    std::cerr << "Initialize CAF store failed." << std::endl;
+    std::exit(1);
+  }
 
-  // TODO: Load test case seeds and then build corpus to return.
+  auto corpus = caf::make_unique<CAFCorpus>(std::move(store));
 
-  return nullptr;
+  LoadSeeds(*corpus);
+
+  return std::move(corpus);
 }
 
 } // namespace caf

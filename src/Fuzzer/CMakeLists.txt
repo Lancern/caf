@@ -3,6 +3,8 @@ add_library(CAFMutator MODULE
     Corpus.cpp
     CorpusInitialize.h
     CorpusInitialize.cpp
+    TestCaseInitialize.cpp
+    TestCaseInitialize.h
     TestCaseMutator.cpp
     TestCaseSerializer.cpp
     ValueGenerator.cpp

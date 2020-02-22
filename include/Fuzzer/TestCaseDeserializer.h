@@ -44,6 +44,19 @@ public:
   TestCaseDeserializer& operator=(const TestCaseDeserializer &) = delete;
   TestCaseDeserializer& operator=(TestCaseDeserializer &&) = default;
 
+  /**
+   * @brief Read a test case from the given input stream.
+   *
+   * @tparam Input type of the input stream. This type should contain a `read` method than can be
+   * called by the following signature:
+   *
+   * @code
+   * void read(uint8_t* buffer, size_t size);
+   * @endcode
+   *
+   * @param in the input stream.
+   * @return CAFCorpusTestCaseRef pointer to the created test case.
+   */
   template <typename Input>
   CAFCorpusTestCaseRef Read(Input& in) const {
     std::vector<Value *> values;
@@ -66,12 +79,7 @@ private:
    *
    * @tparam T the type of the integer to be returned.
    * @tparam Size the number of bytes that will be read from the stream to build the integer.
-   * @tparam Input the type of the input stream. This type should contain a `read` method than can
-   * be called by the following signature:
-   *
-   * @code
-   * void read(uint8_t* buffer, size_t size);
-   * @endcode
+   * @tparam Input the type of the input stream.
    *
    * @param in the input stream.
    * @return T the integer read.

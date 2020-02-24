@@ -54,6 +54,21 @@ public:
     _ctors.push_back(std::move(ctor));
   }
 
+  /**
+   * @brief Get the Constructor with the given ID.
+   *
+   * @param id the ID of the constructor.
+   * @return const Constructor* the ID of the constructor.
+   */
+  const Constructor* GetConstructor(uint64_t id) const {
+    for (const auto& ctor : _ctors) {
+      if (ctor.id() == id) {
+        return &ctor;
+      }
+    }
+    return nullptr;
+  }
+
 #ifdef CAF_LLVM
   /**
    * @brief Test whether the given object is an instance of StructType.

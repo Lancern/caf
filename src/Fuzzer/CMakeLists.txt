@@ -3,6 +3,8 @@ add_library(CAFMutator MODULE
     Corpus.cpp
     CorpusInitialize.h
     CorpusInitialize.cpp
+    TestCaseInitialize.cpp
+    TestCaseInitialize.h
     TestCaseMutator.cpp
     TestCaseSerializer.cpp
     ValueGenerator.cpp
@@ -16,6 +18,7 @@ add_library(CAFMutator MODULE
     ${CAF_INCLUDE_DIR}/Fuzzer/PointerValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/StructValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCase.h
+    ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseDeserializer.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseMutator.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseSerializer.h
     ${CAF_INCLUDE_DIR}/Fuzzer/Value.h

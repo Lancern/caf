@@ -43,6 +43,21 @@ public:
    */
   const FunctionSignature& signature() const { return _signature; }
 
+  /**
+   * @brief Get the number of arguments.
+   *
+   * @return size_t the number of arguments.
+   */
+  size_t GetArgCount() const { return _signature.GetArgCount(); }
+
+  /**
+   * @brief Get the type of the argument at the given index.
+   *
+   * @param index the index of the argument.
+   * @return CAFStoreRef<Type> the type of the argument at the given index.
+   */
+  CAFStoreRef<Type> GetArgType(size_t index) const { return _signature.GetArgType(index); }
+
 private:
   uint64_t _id;
   FunctionSignature _signature;

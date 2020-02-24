@@ -19,6 +19,10 @@ void TestCaseSerializationContext::AddValue(Value* value) {
   _valueIds[value] = _valueIdAlloc.next();
 }
 
+void TestCaseSerializationContext::SkipCurrentIndex() {
+  _valueIdAlloc.next();
+}
+
 } // namespace details
 
 } // namespace caf

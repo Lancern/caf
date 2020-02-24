@@ -4,6 +4,8 @@
 #include "Basic/BitsType.h"
 #include "Fuzzer/Value.h"
 
+#include <vector>
+
 namespace caf {
 
 /**

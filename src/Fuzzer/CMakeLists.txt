@@ -29,4 +29,4 @@ target_link_libraries(CAFFuzzer PUBLIC CAFBasicPIC)
 add_library(CAFMutator MODULE
     AFLExport.cpp)
 
-target_link_libraries(CAFMutator PRIVATE CAFFuzer)
+target_link_libraries(CAFMutator PRIVATE CAFFuzzer)

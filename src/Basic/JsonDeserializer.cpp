@@ -8,6 +8,8 @@
 #include "Basic/Constructor.h"
 #include "Basic/JsonDeserializer.h"
 
+#include <fstream>
+
 namespace caf {
 
 std::unique_ptr<CAFStore> JsonDeserializer::DeserializeCAFStore(const nlohmann::json& json) {
@@ -27,6 +29,14 @@ std::unique_ptr<CAFStore> JsonDeserializer::DeserializeCAFStore(const nlohmann::
       json["callbackFuncs"].get<std::unordered_map<uint64_t, std::vector<size_t>>>());
 
   return std::move(_context.store);
+}
+
+std::unique_ptr<CAFStore> JsonDeserializer::DeserializeCAFStoreFromFile(const char *path) {
+  std::ifstream file { path };
+  if (file.fail()) {
+    return nullptr;
+  }
+  return DeserializeCAFStoreFrom(file);
 }
 
 std::unique_ptr<Type> JsonDeserializer::DeserializeType(const nlohmann::json& json) const {

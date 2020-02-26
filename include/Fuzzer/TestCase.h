@@ -21,7 +21,9 @@ public:
    *
    * @param call the API function call to add.
    */
-  void AddFunctionCall(FunctionCall call);
+  void AddFunctionCall(FunctionCall call) {
+    _calls.push_back(std::move(call));
+  }
 
   /**
    * @brief Get the function call at the given index.

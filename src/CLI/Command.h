@@ -30,7 +30,7 @@ public:
    *
    * @param app the command line settings for this command.
    */
-  virtual void SetupArgs(CLI::App& app) const = 0;
+  virtual void SetupArgs(CLI::App& app) = 0;
 
   /**
    * @brief When overridden in derived classes, execute this command.

@@ -2,6 +2,7 @@ add_executable(CAFCLI
     Command.h
     CommandManager.cpp
     CommandManager.h
+    Diagnostics.h
     GenerateTestCaseCommand.cpp
     main.cpp
     RegisterCommand.h)

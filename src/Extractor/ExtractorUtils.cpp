@@ -192,7 +192,18 @@ bool IsConstructor(const llvm::Function& func) {
 }
 
 std::string GetConstructingTypeName(const llvm::Function& ctor) {
-  return RemoveArgs(demangle(ctor.getName()));
+  auto ctorName = RemoveArgs(demangle(ctor.getName()));
+  QualifiedName qualName { ctorName };
+
+  std::string typeName;
+  for (auto i = 0; i < static_cast<int>(qualName.size()) - 1; ++i) {
+    if (i > 0) {
+      typeName.append("::");
+    }
+    typeName.append(qualName[i]);
+  }
+
+  return typeName;
 }
 
 } // namespace caf

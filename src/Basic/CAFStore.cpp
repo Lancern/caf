@@ -18,14 +18,13 @@ CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size, ui
   return AddType(std::move(type)).unchecked_dyn_cast<BitsType>();
 }
 
-CAFStoreRef<PointerType> CAFStore::CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id) {
-  auto type = caf::make_unique<PointerType>(this, pointeeType, id);
+CAFStoreRef<PointerType> CAFStore::CreatePointerType(uint64_t id) {
+  auto type = caf::make_unique<PointerType>(this, id);
   return AddType(std::move(type)).unchecked_dyn_cast<PointerType>();
 }
 
-CAFStoreRef<ArrayType> CAFStore::CreateArrayType(
-    size_t size, CAFStoreRef<Type> elementType, uint64_t id) {
-  auto type = caf::make_unique<ArrayType>(this, size, elementType, id);
+CAFStoreRef<ArrayType> CAFStore::CreateArrayType(size_t size, uint64_t id) {
+  auto type = caf::make_unique<ArrayType>(this, size, id);
   return AddType(std::move(type)).unchecked_dyn_cast<ArrayType>();
 }
 

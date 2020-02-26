@@ -189,12 +189,10 @@ public:
   /**
    * @brief Create a PointerType object managed by this store.
    *
-   * @param pointeeType the type of the pointee, a.k.a. the type of the value pointed to by the
-   * pointer.
    * @param id the ID of this type.
    * @return CAFStoreRef<PointerType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<PointerType> CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id);
+  CAFStoreRef<PointerType> CreatePointerType(uint64_t id);
 
   /**
    * @brief Create an ArrayType object managed by this store.
@@ -204,7 +202,7 @@ public:
    * @param id the ID of this type.
    * @return CAFStoreRef<ArrayType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<ArrayType> CreateArrayType(size_t size, CAFStoreRef<Type> elementType, uint64_t id);
+  CAFStoreRef<ArrayType> CreateArrayType(size_t size, uint64_t id);
 
   /**
    * @brief Create a StructType object managed by this store. If the name of the given struct type

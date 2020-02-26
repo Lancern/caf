@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <cstring>
 #include <utility>
 #include <vector>
 #include <unordered_map>
@@ -104,6 +105,14 @@ std::string GetTypeName(const llvm::Type* type) {
   } else {
     return "";
   }
+}
+
+bool BeginWith(const std::string& s, const char* prefix) {
+  size_t len = std::strlen(prefix);
+  if (len > s.length()) {
+    return false;
+  }
+  return std::strncmp(s.c_str(), prefix, len) == 0;
 }
 
 } // namespace <anonymous>
@@ -330,8 +339,7 @@ private:
     CAFStore* _store;
 
     std::unordered_map<const llvm::Type *, CAFStoreRef<Type>> _types;
-    std::unordered_map<LLVMFunctionSignature, CAFStoreRef<FunctionType>,
-        Hasher<LLVMFunctionSignature>> _funcTypes;
+    std::unordered_map<LLVMFunctionSignature, uint64_t, Hasher<LLVMFunctionSignature>> _funcTypeIds;
     IncrementIdAllocator<uint64_t> _funcSignatureIdAlloc;
 
     CAFStoreRef<Type> AddLLVMType(const llvm::Type* type) {
@@ -344,67 +352,26 @@ private:
         return i->second;
       }
 
-      auto typeId = _frozenContext->GetTypeId(type);
+      auto typeId = _frozenContext->GetTypeId(type).take();
 
       CAFStoreRef<Type> cafType;
       if (type->isIntegerTy() || type->isFloatingPointTy()) {
         cafType = _store->CreateBitsType(GetTypeName(type), GetTypeSize(type), typeId);
+        _types.emplace(type, cafType);
       } else if (type->isPointerTy()) {
-        auto pointeeType = AddLLVMType(type->getPointerElementType());
-        cafType = _store->CreatePointerType(pointeeType, typeId);
+        auto pointerType = _store->CreatePointerType(typeId);
+        _types.emplace(type, pointerType);
+        pointerType->SetPointeeType(AddLLVMType(type->getPointerElementType()));
+        cafType = pointerType;
       } else if (type->isArrayTy()) {
-        auto elementType = AddLLVMType(type->getArrayElementType());
-        cafType = _store->CreateArrayType(type->getArrayNumElements(), elementType, typeId);
+        auto arrayType = _store->CreateArrayType(type->getArrayNumElements(), typeId);
+        _types.emplace(type, arrayType);
+        arrayType->SetElementType(AddLLVMType(type->getArrayElementType()));
+        cafType = arrayType;
       } else if (type->isStructTy()) {
-        auto structType = caf::dyn_cast<llvm::StructType>(type);
-        if (structType->isLiteral() || !structType->hasName()) {
-          cafType = _store->CreateUnnamedStructType(typeId);
-        } else {
-          auto structType = _store->CreateStructType(type->getStructName(), typeId);
-
-          auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type);
-          for (auto c : ctorsLLVM) {
-            auto funcType = c->getFunctionType();
-            auto ctorId = _frozenContext->GetConstructorId(c);
-
-            std::vector<CAFStoreRef<Type>> paramTypes;
-            paramTypes.reserve(funcType->getNumParams());
-            for (auto paramType : funcType->params()) {
-              paramTypes.push_back(AddLLVMType(paramType));
-            }
-
-            FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };
-            structType->AddConstructor(Constructor { std::move(ctorSignature), ctorId });
-          }
-
-          cafType = structType;
-        }
+        cafType = AddLLVMStructType(caf::dyn_cast<llvm::StructType>(type), typeId);
       } else if (type->isFunctionTy()) {
-        auto signatureLLVM = LLVMFunctionSignature::FromType(type);
-        auto i = _funcTypes.find(signatureLLVM);
-        if (i != _funcTypes.end()) {
-          return i->second;
-        }
-
-        auto signatureId = _funcSignatureIdAlloc.next();
-        auto funcType = _store->CreateFunctionType(signatureId, typeId);
-        _funcTypes.emplace(signatureLLVM, funcType);
-
-        auto retType = AddLLVMType(signatureLLVM.retType());
-        std::vector<CAFStoreRef<Type>> paramTypes;
-        for (auto t : signatureLLVM.paramTypes()) {
-          paramTypes.push_back(AddLLVMType(t));
-        }
-
-        FunctionSignature cafSignature { retType, std::move(paramTypes) };
-        funcType->SetSigature(std::move(cafSignature));
-
-        // Add all callback functions that match the signature to the store.
-        for (auto callbackFuncId : _frozenContext->GetCallbackFunctions(signatureLLVM)) {
-          _store->AddCallbackFunction(signatureId, callbackFuncId);
-        }
-
-        cafType = funcType;
+        cafType = AddLLVMFunctionType(caf::dyn_cast<llvm::FunctionType>(type), typeId);
       } else {
         // This branch should be unreachable.
         assert(false && "Unreachable branch.");
@@ -412,6 +379,66 @@ private:
       }
 
       return cafType;
+    }
+
+    CAFStoreRef<Type> AddLLVMStructType(const llvm::StructType* type, uint64_t typeId) {
+      auto structType = caf::dyn_cast<llvm::StructType>(type);
+      if (structType->isLiteral() || !structType->hasName()) {
+        auto structType = _store->CreateUnnamedStructType(typeId);
+        _types.emplace(type, structType);
+        return structType;
+      } else {
+        auto structType = _store->CreateStructType(type->getStructName(), typeId);
+        _types.emplace(type, structType);
+
+        auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type);
+        for (auto c : ctorsLLVM) {
+          auto funcType = c->getFunctionType();
+          auto ctorId = _frozenContext->GetConstructorId(c);
+
+          std::vector<CAFStoreRef<Type>> paramTypes;
+          paramTypes.reserve(funcType->getNumParams());
+          for (auto paramType : funcType->params()) {
+            paramTypes.push_back(AddLLVMType(paramType));
+          }
+
+          FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };
+          structType->AddConstructor(Constructor { std::move(ctorSignature), ctorId });
+        }
+
+        return structType;
+      }
+    }
+
+    CAFStoreRef<Type> AddLLVMFunctionType(const llvm::FunctionType* type, uint64_t typeId) {
+      auto signatureLLVM = LLVMFunctionSignature::FromType(type);
+      auto i = _funcTypeIds.find(signatureLLVM);
+      uint64_t signatureId;
+      if (i != _funcTypeIds.end()) {
+        signatureId = i->second;
+      } else {
+        signatureId = _funcSignatureIdAlloc.next();
+        _funcTypeIds.emplace(signatureLLVM, signatureId);
+      }
+
+      auto funcType = _store->CreateFunctionType(signatureId, typeId);
+      _types.emplace(type, funcType);
+
+      auto retType = AddLLVMType(signatureLLVM.retType());
+      std::vector<CAFStoreRef<Type>> paramTypes;
+      for (auto t : signatureLLVM.paramTypes()) {
+        paramTypes.push_back(AddLLVMType(t));
+      }
+
+      FunctionSignature cafSignature { retType, std::move(paramTypes) };
+      funcType->SetSigature(std::move(cafSignature));
+
+      // Add all callback functions that match the signature to the store.
+      for (auto callbackFuncId : _frozenContext->GetCallbackFunctions(signatureLLVM)) {
+        _store->AddCallbackFunction(signatureId, callbackFuncId);
+      }
+
+      return funcType;
     }
   }; // class CreateCAFStoreContext
 
@@ -508,7 +535,11 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
   }
 
   _frozen->AddType(type);
-  if (type->isStructTy()) {
+  if (type->isPointerTy()) {
+    FreezeType(type->getPointerElementType());
+  } else if (type->isArrayTy()) {
+    FreezeType(type->getArrayElementType());
+  } else if (type->isStructTy()) {
     auto structType = caf::dyn_cast<llvm::StructType>(type);
     if (!structType->hasName()) {
       // Unnamed struct type does not have constructors for sure.
@@ -516,7 +547,16 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
     }
 
     auto name = type->getStructName().str();
-    auto r = _ctors.equal_range(name);
+    auto ctorName = name;
+    // When lookup constructors for this struct type, we need to remove the "class." or the
+    // "struct." prefix of the struct name, if any.
+    if (BeginWith(ctorName, "class.")) {
+      ctorName = ctorName.substr(sizeof("class.") - 1);
+    } else if (BeginWith(ctorName, "struct.")) {
+      ctorName = ctorName.substr(sizeof("struct.") - 1);
+    }
+
+    auto r = _ctors.equal_range(ctorName);
     if (r.first == r.second) {
       llvm::errs() << "CAF: Warning: no constructor found for struct type " << name << "\n";
     } else {
@@ -524,11 +564,23 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
         FreezeConstructor(type, i->second);
       }
     }
+  } else if (type->isFunctionTy()) {
+    auto funcType = caf::dyn_cast<llvm::FunctionType>(type);
+    FreezeType(funcType->getReturnType());
+    for (auto paramType : funcType->params()) {
+      FreezeType(paramType);
+    }
   }
 }
 
 void ExtractorContext::FreezeConstructor(const llvm::Type* type, const llvm::Function* ctor) const {
   _frozen->AddConstructor(type, ctor);
+
+  auto ctorFuncType = ctor->getFunctionType();
+  FreezeType(ctorFuncType->getReturnType());
+  for (auto paramType : ctorFuncType->params()) {
+    FreezeType(paramType);
+  }
 }
 
 std::unique_ptr<CAFStore> ExtractorContext::CreateCAFStore() const {

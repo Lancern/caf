@@ -107,14 +107,6 @@ std::string GetTypeName(const llvm::Type* type) {
   }
 }
 
-bool BeginWith(const std::string& s, const char* prefix) {
-  size_t len = std::strlen(prefix);
-  if (len > s.length()) {
-    return false;
-  }
-  return std::strncmp(s.c_str(), prefix, len) == 0;
-}
-
 } // namespace <anonymous>
 
 class ExtractorContext::FrozenContext {
@@ -488,10 +480,9 @@ void ExtractorContext::AddApiFunction(const llvm::Function* func) {
   _apis.push_back(func);
 }
 
-void ExtractorContext::AddConstructor(
-    std::string constructingTypeName, const llvm::Function *ctor) {
+void ExtractorContext::AddConstructor(const llvm::Type* type, const llvm::Function *ctor) {
   EnsureNotFrozen();
-  _ctors.emplace(std::move(constructingTypeName), ctor);
+  _ctors.emplace(type, ctor);
 }
 
 void ExtractorContext::AddCallbackFunctionCandidate(const llvm::Function* func) {
@@ -546,19 +537,10 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
       return;
     }
 
-    auto name = type->getStructName().str();
-    auto ctorName = name;
-    // When lookup constructors for this struct type, we need to remove the "class." or the
-    // "struct." prefix of the struct name, if any.
-    if (BeginWith(ctorName, "class.")) {
-      ctorName = ctorName.substr(sizeof("class.") - 1);
-    } else if (BeginWith(ctorName, "struct.")) {
-      ctorName = ctorName.substr(sizeof("struct.") - 1);
-    }
-
-    auto r = _ctors.equal_range(ctorName);
+    auto r = _ctors.equal_range(type);
     if (r.first == r.second) {
-      llvm::errs() << "CAF: Warning: no constructor found for struct type " << name << "\n";
+      llvm::errs() << "CAF: Warning: no constructor found for struct type "
+                   << structType->getStructName() << "\n";
     } else {
       for (auto i = r.first; i != r.second; ++i) {
         FreezeConstructor(type, i->second);

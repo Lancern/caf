@@ -79,8 +79,8 @@ bool ExtractorPass::runOnModule(llvm::Module &module) {
       }
     } else if (caf::IsConstructor(func)) {
       ++ConstructorsCount;
-      auto name = caf::GetConstructingTypeName(func);
-      _context.AddConstructor(std::move(name), &func);
+      // auto name = caf::GetConstructingTypeName(func);
+      _context.AddConstructor(caf::GetConstructingType(&func), &func);
     }
 
     ++CallbackCandidatesCount;

@@ -9,6 +9,7 @@ set(CAF_BASIC_SOURCES
     ${CAF_INCLUDE_DIR}/Basic/ArrayType.h
     ${CAF_INCLUDE_DIR}/Basic/StructType.h
     ${CAF_INCLUDE_DIR}/Basic/FunctionType.h
+    ${CAF_INCLUDE_DIR}/Basic/AggregateType.h
     ${CAF_INCLUDE_DIR}/Basic/Function.h
     ${CAF_INCLUDE_DIR}/Basic/Constructor.h
     ${CAF_INCLUDE_DIR}/Basic/CAFStore.h

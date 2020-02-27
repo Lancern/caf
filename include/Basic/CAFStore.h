@@ -18,6 +18,7 @@ class PointerType;
 class ArrayType;
 class StructType;
 class FunctionType;
+class AggregateType;
 class FunctionSignature;
 class Function;
 
@@ -205,9 +206,7 @@ public:
   CAFStoreRef<ArrayType> CreateArrayType(size_t size, uint64_t id);
 
   /**
-   * @brief Create a StructType object managed by this store. If the name of the given struct type
-   * already exist in the store, then no StructType instances will be created and the already
-   * existed instance will be returned.
+   * @brief Create a StructType object managed by this store.
    *
    * @param name the name of the struct.
    * @param id the ID of this type.
@@ -231,6 +230,23 @@ public:
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
   CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId, uint64_t id);
+
+  /**
+   * @brief Create an AggregateType object managed by this store.
+   *
+   * @param name the name of the aggregate type.
+   * @param id the ID of the aggregate type.
+   * @return CAFStoreRef<AggregateType> the created aggregate type.
+   */
+  CAFStoreRef<AggregateType> CreateAggregateType(std::string name, uint64_t id);
+
+  /**
+   * @brief Create an unnamed aggregate type and add it to this store.
+   *
+   * @param id the ID of the type.
+   * @return CAFStoreRef<AggregateType> the created aggregate type.
+   */
+  CAFStoreRef<AggregateType> CreateUnnamedAggregateType(uint64_t id);
 
   /**
    * @brief Create a Function object representing an API in this store. If the name of the API

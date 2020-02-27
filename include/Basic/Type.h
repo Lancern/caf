@@ -40,7 +40,14 @@ enum class TypeKind {
    * @brief Function type, defined in FunctionType class.
    *
    */
-  Function
+  Function,
+
+  /**
+   * @brief Aggregate type (struct type that does not have any constructors), defined in
+   * AggregateType class.
+   *
+   */
+  Aggregate,
 };
 
 /**

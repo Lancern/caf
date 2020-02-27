@@ -7,6 +7,7 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/FunctionType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Function.h"
 
 namespace caf {
@@ -34,13 +35,21 @@ CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name, uint64_t id
 }
 
 CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType(uint64_t id) {
-  auto type = caf::make_unique<StructType>(this, "", id);
-  return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
+  return CreateStructType("", id);
 }
 
 CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId, uint64_t id) {
   auto type = caf::make_unique<FunctionType>(this, signatureId, id);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
+}
+
+CAFStoreRef<AggregateType> CAFStore::CreateAggregateType(std::string name, uint64_t id) {
+  auto type = caf::make_unique<AggregateType>(this, std::move(name), id);
+  return AddType(std::move(type)).unchecked_dyn_cast<AggregateType>();
+}
+
+CAFStoreRef<AggregateType> CAFStore::CreateUnnamedAggregateType(uint64_t id) {
+  return CreateAggregateType("", id);
 }
 
 CAFStoreRef<Function> CAFStore::CreateApi(

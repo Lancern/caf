@@ -5,6 +5,7 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/FunctionType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Constructor.h"
 #include "Basic/JsonDeserializer.h"
 
@@ -63,6 +64,10 @@ std::unique_ptr<Type> JsonDeserializer::DeserializeType(const nlohmann::json& js
     case TypeKind::Function:
       type = DeserializeFunctionType(json);
       break;
+
+    case TypeKind::Aggregate:
+      type = DeserializeAggregateType(json);
+      break;
   }
 
   if (type) {
@@ -106,6 +111,20 @@ std::unique_ptr<Type> JsonDeserializer::DeserializeFunctionType(const nlohmann::
   auto signature = DeserializeFunctionSignature(json["signature"]);
   auto signatureId = json["signatureId"].get<uint64_t>();
   return caf::make_unique<FunctionType>(_context.store.get(), std::move(signature), signatureId, 0);
+}
+
+std::unique_ptr<Type> JsonDeserializer::DeserializeAggregateType(const nlohmann::json& json) const {
+  auto name = json["name"].get<std::string>();
+
+  const auto& fieldsJson = json["fields"];
+  std::vector<CAFStoreRef<Type>> fields;
+  fields.reserve(fieldsJson.size());
+  for (const auto& field : fieldsJson) {
+    fields.push_back(DeserializeCAFStoreRef<Type>(field));
+  }
+
+  return caf::make_unique<AggregateType>(
+      _context.store.get(), std::move(name), std::move(fields), 0);
 }
 
 FunctionSignature JsonDeserializer::DeserializeFunctionSignature(const nlohmann::json& json) const {

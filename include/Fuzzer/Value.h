@@ -42,6 +42,12 @@ enum class ValueKind : int {
   StructValue,
 
   /**
+   * @brief The value is an instance of `AggregateType`.
+   *
+   */
+  AggregateValue,
+
+  /**
    * @brief The value is an instance of `PlaceholderValue`.
    *
    */

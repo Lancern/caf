@@ -13,11 +13,13 @@ class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
+class AggregateType;
 class BitsValue;
 class PointerValue;
 class FunctionPointerValue;
 class ArrayValue;
 class StructValue;
+class AggregateValue;
 class PlaceholderValue;
 class TestCase;
 
@@ -77,6 +79,14 @@ public:
    * @return StructValue* the generated value.
    */
   StructValue* GenerateNewStructType(const StructType* type);
+
+  /**
+   * @brief Generate a new aggregate type value.
+   *
+   * @param type the type of the aggregate value to be generated.
+   * @return AggregateValue* the generated value.
+   */
+  AggregateValue* GenerateNewAggregateType(const AggregateType* type);
 
   /**
    * @brief Generate a new value of the given type.

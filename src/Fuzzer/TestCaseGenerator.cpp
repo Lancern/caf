@@ -3,6 +3,7 @@
 #include "Basic/FunctionType.h"
 #include "Basic/PointerType.h"
 #include "Basic/StructType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Type.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/BitsValue.h"
@@ -11,6 +12,7 @@
 #include "Fuzzer/PlaceholderValue.h"
 #include "Fuzzer/PointerValue.h"
 #include "Fuzzer/StructValue.h"
+#include "Fuzzer/AggregateValue.h"
 #include "Fuzzer/TestCaseGenerator.h"
 #include "Fuzzer/Value.h"
 #include "Infrastructure/Casting.h"
@@ -89,13 +91,29 @@ FunctionPointerValue* TestCaseGenerator::GenerateNewFunctionPointerType(const Po
   return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, type);
 }
 
+AggregateValue* TestCaseGenerator::GenerateNewAggregateType(const AggregateType *type) {
+  std::vector<Value *> fields;
+  fields.reserve(type->GetFieldsCount());
+  for (size_t i = 0; i < type->GetFieldsCount(); ++i) {
+    fields.push_back(GenerateNewValue(type->GetField(i).get()));
+  }
+
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  return objectPool->CreateValue<AggregateValue>(objectPool, type, std::move(fields));
+}
+
 Value* TestCaseGenerator::GenerateNewValue(const Type* type) {
   switch (type->kind()) {
     case TypeKind::Bits: {
       return GenerateNewBitsType(caf::dyn_cast<BitsType>(type));
     }
     case TypeKind::Pointer: {
-      return GenerateNewPointerType(caf::dyn_cast<PointerType>(type));
+      auto pointerType = caf::dyn_cast<PointerType>(type);
+      if (pointerType->isFunctionPointer()) {
+        return GenerateNewFunctionPointerType(pointerType);
+      } else {
+        return GenerateNewPointerType(pointerType);
+      }
     }
     case TypeKind::Array: {
       return GenerateNewArrayType(caf::dyn_cast<ArrayType>(type));

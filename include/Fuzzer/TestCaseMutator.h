@@ -81,6 +81,8 @@ private:
 
   Value* MutateStructValue(const StructValue* value, MutationContext& context);
 
+  Value* MutateAggregateValue(const AggregateValue* value, MutationContext& context);
+
   Value* MutatePlaceholderValue(const PlaceholderValue* value, MutationContext& context);
 
   /**

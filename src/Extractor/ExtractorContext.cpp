@@ -8,6 +8,7 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/FunctionType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Function.h"
 #include "Basic/Constructor.h"
 #include "Extractor/ExtractorContext.h"
@@ -376,14 +377,16 @@ private:
     CAFStoreRef<Type> AddLLVMStructType(const llvm::StructType* type, uint64_t typeId) {
       auto structType = caf::dyn_cast<llvm::StructType>(type);
       if (structType->isLiteral() || !structType->hasName()) {
-        auto structType = _store->CreateUnnamedStructType(typeId);
-        _types.emplace(type, structType);
-        return structType;
+        return AddLLVMStructTypeAsAggregateType(type, typeId);
       } else {
+        auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type);
+        if (ctorsLLVM.empty()) {
+          return AddLLVMStructTypeAsAggregateType(type, typeId);
+        }
+
         auto structType = _store->CreateStructType(type->getStructName(), typeId);
         _types.emplace(type, structType);
 
-        auto ctorsLLVM = _frozenContext->GetConstructorsOfType(type);
         for (auto c : ctorsLLVM) {
           auto funcType = c->getFunctionType();
           auto ctorId = _frozenContext->GetConstructorId(c);
@@ -400,6 +403,24 @@ private:
 
         return structType;
       }
+    }
+
+    CAFStoreRef<Type> AddLLVMStructTypeAsAggregateType(
+        const llvm::StructType* type, uint64_t typeId) {
+      CAFStoreRef<AggregateType> aggregateType;
+      if (type->isLiteral() || !type->hasName()) {
+        aggregateType = _store->CreateUnnamedAggregateType(typeId);
+      } else {
+        auto name = type->getStructName().str();
+        aggregateType = _store->CreateAggregateType(std::move(name), typeId);
+      }
+      _types.emplace(type, aggregateType);
+
+      for (auto fieldType : type->elements()) {
+        aggregateType->AddField(AddLLVMType(fieldType));
+      }
+
+      return aggregateType;
     }
 
     CAFStoreRef<Type> AddLLVMFunctionType(const llvm::FunctionType* type, uint64_t typeId) {
@@ -538,13 +559,8 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
     }
 
     auto r = _ctors.equal_range(type);
-    if (r.first == r.second) {
-      llvm::errs() << "CAF: Warning: no constructor found for struct type "
-                   << structType->getStructName() << "\n";
-    } else {
-      for (auto i = r.first; i != r.second; ++i) {
-        FreezeConstructor(type, i->second);
-      }
+    for (auto i = r.first; i != r.second; ++i) {
+      FreezeConstructor(type, i->second);
     }
   } else if (type->isFunctionTy()) {
     auto funcType = caf::dyn_cast<llvm::FunctionType>(type);

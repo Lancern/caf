@@ -215,14 +215,6 @@ public:
   CAFStoreRef<StructType> CreateStructType(std::string name, uint64_t id);
 
   /**
-   * @brief Create an unnamed struct type and add it to this store.
-   *
-   * @param id the ID of this type.
-   * @return CAFStoreRef<StructType> the created unnamed struct type.
-   */
-  CAFStoreRef<StructType> CreateUnnamedStructType(uint64_t id);
-
-  /**
    * @brief Create a FunctionType object managed by this store.
    *
    * @param signatureId ID of the function signature.

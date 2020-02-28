@@ -34,10 +34,6 @@ CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name, uint64_t id
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType(uint64_t id) {
-  return CreateStructType("", id);
-}
-
 CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId, uint64_t id) {
   auto type = caf::make_unique<FunctionType>(this, signatureId, id);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();

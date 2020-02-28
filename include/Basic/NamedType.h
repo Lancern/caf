@@ -32,7 +32,8 @@ public:
    */
   static bool classof(const Type* object) {
     return object->kind() == TypeKind::Bits ||
-           object->kind() == TypeKind::Struct;
+           object->kind() == TypeKind::Struct ||
+           object->kind() == TypeKind::Aggregate;
   }
 #endif
 

@@ -47,8 +47,6 @@ void JsonSerializer::Serialize(const Type& object, nlohmann::json& json) const {
     Serialize(caf::dyn_cast<ArrayType>(object), json);
   } else if (caf::is_a<FunctionType>(object)) {
     Serialize(caf::dyn_cast<FunctionType>(object), json);
-  } else if (caf::is_a<AggregateType>(object)) {
-    Serialize(caf::dyn_cast<AggregateType>(object), json);
   } else {
     CAF_UNREACHABLE;
   }
@@ -61,6 +59,8 @@ void JsonSerializer::Serialize(const NamedType& object, nlohmann::json& json) co
     Serialize(caf::dyn_cast<BitsType>(object), json);
   } else if (caf::is_a<StructType>(object)) {
     Serialize(caf::dyn_cast<StructType>(object), json);
+  } else if (caf::is_a<AggregateType>(object)) {
+    Serialize(caf::dyn_cast<AggregateType>(object), json);
   } else {
     CAF_UNREACHABLE;
   }

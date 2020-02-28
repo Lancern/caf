@@ -51,6 +51,12 @@ enum class TypeKind {
 };
 
 /**
+ * @brief Number of type kinds.
+ *
+ */
+constexpr static const int CAF_TYPE_KINDS_COUNT = 6;
+
+/**
  * @brief Abstract base class of a type.
  *
  */

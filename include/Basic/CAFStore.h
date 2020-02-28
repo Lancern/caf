@@ -3,6 +3,7 @@
 
 #include "Infrastructure/Casting.h"
 #include "Infrastructure/Hash.h"
+#include "Basic/Type.h"
 
 #include <cstddef>
 #include <memory>
@@ -12,7 +13,6 @@
 
 namespace caf {
 
-class Type;
 class BitsType;
 class PointerType;
 class ArrayType;
@@ -150,6 +150,13 @@ struct Hasher<CAFStoreRef<T>> {
  */
 class CAFStore {
 public:
+  struct Statistics {
+    int TypesCount[CAF_TYPE_KINDS_COUNT];
+    int ApiFunctionsCount;
+    int ConstructorsCount;
+    int CallbackFunctionCandidatesCount;
+  }; // struct Statistics
+
   template <typename T>
   friend class CAFStoreRef;
 
@@ -174,6 +181,13 @@ public:
   const std::vector<std::unique_ptr<Function>>& funcs() const {
     return _funcs;
   }
+
+  /**
+   * @brief Create statistics about this CAFStore object.
+   *
+   * @return Statistics the created statistics.
+   */
+  Statistics CreateStatistics() const;
 
   /**
    * @brief Create a BitsType object managed by this store. If the name of the BitsType object given

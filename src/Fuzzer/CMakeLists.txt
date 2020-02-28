@@ -7,7 +7,7 @@ add_library(CAFFuzzer STATIC
     TestCaseInitialize.h
     TestCaseMutator.cpp
     TestCaseSerializer.cpp
-    ${CAF_INCLUDE_DIR}/AggregateValue.h
+    ${CAF_INCLUDE_DIR}/Fuzzer/AggregateValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/ArrayValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/BitsValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/Corpus.h

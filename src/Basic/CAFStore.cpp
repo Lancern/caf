@@ -14,6 +14,22 @@ namespace caf {
 
 CAFStore::~CAFStore() = default;
 
+CAFStore::Statistics CAFStore::CreateStatistics() const {
+  Statistics stat;
+  for (const auto& type : _types) {
+    ++stat.TypesCount[static_cast<int>(type->kind())];
+    if (type->kind() == TypeKind::Struct) {
+      auto structType = caf::dyn_cast<StructType>(type.get());
+      stat.ConstructorsCount += structType->GetConstructorsCount();
+    }
+  }
+  stat.ApiFunctionsCount = _funcs.size();
+  for (const auto& callbackFunc : _callbackFunctions) {
+    stat.CallbackFunctionCandidatesCount += callbackFunc.second.size();
+  }
+  return stat;
+}
+
 CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size, uint64_t id) {
   auto type = caf::make_unique<BitsType>(this, std::move(name), size, id);
   return AddType(std::move(type)).unchecked_dyn_cast<BitsType>();

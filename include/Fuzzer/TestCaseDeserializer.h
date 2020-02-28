@@ -184,7 +184,7 @@ private:
         std::vector<Value *> fields;
         fields.reserve(aggregateType->GetFieldsCount());
         for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
-          fields.push_back(ReadValue(in, aggregateType->GetField(i), values));
+          fields.push_back(ReadValue(in, aggregateType->GetField(i).get(), values));
         }
         return pool->CreateValue<AggregateValue>(pool, aggregateType, std::move(fields));
       }

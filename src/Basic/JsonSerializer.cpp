@@ -105,7 +105,7 @@ void JsonSerializer::Serialize(const AggregateType& object, nlohmann::json& json
   auto fieldsJson = nlohmann::json::array();
   for (auto field : object.fields()) {
     auto fieldJson = nlohmann::json::object();
-    Serialize(*field, fieldJson);
+    Serialize(field, fieldJson);
     fieldsJson.push_back(std::move(fieldJson));
   }
   json["fields"] = std::move(fieldsJson);

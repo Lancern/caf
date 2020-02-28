@@ -7,7 +7,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <memory>
+#include <numeric>
 #include <vector>
 #include <unordered_map>
 #include <type_traits>
@@ -156,6 +158,23 @@ public:
     int64_t ApiFunctionsCount;
     int64_t ConstructorsCount;
     int64_t CallbackFunctionCandidatesCount;
+
+    template <typename Output>
+    void dump(Output& o) {
+      o << "========== CAFStore Statistics ==========\n";
+      o << "Number of types: "<< std::accumulate(std::begin(TypesCount), std::end(TypesCount), 0)
+        << "\n";
+      o << "\tBits Types: " << TypesCount[static_cast<int>(TypeKind::Bits)] << "\n";
+      o << "\tPointer Types: " << TypesCount[static_cast<int>(TypeKind::Pointer)] << "\n";
+      o << "\tArray Types: " << TypesCount[static_cast<int>(TypeKind::Array)] << "\n";
+      o << "\tStruct Types: " << TypesCount[static_cast<int>(TypeKind::Struct)] << "\n";
+      o << "\tFunction Types: " << TypesCount[static_cast<int>(TypeKind::Function)] << "\n";
+      o << "\tAggregate Types: " << TypesCount[static_cast<int>(TypeKind::Aggregate)] << "\n";
+      o << "Number of API functions: " << ApiFunctionsCount << "\n";
+      o << "Number of constructrs: " << ConstructorsCount << "\n";
+      o << "Number of callback function candidates: " << CallbackFunctionCandidatesCount << "\n";
+      o << "========== CAFStore Statistics ==========\n";
+    }
   }; // struct Statistics
 
   template <typename T>

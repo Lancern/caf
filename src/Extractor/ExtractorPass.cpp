@@ -19,8 +19,6 @@
 
 #include <cstring>
 #include <utility>
-#include <numeric>
-#include <iterator>
 #include <string>
 
 namespace caf {
@@ -50,27 +48,6 @@ STATISTIC(FrozenApiFunctionsCount, "Number of frozen API functions");
 STATISTIC(FrozenTypesCount, "Number of frozen types");
 STATISTIC(FrozenConstructorsCount, "Number of frozen constructors");
 STATISTIC(FrozenCallbackCandidatesCount, "Number of frozen callback function candidates");
-
-void PrintCAFStoreStat(const CAFStore::Statistics& stat) {
-  llvm::errs() << "========== CAFStore Statistics ==========\n";
-  llvm::errs() << "Number of types: "
-               << std::accumulate(std::begin(stat.TypesCount), std::end(stat.TypesCount), 0)
-               << "\n";
-  llvm::errs() << "\tBits Types: " << stat.TypesCount[static_cast<int>(TypeKind::Bits)] << "\n";
-  llvm::errs() << "\tPointer Types: " << stat.TypesCount[static_cast<int>(TypeKind::Pointer)]
-               << "\n";
-  llvm::errs() << "\tArray Types: " << stat.TypesCount[static_cast<int>(TypeKind::Array)] << "\n";
-  llvm::errs() << "\tStruct Types: " << stat.TypesCount[static_cast<int>(TypeKind::Struct)] << "\n";
-  llvm::errs() << "\tFunction Types: " << stat.TypesCount[static_cast<int>(TypeKind::Function)]
-               << "\n";
-  llvm::errs() << "\tAggregate Types: " << stat.TypesCount[static_cast<int>(TypeKind::Aggregate)]
-               << "\n";
-  llvm::errs() << "Number of API functions: " << stat.ApiFunctionsCount << "\n";
-  llvm::errs() << "Number of constructrs: " << stat.ConstructorsCount << "\n";
-  llvm::errs() << "Number of callback function candidates: " << stat.CallbackFunctionCandidatesCount
-               << "\n";
-  llvm::errs() << "========== CAFStore Statistics ==========\n";
-}
 
 } // namespace <anonymous>
 
@@ -132,7 +109,7 @@ bool ExtractorPass::runOnModule(llvm::Module &module) {
 
       auto store = _context.CreateCAFStore();
       auto stat = store->CreateStatistics();
-      PrintCAFStoreStat(stat);
+      stat.dump(llvm::errs());
 
       caf::JsonSerializer jsonSerializer;
       auto json = jsonSerializer.Serialize(*store);

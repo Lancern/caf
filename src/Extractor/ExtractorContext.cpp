@@ -553,14 +553,26 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
     FreezeType(type->getArrayElementType());
   } else if (type->isStructTy()) {
     auto structType = caf::dyn_cast<llvm::StructType>(type);
-    if (!structType->hasName()) {
-      // Unnamed struct type does not have constructors for sure.
-      return;
+    bool isAggregate = false;
+    if (structType->isLiteral() || !structType->hasName()) {
+      isAggregate = true;
+    } else {
+      isAggregate = (_ctors.find(type) == _ctors.end());
     }
 
-    auto r = _ctors.equal_range(type);
-    for (auto i = r.first; i != r.second; ++i) {
-      FreezeConstructor(type, i->second);
+    llvm::errs() << "CAF: Freezing struct type: ";
+    structType->dump();
+    llvm::errs() << "\n";
+
+    if (isAggregate) {
+      for (auto field : structType->elements()) {
+        FreezeType(field);
+      }
+    } else {
+      auto r = _ctors.equal_range(type);
+      for (auto i = r.first; i != r.second; ++i) {
+        FreezeConstructor(type, i->second);
+      }
     }
   } else if (type->isFunctionTy()) {
     auto funcType = caf::dyn_cast<llvm::FunctionType>(type);

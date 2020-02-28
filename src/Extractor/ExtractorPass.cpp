@@ -61,7 +61,7 @@ void PrintCAFStoreStat(const CAFStore::Statistics& stat) {
                << "\n";
   llvm::errs() << "\tArray Types: " << stat.TypesCount[static_cast<int>(TypeKind::Array)] << "\n";
   llvm::errs() << "\tStruct Types: " << stat.TypesCount[static_cast<int>(TypeKind::Struct)] << "\n";
-  llvm::errs() << "\tFunction Types: " << stat.TypesCount[static_cast<int>(TypeKind::Struct)]
+  llvm::errs() << "\tFunction Types: " << stat.TypesCount[static_cast<int>(TypeKind::Function)]
                << "\n";
   llvm::errs() << "\tAggregate Types: " << stat.TypesCount[static_cast<int>(TypeKind::Aggregate)]
                << "\n";

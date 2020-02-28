@@ -10,12 +10,15 @@
 #include "Basic/AggregateType.h"
 #include "Basic/Function.h"
 
+#include <cstring>
+
 namespace caf {
 
 CAFStore::~CAFStore() = default;
 
 CAFStore::Statistics CAFStore::CreateStatistics() const {
   Statistics stat;
+  memset(&stat, 0, sizeof(stat));
   for (const auto& type : _types) {
     ++stat.TypesCount[static_cast<int>(type->kind())];
     if (type->kind() == TypeKind::Struct) {

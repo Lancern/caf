@@ -6,6 +6,7 @@
 #include "Basic/Type.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -151,10 +152,10 @@ struct Hasher<CAFStoreRef<T>> {
 class CAFStore {
 public:
   struct Statistics {
-    int TypesCount[CAF_TYPE_KINDS_COUNT];
-    int ApiFunctionsCount;
-    int ConstructorsCount;
-    int CallbackFunctionCandidatesCount;
+    int64_t TypesCount[CAF_TYPE_KINDS_COUNT];
+    int64_t ApiFunctionsCount;
+    int64_t ConstructorsCount;
+    int64_t CallbackFunctionCandidatesCount;
   }; // struct Statistics
 
   template <typename T>

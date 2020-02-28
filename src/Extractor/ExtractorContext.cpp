@@ -53,6 +53,7 @@ bool IsValidType(const llvm::Type* type) {
          type->isPointerTy() ||
          type->isFunctionTy() ||
          type->isArrayTy() ||
+         type->isVectorTy() ||
          type->isStructTy();
 }
 
@@ -361,6 +362,11 @@ private:
         _types.emplace(type, arrayType);
         arrayType->SetElementType(AddLLVMType(type->getArrayElementType()));
         cafType = arrayType;
+      } else if (type->isVectorTy()) {
+        auto vectorType = _store->CreateArrayType(type->getVectorNumElements(), typeId);
+        _types.emplace(type, vectorType);
+        vectorType->SetElementType(AddLLVMType(type->getVectorElementType()));
+        cafType = vectorType;
       } else if (type->isStructTy()) {
         cafType = AddLLVMStructType(caf::dyn_cast<llvm::StructType>(type), typeId);
       } else if (type->isFunctionTy()) {
@@ -551,6 +557,8 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
     FreezeType(type->getPointerElementType());
   } else if (type->isArrayTy()) {
     FreezeType(type->getArrayElementType());
+  } else if (type->isVectorTy()) {
+    FreezeType(type->getVectorElementType());
   } else if (type->isStructTy()) {
     auto structType = caf::dyn_cast<llvm::StructType>(type);
     bool isAggregate = false;
@@ -559,10 +567,6 @@ void ExtractorContext::FreezeType(const llvm::Type* type) const {
     } else {
       isAggregate = (_ctors.find(type) == _ctors.end());
     }
-
-    llvm::errs() << "CAF: Freezing struct type: ";
-    structType->dump();
-    llvm::errs() << "\n";
 
     if (isAggregate) {
       for (auto field : structType->elements()) {

@@ -147,7 +147,7 @@ void CAFCodeGenerator::GenerateStub() {
 
     auto loadApiId = builder.CreateLoad(apiId);
     CreatePrintfCall(builder, "api_id = %d\n", loadApiId);
-    auto apiRetObj = builder.CreateCall(dispatchFunc, loadApiId);
+    // auto apiRetObj = builder.CreateCall(dispatchFunc, loadApiId);
   }
   builder.CreateBr(mainWhileCond);
 
@@ -469,7 +469,7 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
     "ctor_id");
   CreateInputIntToCall(builder, ctorId);
   auto ctorIdValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(ctorId));
-  CreatePrintfCall(builder, "ctor id = %d\n", ctorIdValue);
+  CreatePrintfCall(builder, "ctor_id = %d\n", ctorIdValue);
 
   auto stype = llvm::dyn_cast<llvm::StructType>(type);
 
@@ -491,7 +491,15 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
     unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
     CreateMemcpyCall(builder, argAlloca, ctorSret, llvm::ConstantInt::get(builder.getInt64Ty(), TypeSize));
   } else {
-
+    llvm::errs() << tname << " has no ctors.";
+    int elementId = 0;
+    for(auto elementType: type->elements()) {
+      llvm::Value* element = AllocaValueOfType(builder, elementType, 0, init);
+      llvm::Value* elementValue = builder.CreateLoad(element);
+      llvm::Value *GEPIndices[] = { builder.getInt32(0), builder.getInt32(elementId++) };
+      llvm::Value * curAddr = builder.CreateInBoundsGEP(argAlloca, GEPIndices);
+      builder.CreateStore(elementValue, curAddr);
+    }
   }
 
   return argAlloca;
@@ -644,7 +652,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     }
   }
 
-  auto kindEQ4 = builder.CreateICmpEQ(inputKindValue, builder.getInt32(4), "kindEQ4");
+  auto kindEQ4 = builder.CreateICmpEQ(inputKindValue, builder.getInt32(6), "kindEQ4");
 
   auto thenBlock = llvm::BasicBlock::Create(
       builder.getContext(), "reuse.object.then",
@@ -680,7 +688,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   llvm::Value* elseRet;
   builder.SetInsertPoint(elseBlock);
   // {
-    if (type->isIntegerTy() || type->isFloatingPointTy()) {
+    if (type->isIntegerTy() || type->isFloatingPointTy()) { // input_kind == 0
       llvm::Value* valueAddr = CreateMallocCall(builder, type);
       // insertBefore->eraseFromParent();
       if(init == true) { // input_kind = 0
@@ -718,6 +726,8 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   // }
   builder.SetInsertPoint(afterBlock);
 
+
+  CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(phiObj, builder.getInt64Ty()));
   return phiObj;
 }
 
@@ -742,7 +752,7 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
   int arg_num = 1;
   for (const auto& arg: callee->args()) {
     auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true);
-    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
+    // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
 
     auto argValue = builder.CreateLoad(argAlloca);
     arg_num ++;

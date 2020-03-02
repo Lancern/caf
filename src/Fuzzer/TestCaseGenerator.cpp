@@ -20,18 +20,6 @@
 
 namespace caf {
 
-namespace {
-
-size_t GetValuesCount(const Function* func) {
-  size_t ret = func->signature().GetArgCount();
-  if (func->signature().returnType()) {
-    ++ret;
-  }
-  return ret;
-}
-
-}; // namespace <anonymous>
-
 BitsValue* TestCaseGenerator::GenerateNewBitsType(const BitsType* type) {
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
   if (!objectPool->empty()) {
@@ -46,19 +34,20 @@ BitsValue* TestCaseGenerator::GenerateNewBitsType(const BitsType* type) {
 
 PointerValue* TestCaseGenerator::GenerateNewPointerType(const PointerType* type) {
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  auto pointeeValue = GenerateValue(type->pointeeType().get());
-  return objectPool->CreateValue<PointerValue>(objectPool, pointeeValue, type);
+  auto value = objectPool->CreateValue<PointerValue>(objectPool, type);
+  value->SetPointee(GenerateValue(type->pointeeType().get()));
+  return value;
 }
 
 ArrayValue* TestCaseGenerator::GenerateNewArrayType(const ArrayType* type) {
-  std::vector<Value *> elements { };
-  elements.reserve(type->size());
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  auto value = objectPool->CreateValue<ArrayValue>(objectPool, type);
+
   for (size_t i = 0; i < type->size(); ++i) {
-    elements.push_back(GenerateValue(type->elementType().get()));
+    value->AddElement(GenerateValue(type->elementType().get()));
   }
 
-  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<ArrayValue>(objectPool, type, std::move(elements));
+  return value;
 }
 
 StructValue* TestCaseGenerator::GenerateNewStructType(const StructType* type) {
@@ -66,16 +55,15 @@ StructValue* TestCaseGenerator::GenerateNewStructType(const StructType* type) {
   auto& constructor = _rnd.Select(type->ctors());
   const auto& constructorArgs = constructor.signature().args();
 
-  // Generate arguments passed to the constructor. Note that the first argument to the constructor
-  // is a pointer to the constructing object and thus should not be generated here.
-  std::vector<Value *> args { };
-  args.reserve(constructorArgs.size() - 1);
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  auto value =  objectPool->CreateValue<StructValue>(objectPool, type, &constructor);
+
+  // Generate arguments passed to the constructor.
   for (size_t i = 1; i < constructorArgs.size(); ++i) {
-    args.push_back(GenerateValue(constructorArgs[i].get()));
+    value->AddArg(GenerateValue(constructorArgs[i].get()));
   }
 
-  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<StructValue>(objectPool, type, &constructor, std::move(args));
+  return value;
 }
 
 FunctionPointerValue* TestCaseGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
@@ -92,14 +80,14 @@ FunctionPointerValue* TestCaseGenerator::GenerateNewFunctionPointerType(const Po
 }
 
 AggregateValue* TestCaseGenerator::GenerateNewAggregateType(const AggregateType *type) {
-  std::vector<Value *> fields;
-  fields.reserve(type->GetFieldsCount());
+  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  auto value = objectPool->CreateValue<AggregateValue>(objectPool, type);
+
   for (size_t i = 0; i < type->GetFieldsCount(); ++i) {
-    fields.push_back(GenerateNewValue(type->GetField(i).get()));
+    value->AddField(GenerateValue(type->GetField(i).get()));
   }
 
-  auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<AggregateValue>(objectPool, type, std::move(fields));
+  return value;
 }
 
 Value* TestCaseGenerator::GenerateNewValue(const Type* type) {
@@ -121,6 +109,9 @@ Value* TestCaseGenerator::GenerateNewValue(const Type* type) {
     case TypeKind::Struct: {
       return GenerateNewStructType(caf::dyn_cast<StructType>(type));
     }
+    case TypeKind::Aggregate: {
+      return GenerateNewAggregateType(caf::dyn_cast<AggregateType>(type));
+    }
     default: CAF_UNREACHABLE;
   }
 }
@@ -132,23 +123,10 @@ Value* TestCaseGenerator::GenerateValue(const Type* type) {
     return GenerateNewValue(type);
   }
 
-  enum GenerateValueStrategies : int {
-    UseExisting,
-    CreateNew,
-    _GenerateValueStrategiesMax = CreateNew
-  };
-
-  auto strategy = static_cast<GenerateValueStrategies>(
-      _rnd.Next(0, static_cast<int>(_GenerateValueStrategiesMax)));
-  switch (strategy) {
-    case UseExisting: {
-      // Randomly choose an existing value from the object pool.
-      return _rnd.Select(objectPool->values()).get();
-    }
-    case CreateNew: {
-      return GenerateNewValue(type);
-    }
-    default: CAF_UNREACHABLE;
+  if (_rnd.WithProbability(0.1)) {
+    return GenerateNewValue(type);
+  } else {
+    return _rnd.Select(objectPool->values()).get();
   }
 }
 
@@ -165,7 +143,7 @@ Value* TestCaseGenerator::GenerateValueOrPlaceholder(
     if (retType && retType.get() == type) {
       placeholderIndexCandidates.push_back(valueIndex);
     }
-    valueIndex += GetValuesCount(call.func());
+    ++valueIndex;
   }
 
   if (placeholderIndexCandidates.empty() || _rnd.WithProbability(0.5)) {

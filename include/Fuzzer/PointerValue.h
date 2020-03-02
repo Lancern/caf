@@ -25,11 +25,29 @@ public:
   { }
 
   /**
+   * @brief Construct a new PointerValue object.
+   *
+   * @param pool the object pool containing this value.
+   * @param type the type of the pointer.
+   */
+  explicit PointerValue(CAFObjectPool* pool, const PointerType* type)
+    : Value { pool, ValueKind::PointerValue, type },
+      _pointee(nullptr)
+  { }
+
+  /**
    * @brief Get the value at the pointee's site.
    *
    * @return Value* value at the pointee's site.
    */
   Value* pointee() const { return _pointee; }
+
+  /**
+   * @brief Set the pointee value.
+   *
+   * @param pointee the pointee value.
+   */
+  void SetPointee(Value* pointee) { _pointee = pointee; }
 
 private:
   Value* _pointee;

@@ -12,6 +12,7 @@
 
 #include <unistd.h>
 
+#include <cerrno>
 #include <chrono>
 #include <fstream>
 #include <string>
@@ -30,11 +31,12 @@ namespace {
  */
 void ChangeWorkingDirectory(const char* dir) {
   int ret = chdir(dir);
-  if (ret == ENOENT) {
+  if (ret != 0 && errno == ENOENT) {
     ret = mkdir(dir, 0777);
     if (ret != 0) {
       PRINT_LAST_OS_ERR_AND_EXIT_FMT("failed to create directory \"%s\"", dir);
     }
+    ret = chdir(dir);
   }
   if (ret != 0) {
     PRINT_LAST_OS_ERR_AND_EXIT("failed to chdir to output directory");

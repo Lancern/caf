@@ -45,14 +45,14 @@ public:
    * @return true if the given Value object is contained in this context.
    * @return false if the given Value object is not contained in this context.
    */
-  bool HasValue(Value* value) const;
+  bool HasValue(const Value* value) const;
 
   /**
    * @brief Add the given Value object to the context.
    *
    * @param value the Value object to be added.
    */
-  void AddValue(Value* value);
+  void AddValue(const Value* value);
 
   /**
    * @brief Get the index of the already-exist Value object.
@@ -62,7 +62,7 @@ public:
    * @param value the Value object.
    * @return size_t the index of the Value object.
    */
-  size_t GetValueIndex(Value* value) const;
+  size_t GetValueIndex(const Value* value) const;
 
   /**
    * @brief Skips the next available value index.
@@ -73,9 +73,26 @@ public:
    */
   void SkipCurrentIndex();
 
+  /**
+   * @brief Set the adjusted index for the next test case placeholder index to the next available
+   * index.
+   *
+   */
+  void SetPlaceholderIndexAdjustment();
+
+  /**
+   * @brief Get the adjusted index for the given test case placeholder index.
+   *
+   * @param placeholderIndex the test case placeholder index.
+   * @return size_t the adjustment of the given test case placeholder index.
+   */
+  size_t GetPlaceholderIndexAdjustment(size_t placeholderIndex) const;
+
 private:
-  std::unordered_map<Value *, size_t> _valueIds;
+  std::unordered_map<const Value *, size_t> _valueIds;
+  std::unordered_map<size_t, size_t> _adjustedPlaceholderIndexes;
   caf::IncrementIdAllocator<size_t> _valueIdAlloc;
+  caf::IncrementIdAllocator<size_t> _placeholderIndexAlloc;
 }; // class TestCaseSerializationContext
 
 }; // namespace details
@@ -109,10 +126,12 @@ public:
 
     // Write each function call to the output stream.
     for (const auto& funcCall : testCase.calls()) {
-      // Skip current value index because this index is reserved for the return value of the
-      // current function.
-      context.SkipCurrentIndex();
       Write(o, funcCall, context);
+
+      // Adjust placeholder index that references to the return value of the current function.
+      context.SetPlaceholderIndexAdjustment();
+      // The next index is reserved for the return value of the current function.
+      context.SkipCurrentIndex();
     }
   }
 
@@ -140,9 +159,28 @@ private:
    * @tparam Output type of the output stream.
    * @param o the output stream.
    * @param value the value to be written.
+   * @param context the serialization context.
+   * @param adjustPlaceholderIndex should we adjust the index of placeholder values?
    */
   template <typename Output>
-  void Write(Output& o, const Value& value) const {
+  void Write(Output& o, const Value& value,
+      details::TestCaseSerializationContext& context, bool adjustPlaceholderIndex) const {
+    if (context.HasValue(&value)) {
+      auto index = context.GetValueIndex(&value);
+      PlaceholderValue ph { value.type(), index };
+      Write(o, ph, context, false);
+      return;
+    }
+
+    if (value.kind() == ValueKind::PlaceholderValue) {
+      // Placeholder values will not be registered to the serialization context due to ownership
+      // issues. But the slot of the placeholder value in the serialization context should be
+      // reserved.
+      context.SkipCurrentIndex();
+    } else {
+      context.AddValue(&value);
+    }
+
     // Write kind of the value.
     WriteInt<4>(o, static_cast<int>(value.kind()));
     switch (value.kind()) {
@@ -157,7 +195,7 @@ private:
       case ValueKind::PointerValue: {
         // Write the underlying value pointed to by the pointer.
         const auto& pointerValue = caf::dyn_cast<PointerValue>(value);
-        Write(o, *pointerValue.pointee());
+        Write(o, *pointerValue.pointee(), context, true);
         break;
       }
       case ValueKind::FunctionPointerValue: {
@@ -171,7 +209,7 @@ private:
         const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
         WriteInt<4>(o, arrayValue.size());
         for (auto el : arrayValue.elements()) {
-          Write(o, *el);
+          Write(o, *el, context, true);
         }
         break;
       }
@@ -180,7 +218,7 @@ private:
         const auto& structValue = caf::dyn_cast<StructValue>(value);
         WriteInt<4>(o, structValue.ctor()->id());
         for (auto arg : structValue.args()) {
-          Write(o, *arg);
+          Write(o, *arg, context, true);
         }
         break;
       }
@@ -188,12 +226,17 @@ private:
         // Write all the fields to the output stream.
         const auto& aggregateValue = caf::dyn_cast<AggregateValue>(value);
         for (auto field : aggregateValue.fields()) {
-          Write(o, *field);
+          Write(o, *field, context, true);
         }
+        break;
       }
       case ValueKind::PlaceholderValue: {
         const auto& placeholderValue = caf::dyn_cast<PlaceholderValue>(value);
-        WriteInt<4>(o, placeholderValue.valueIndex());
+        auto index = placeholderValue.valueIndex();
+        if (adjustPlaceholderIndex) {
+          index = context.GetPlaceholderIndexAdjustment(index);
+        }
+        WriteInt<4>(o, index);
         break;
       }
       default: CAF_UNREACHABLE;
@@ -216,16 +259,7 @@ private:
 
     // Write arguments.
     for (auto arg : funcCall.args()) {
-      if (context.HasValue(arg)) {
-        // This argument has already been serialized into the underlying stream.
-        // Use a PlaceholderValue referencing that object instead to reduce data size.
-        PlaceholderValue ph { arg->type(), context.GetValueIndex(arg) };
-        Write(o, ph);
-        context.SkipCurrentIndex();
-      } else {
-        Write(o, *arg);
-        context.AddValue(arg);
-      }
+      Write(o, *arg, context, true);
     }
   }
 }; // class TestCaseSerializer

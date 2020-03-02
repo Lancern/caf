@@ -2,6 +2,7 @@ add_library(CAFFuzzer STATIC
     Corpus.cpp
     CorpusInitialize.h
     CorpusInitialize.cpp
+    TestCaseDeserializer.cpp
     TestCaseGenerator.cpp
     TestCaseInitialize.cpp
     TestCaseInitialize.h

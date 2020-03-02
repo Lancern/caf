@@ -2,6 +2,7 @@
 #define CAF_TEST_CASE_DESERIALIZER_H
 
 #include "Infrastructure/Casting.h"
+#include "Infrastructure/Identity.h"
 #include "Infrastructure/Intrinsic.h"
 #include "Basic/CAFStore.h"
 #include "Basic/Function.h"
@@ -22,13 +23,111 @@
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/AggregateValue.h"
+#include "Fuzzer/PlaceholderValue.h"
 
 #include <cstdint>
 #include <utility>
 #include <type_traits>
 #include <vector>
+#include <unordered_map>
 
 namespace caf {
+
+namespace details {
+
+/**
+ * @brief Provide context information when deserializing test cases.
+ *
+ */
+class TestCaseDeserializationContext {
+public:
+  /**
+   * @brief Construct a new Test Case Deserialization Context object.
+   *
+   */
+  explicit TestCaseDeserializationContext() = default;
+
+  TestCaseDeserializationContext(const TestCaseDeserializationContext &) = delete;
+  TestCaseDeserializationContext(TestCaseDeserializationContext &&) noexcept = default;
+
+  TestCaseDeserializationContext& operator=(const TestCaseDeserializationContext &) = delete;
+  TestCaseDeserializationContext& operator=(TestCaseDeserializationContext &&) = default;
+
+  /**
+   * @brief Allocate a new test case object pool index.
+   *
+   * @return size_t the allocated test case object pool index.
+   */
+  size_t AllocValueIndex();
+
+  /**
+   * @brief Set the value at the given test case object pool index.
+   *
+   * @param index the test case object pool index.
+   * @param value the value.
+   */
+  void SetValue(size_t index, Value* value);
+
+  /**
+   * @brief Get the value at the given test case object pool index.
+   *
+   * This function will trigger an assertion failure if the given index is out of range.
+   *
+   * @param index the test case object pool index.
+   * @return Value* the value at the given index.
+   */
+  Value* GetValue(size_t index) const;
+
+  /**
+   * @brief Skip the next test case object pool index. The value at the next test case object pool
+   * index will be nullptr.
+   *
+   */
+  void SkipNextValueIndex();
+
+  /**
+   * @brief Skip the next test case placeholder index.
+   *
+   */
+  void SkipNextPlaceholderIndex();
+
+  /**
+   * @brief Associate the next test case placeholder index with the next test case object pool value
+   * index.
+   *
+   * After calling this function, the return value of IsPlaceholderIndex given the next available
+   * test case object pool index will be true, and the return value of GetPlaceholderIndex given the
+   * next available test case object pool index will be the next available test case placeholder
+   * index.
+   *
+   */
+  void ReservePlaceholderIndex();
+
+  /**
+   * @brief Determine whether the given test case object pool index is associated with a test case
+   * placeholder index.
+   *
+   * @param objectPoolIndex the test case object pool index.
+   * @return true if the given test case object pool index is a placeholder index.
+   * @return false if the given test case object pool index is not a placeholder index.
+   */
+  bool IsPlaceholderIndex(size_t objectPoolIndex) const;
+
+  /**
+   * @brief Get the placeholder index associated with the given test case object pool index.
+   *
+   * @param objectPoolIndex the test case object pool index.
+   * @return size_t the placeholder index associated with the given test case object pool index.
+   */
+  size_t GetPlaceholderIndex(size_t objectPoolIndex) const;
+
+private:
+  std::vector<Value *> _values;
+  std::unordered_map<size_t, size_t> _placeholderIndexAdjustment;
+  caf::IncrementIdAllocator<size_t> _placeholderIndexAlloc;
+}; // class TestCaseDeserializationContext
+
+} // namespace details
 
 /**
  * @brief Provide functions to deserialize instances of TestCase from binary representations.
@@ -61,12 +160,12 @@ public:
    */
   template <typename Input>
   CAFCorpusTestCaseRef Read(Input& in) const {
-    std::vector<Value *> values;
+    details::TestCaseDeserializationContext context;
 
     auto tc = _corpus->CreateTestCase();
     auto callsCount = ReadInt<int, 4>(in);
     for (auto ci = 0; ci < callsCount; ++ci) {
-      auto fc = ReadFunctionCall(in, values);
+      auto fc = ReadFunctionCall(in, context);
       tc->AddFunctionCall(std::move(fc));
     }
 
@@ -103,25 +202,29 @@ private:
    *
    * @tparam Input the type of the input stream.
    * @param in the input stream.
-   * @param values a Value vector from which the arguments of the function call can be retrieved.
-   * @return FunctionCall the object read.
+   * @param context the deserialization context.
    */
   template <typename Input>
-  FunctionCall ReadFunctionCall(Input& in, std::vector<Value *>& values) const {
+  FunctionCall ReadFunctionCall(Input& in, details::TestCaseDeserializationContext& context) const {
     auto funcId = ReadInt<uint64_t, 4>(in);
     auto func = _corpus->store()->GetApi(funcId);
 
     FunctionCall fc { func.get() };
 
-    // Add a nullptr to values. This nullptr acts as a placeholder for the return value of the
-    // current function.
-    values.push_back(nullptr);
-
     for (auto argType : func->signature().args()) {
-      auto value = ReadValue(in, argType.get(), values);
+      // Skip the next placeholder index since the next placeholder index is reserved for the
+      // current function argument.
+      context.SkipNextPlaceholderIndex();
+      auto value = ReadValue(in, argType.get(), context);
       fc.AddArg(value);
-      values.push_back(value);
     }
+
+    // Associate the next value index with the next placeholder index. The next placeholder index
+    // is thus available for referencing the return value of the current function call.
+    context.ReservePlaceholderIndex();
+    // Skip the next value index. The next value index is reserved for the return value of the
+    // current function call.
+    context.SkipNextValueIndex();
 
     return fc;
   }
@@ -133,29 +236,36 @@ private:
    * @tparam Input type of the input stream.
    * @param in the input stream.
    * @param type the type of the value to read.
-   * @param values a vector of values that is used to retrieve referenced values.
-   * @return Value* the value read.
+   * @param context the deserialization context.
    */
   template <typename Input>
-  Value* ReadValue(Input& in, const Type* type, const std::vector<Value *>& values) const {
+  Value* ReadValue(
+      Input& in, const Type* type, details::TestCaseDeserializationContext& context) const {
+    auto valueIndex = context.AllocValueIndex();
+
     auto pool = _corpus->GetOrCreateObjectPool(type->id());
     auto kind = static_cast<ValueKind>(ReadInt<int, 4>(in));
+
+    Value* value = nullptr;
     switch (kind) {
       case ValueKind::BitsValue: {
         auto size = ReadInt<size_t, 4>(in);
-        auto value = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
-        in.read(value->data(), size);
-        return value;
+        auto bitsValue = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
+        in.read(bitsValue->data(), size);
+        value = bitsValue;
+        break;
       }
       case ValueKind::PointerValue: {
         auto ptrType = caf::dyn_cast<PointerType>(type);
-        auto pointee = ReadValue(in, ptrType->pointeeType().get(), values);
-        return pool->CreateValue<PointerValue>(pool, pointee, ptrType);
+        auto pointee = ReadValue(in, ptrType->pointeeType().get(), context);
+        value = pool->CreateValue<PointerValue>(pool, pointee, ptrType);
+        break;
       }
       case ValueKind::FunctionPointerValue: {
         auto funcId = ReadInt<uint64_t, 4>(in);
-        return pool->CreateValue<FunctionPointerValue>(
+        value = pool->CreateValue<FunctionPointerValue>(
             pool, funcId, caf::dyn_cast<PointerType>(type));
+        break;
       }
       case ValueKind::ArrayValue: {
         auto arrayType = caf::dyn_cast<ArrayType>(type);
@@ -163,9 +273,10 @@ private:
         std::vector<Value *> elements;
         elements.reserve(size);
         for (size_t ei = 0; ei < size; ++ei) {
-          elements.push_back(ReadValue(in, arrayType->elementType().get(), values));
+          elements.push_back(ReadValue(in, arrayType->elementType().get(), context));
         }
-        return pool->CreateValue<ArrayValue>(pool, arrayType, std::move(elements));
+        value = pool->CreateValue<ArrayValue>(pool, arrayType, std::move(elements));
+        break;
       }
       case ValueKind::StructValue: {
         auto structType = caf::dyn_cast<StructType>(type);
@@ -175,27 +286,38 @@ private:
         ctorArgs.reserve(ctor->GetArgCount());
         for (size_t ai = 0; ai < ctor->GetArgCount(); ++ai) {
           auto argType = ctor->GetArgType(ai);
-          ctorArgs.push_back(ReadValue(in, argType.get(), values));
+          ctorArgs.push_back(ReadValue(in, argType.get(), context));
         }
-        return pool->CreateValue<StructValue>(pool, structType, ctor, std::move(ctorArgs));
+        value = pool->CreateValue<StructValue>(pool, structType, ctor, std::move(ctorArgs));
+        break;
       }
       case ValueKind::AggregateValue: {
         auto aggregateType = caf::dyn_cast<AggregateType>(type);
         std::vector<Value *> fields;
         fields.reserve(aggregateType->GetFieldsCount());
         for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
-          fields.push_back(ReadValue(in, aggregateType->GetField(i).get(), values));
+          fields.push_back(ReadValue(in, aggregateType->GetField(i).get(), context));
         }
-        return pool->CreateValue<AggregateValue>(pool, aggregateType, std::move(fields));
+        value = pool->CreateValue<AggregateValue>(pool, aggregateType, std::move(fields));
+        break;
       }
       case ValueKind::PlaceholderValue: {
         auto valueIndex = ReadInt<size_t, 4>(in);
-        return values.at(valueIndex);
+        if (context.IsPlaceholderIndex(valueIndex)) {
+          valueIndex = context.GetPlaceholderIndex(valueIndex);
+          value = _corpus->GetPlaceholderObjectPool()->CreateValue<PlaceholderValue>(
+              type, valueIndex);
+        } else {
+          value = context.GetValue(valueIndex);
+        }
+        break;
       }
       default: {
         CAF_UNREACHABLE;
       }
     }
+
+    return value;
   }
 }; // class TestCaseDeserializer
 

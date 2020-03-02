@@ -28,6 +28,17 @@ public:
   { }
 
   /**
+   * @brief Construct a new ArrayValue object.
+   *
+   * @param pool the object pool containing this value.
+   * @param type type of the array value.
+   */
+  explicit ArrayValue(CAFObjectPool* pool, const ArrayType* type)
+    : Value { pool, ValueKind::ArrayValue, type },
+      _size(type->size())
+  { }
+
+  /**
    * @brief Get the number of elements in this array.
    *
    * @return size_t the number of elements in this array.
@@ -41,6 +52,13 @@ public:
    * @param value the value to be set.
    */
   void SetElement(size_t index, Value* value) { _elements[index] = value; }
+
+  /**
+   * @brief Add the given value to this array.
+   *
+   * @param value the value to be added.
+   */
+  void AddElement(Value* value) { _elements.push_back(value); }
 
   /**
    * @brief Get the elements contained in this array.

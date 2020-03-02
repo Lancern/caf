@@ -113,16 +113,20 @@ CAFCorpusTestCaseRef TestCaseMutator::MutateSequence(MutationContext& context) {
 
   auto strategy = static_cast<SequenceMutationStrategy>(
       _rnd.Next(0, static_cast<int>(_SequenceMutationStrategyMax)));
+  CAFCorpusTestCaseRef tc;
   switch (strategy) {
     case Splice:
-      return this->Splice(context);
+      tc = this->Splice(context);
     case InsertCall:
-      return this->InsertCall(context);
+      tc = this->InsertCall(context);
     case RemoveCall:
-      return this->RemoveCall(context);
+      tc = this->RemoveCall(context);
     default:
       CAF_UNREACHABLE;
   }
+
+  FixPlaceholderValuesAfterSequenceMutation(tc);
+  return tc;
 }
 
 void TestCaseMutator::FixPlaceholderValuesAfterSequenceMutation(CAFCorpusTestCaseRef tc) {
@@ -397,9 +401,18 @@ CAFCorpusTestCaseRef TestCaseMutator::MutateArgument(MutationContext& context) {
     return previous;
   } else {
     auto argIndex = _rnd.Index(targetCall.args());
-    auto value = targetCall.args()[argIndex];
-    value = MutateValue(value, context);
-    targetCall.SetArg(argIndex, value);
+
+    // With a probability of 0.1, we generate a new value for the argument.
+    if (_rnd.WithProbability(0.1)) {
+      auto value = _valueGen.GenerateValueOrPlaceholder(
+          previous.get(), functionCallIndex, argIndex);
+      targetCall.SetArg(argIndex, value);
+    } else {
+      // Mutate existing value.
+      auto value = targetCall.args()[argIndex];
+      value = MutateValue(value, context);
+      targetCall.SetArg(argIndex, value);
+    }
   }
 
   for (size_t i = functionCallIndex + 1; i < previous->calls().size(); ++i) {

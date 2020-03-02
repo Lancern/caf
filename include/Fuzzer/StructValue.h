@@ -29,6 +29,19 @@ public:
   { }
 
   /**
+   * @brief Construct a new StructValue object.
+   *
+   * @param pool the object pool containing this value.
+   * @param type the type of the value.
+   * @param constructor the constructor to use to activate the object.
+   */
+  explicit StructValue(CAFObjectPool* pool, const StructType* type, const Constructor* constructor)
+    : Value { pool, ValueKind::StructValue, type },
+      _constructor(constructor),
+      _args { }
+  { }
+
+  /**
    * @brief Get the constructor used to activate objects.
    *
    * @return const Constructor* constructor used to activate objects.
@@ -42,6 +55,13 @@ public:
    * @param value the value of the argument to set.
    */
   void SetArg(size_t index, Value* value) { _args[index] = value; }
+
+  /**
+   * @brief Add a new argument to the constructor argument list.
+   *
+   * @param value the value to be added.
+   */
+  void AddArg(Value* value) { _args.push_back(value); }
 
   /**
    * @brief Get the arguments passed to the activator.

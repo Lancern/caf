@@ -3,6 +3,8 @@
 
 #include "json/json.hpp"
 
+#include <type_traits>
+
 namespace caf {
 
 /**
@@ -31,6 +33,15 @@ public:
    */
   T next() {
     return _id++;
+  }
+
+  /**
+   * @brief Get the next available ID but do not change the state of this ID allocator.
+   *
+   * @return T the next ID.
+   */
+  T peek() const {
+    return _id;
   }
 
   /**

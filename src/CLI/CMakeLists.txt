@@ -5,7 +5,8 @@ add_executable(CAFCLI
     Diagnostics.h
     GenerateTestCaseCommand.cpp
     main.cpp
-    RegisterCommand.h)
+    RegisterCommand.h
+    StatCommand.cpp)
 
 target_link_libraries(CAFCLI PRIVATE CAFFuzzer CLI11)
 set_property(TARGET CAFCLI

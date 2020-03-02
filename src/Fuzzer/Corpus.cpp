@@ -22,7 +22,6 @@ CAFObjectPool* CAFCorpus::GetOrCreateObjectPool(uint64_t typeId) {
     return pool;
   }
 
-  fprintf(stderr, "Creating object pool for type #%lu\n", typeId);
   auto createdPool = caf::make_unique<CAFObjectPool>();
   return _pools.emplace(typeId, std::move(createdPool)).first->second.get();
 }

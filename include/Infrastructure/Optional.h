@@ -157,27 +157,6 @@ public:
 
   const T* operator->() const { return &value(); }
 
-  /**
-   * @brief Applies the given functor to the contained value, if any, and store the result in a new
-   * Optional object.
-   *
-   * @tparam Mapper type of the functor.
-   * @param mapper the functor.
-   * @return an Optional object that may contain the result of the mapper functor.
-   */
-  template <typename Mapper>
-  auto map(Mapper mapper) ->
-      Optional<typename std::remove_reference<
-          decltype(mapper(std::declval<T>()))
-        >::type> {
-    using ImageType = typename std::remove_reference<decltype(mapper(std::declval<T>()))>::type;
-    if (!_hasValue) {
-      return Optional<ImageType> { };
-    } else {
-      return Optional<ImageType> { mapper(value()) };
-    }
-  }
-
 private:
   alignas(alignof(T)) char _value[sizeof(T)];
   bool _hasValue;

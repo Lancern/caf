@@ -11,6 +11,7 @@
 #include "Fuzzer/FunctionPointerValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
+#include "Fuzzer/AggregateValue.h"
 #include "Fuzzer/PlaceholderValue.h"
 
 #include <cstddef>
@@ -175,13 +176,20 @@ private:
         break;
       }
       case ValueKind::StructValue: {
-        // Write the ID of the activator and arguments to the activator to the output stream.
+        // Write the ID of the constructor and arguments to the constructor to the output stream.
         const auto& structValue = caf::dyn_cast<StructValue>(value);
         WriteInt<4>(o, structValue.ctor()->id());
         for (auto arg : structValue.args()) {
           Write(o, *arg);
         }
         break;
+      }
+      case ValueKind::AggregateValue: {
+        // Write all the fields to the output stream.
+        const auto& aggregateValue = caf::dyn_cast<AggregateValue>(value);
+        for (auto field : aggregateValue.fields()) {
+          Write(o, *field);
+        }
       }
       case ValueKind::PlaceholderValue: {
         const auto& placeholderValue = caf::dyn_cast<PlaceholderValue>(value);

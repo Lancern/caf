@@ -4,7 +4,7 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Random.h"
 #include "Fuzzer/Corpus.h"
-#include "Fuzzer/ValueGenerator.h"
+#include "Fuzzer/TestCaseGenerator.h"
 
 namespace caf {
 
@@ -53,7 +53,7 @@ private:
 
   CAFCorpus* _corpus;
   Random<>& _rnd;
-  ValueGenerator _valueGen;
+  TestCaseGenerator _valueGen;
 
   CAFCorpusTestCaseRef Splice(MutationContext& context);
 
@@ -80,6 +80,8 @@ private:
   Value* MutateArrayValue(const ArrayValue* value, MutationContext& context);
 
   Value* MutateStructValue(const StructValue* value, MutationContext& context);
+
+  Value* MutateAggregateValue(const AggregateValue* value, MutationContext& context);
 
   Value* MutatePlaceholderValue(const PlaceholderValue* value, MutationContext& context);
 

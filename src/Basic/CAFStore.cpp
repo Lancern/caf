@@ -7,25 +7,44 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/FunctionType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Function.h"
+
+#include <cstring>
 
 namespace caf {
 
 CAFStore::~CAFStore() = default;
+
+CAFStore::Statistics CAFStore::CreateStatistics() const {
+  Statistics stat;
+  memset(&stat, 0, sizeof(stat));
+  for (const auto& type : _types) {
+    ++stat.TypesCount[static_cast<int>(type->kind())];
+    if (type->kind() == TypeKind::Struct) {
+      auto structType = caf::dyn_cast<StructType>(type.get());
+      stat.ConstructorsCount += structType->GetConstructorsCount();
+    }
+  }
+  stat.ApiFunctionsCount = _funcs.size();
+  for (const auto& callbackFunc : _callbackFunctions) {
+    stat.CallbackFunctionCandidatesCount += callbackFunc.second.size();
+  }
+  return stat;
+}
 
 CAFStoreRef<BitsType> CAFStore::CreateBitsType(std::string name, size_t size, uint64_t id) {
   auto type = caf::make_unique<BitsType>(this, std::move(name), size, id);
   return AddType(std::move(type)).unchecked_dyn_cast<BitsType>();
 }
 
-CAFStoreRef<PointerType> CAFStore::CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id) {
-  auto type = caf::make_unique<PointerType>(this, pointeeType, id);
+CAFStoreRef<PointerType> CAFStore::CreatePointerType(uint64_t id) {
+  auto type = caf::make_unique<PointerType>(this, id);
   return AddType(std::move(type)).unchecked_dyn_cast<PointerType>();
 }
 
-CAFStoreRef<ArrayType> CAFStore::CreateArrayType(
-    size_t size, CAFStoreRef<Type> elementType, uint64_t id) {
-  auto type = caf::make_unique<ArrayType>(this, size, elementType, id);
+CAFStoreRef<ArrayType> CAFStore::CreateArrayType(size_t size, uint64_t id) {
+  auto type = caf::make_unique<ArrayType>(this, size, id);
   return AddType(std::move(type)).unchecked_dyn_cast<ArrayType>();
 }
 
@@ -34,14 +53,18 @@ CAFStoreRef<StructType> CAFStore::CreateStructType(std::string name, uint64_t id
   return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
 }
 
-CAFStoreRef<StructType> CAFStore::CreateUnnamedStructType(uint64_t id) {
-  auto type = caf::make_unique<StructType>(this, "", id);
-  return AddType(std::move(type)).unchecked_dyn_cast<StructType>();
-}
-
 CAFStoreRef<FunctionType> CAFStore::CreateFunctionType(uint64_t signatureId, uint64_t id) {
   auto type = caf::make_unique<FunctionType>(this, signatureId, id);
   return AddType(std::move(type)).unchecked_dyn_cast<FunctionType>();
+}
+
+CAFStoreRef<AggregateType> CAFStore::CreateAggregateType(std::string name, uint64_t id) {
+  auto type = caf::make_unique<AggregateType>(this, std::move(name), id);
+  return AddType(std::move(type)).unchecked_dyn_cast<AggregateType>();
+}
+
+CAFStoreRef<AggregateType> CAFStore::CreateUnnamedAggregateType(uint64_t id) {
+  return CreateAggregateType("", id);
 }
 
 CAFStoreRef<Function> CAFStore::CreateApi(

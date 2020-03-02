@@ -1,13 +1,13 @@
-add_library(CAFMutator MODULE
-    AFLExport.cpp
+add_library(CAFFuzzer STATIC
     Corpus.cpp
     CorpusInitialize.h
     CorpusInitialize.cpp
+    TestCaseGenerator.cpp
     TestCaseInitialize.cpp
     TestCaseInitialize.h
     TestCaseMutator.cpp
     TestCaseSerializer.cpp
-    ValueGenerator.cpp
+    ${CAF_INCLUDE_DIR}/Fuzzer/AggregateValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/ArrayValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/BitsValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/Corpus.h
@@ -18,11 +18,16 @@ add_library(CAFMutator MODULE
     ${CAF_INCLUDE_DIR}/Fuzzer/PointerValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/StructValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCase.h
+    ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseGenerator.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseDeserializer.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseMutator.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCaseSerializer.h
-    ${CAF_INCLUDE_DIR}/Fuzzer/Value.h
-    ${CAF_INCLUDE_DIR}/Fuzzer/ValueGenerator.h)
+    ${CAF_INCLUDE_DIR}/Fuzzer/Value.h)
 
-target_link_libraries(CAFMutator PRIVATE CAFInfrastructure)
-target_link_libraries(CAFMutator PRIVATE CAFBasicPIC)
+target_link_libraries(CAFFuzzer PUBLIC CAFInfrastructure)
+target_link_libraries(CAFFuzzer PUBLIC CAFBasicPIC)
+
+add_library(CAFMutator MODULE
+    AFLExport.cpp)
+
+target_link_libraries(CAFMutator PRIVATE CAFFuzzer)

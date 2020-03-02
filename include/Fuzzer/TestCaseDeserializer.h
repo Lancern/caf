@@ -10,16 +10,18 @@
 #include "Basic/PointerType.h"
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Constructor.h"
-#include "Corpus.h"
-#include "ObjectPool.h"
-#include "FunctionCall.h"
-#include "Value.h"
-#include "BitsValue.h"
-#include "PointerValue.h"
-#include "FunctionPointerValue.h"
-#include "ArrayValue.h"
-#include "StructValue.h"
+#include "Fuzzer/Corpus.h"
+#include "Fuzzer/ObjectPool.h"
+#include "Fuzzer/FunctionCall.h"
+#include "Fuzzer/Value.h"
+#include "Fuzzer/BitsValue.h"
+#include "Fuzzer/PointerValue.h"
+#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/ArrayValue.h"
+#include "Fuzzer/StructValue.h"
+#include "Fuzzer/AggregateValue.h"
 
 #include <cstdint>
 #include <utility>
@@ -176,6 +178,15 @@ private:
           ctorArgs.push_back(ReadValue(in, argType.get(), values));
         }
         return pool->CreateValue<StructValue>(pool, structType, ctor, std::move(ctorArgs));
+      }
+      case ValueKind::AggregateValue: {
+        auto aggregateType = caf::dyn_cast<AggregateType>(type);
+        std::vector<Value *> fields;
+        fields.reserve(aggregateType->GetFieldsCount());
+        for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
+          fields.push_back(ReadValue(in, aggregateType->GetField(i).get(), values));
+        }
+        return pool->CreateValue<AggregateValue>(pool, aggregateType, std::move(fields));
       }
       case ValueKind::PlaceholderValue: {
         auto valueIndex = ReadInt<size_t, 4>(in);

@@ -5,6 +5,7 @@
 
 namespace llvm {
 class Function;
+class Type;
 } // namespace llvm
 
 namespace caf {
@@ -41,15 +42,12 @@ bool IsV8ApiFunction(const llvm::Function& func);
 bool IsConstructor(const llvm::Function& func);
 
 /**
- * @brief Get the name of the struct type that can be constructed from the given constructor
- * function.
+ * @brief Get the type the given constructor is constructing.
  *
- * If the given function is not a constructor, the behavior is undefined.
- *
- * @param ctor the constructor function.
- * @return std::string the name of the constructed type by the give constructor.
+ * @param ctor the constructor.
+ * @return llvm::Type* the type the given constructor is constructing.
  */
-std::string GetConstructingTypeName(const llvm::Function& ctor);
+llvm::Type* GetConstructingType(llvm::Function* ctor);
 
 } // namespace caf
 

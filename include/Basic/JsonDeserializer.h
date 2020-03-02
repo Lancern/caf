@@ -38,6 +38,28 @@ public:
    */
   std::unique_ptr<CAFStore> DeserializeCAFStore(const nlohmann::json& json);
 
+  /**
+   * @brief Deserialize a CAFStore object from the given input stream.
+   *
+   * @tparam Input type of the input stream.
+   * @param in the input stream.
+   * @return std::unique_ptr<CAFStore> the deserialized object.
+   */
+  template <typename Input>
+  std::unique_ptr<CAFStore> DeserializeCAFStoreFrom(Input& in) {
+    nlohmann::json json;
+    in >> json;
+    return DeserializeCAFStore(json);
+  }
+
+  /**
+   * @brief Deserialize a CAFStore object from the given file.
+   *
+   * @param path path to the file.
+   * @return std::unique_ptr<CAFStore> the deserialized object.
+   */
+  std::unique_ptr<CAFStore> DeserializeCAFStoreFromFile(const char* path);
+
 private:
   JsonDeserializerContext _context;
 
@@ -99,6 +121,14 @@ private:
    * @return std::unique_ptr<Type> the deserialized object.
    */
   std::unique_ptr<Type> DeserializeFunctionType(const nlohmann::json& json) const;
+
+  /**
+   * @brief Deserialize an AggregateType object from the given JSON container.
+   *
+   * @param json the JSON container.
+   * @return std::unique_ptr<Type> the deserialized object.
+   */
+  std::unique_ptr<Type> DeserializeAggregateType(const nlohmann::json& json) const;
 
   /**
    * @brief Deserialize a @see FunctionSignature object from the given JSON container.

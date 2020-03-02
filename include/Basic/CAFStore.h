@@ -3,8 +3,10 @@
 
 #include "Infrastructure/Casting.h"
 #include "Infrastructure/Hash.h"
+#include "Basic/Type.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -12,12 +14,12 @@
 
 namespace caf {
 
-class Type;
 class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
 class FunctionType;
+class AggregateType;
 class FunctionSignature;
 class Function;
 
@@ -149,6 +151,13 @@ struct Hasher<CAFStoreRef<T>> {
  */
 class CAFStore {
 public:
+  struct Statistics {
+    int64_t TypesCount[CAF_TYPE_KINDS_COUNT];
+    int64_t ApiFunctionsCount;
+    int64_t ConstructorsCount;
+    int64_t CallbackFunctionCandidatesCount;
+  }; // struct Statistics
+
   template <typename T>
   friend class CAFStoreRef;
 
@@ -175,6 +184,13 @@ public:
   }
 
   /**
+   * @brief Create statistics about this CAFStore object.
+   *
+   * @return Statistics the created statistics.
+   */
+  Statistics CreateStatistics() const;
+
+  /**
    * @brief Create a BitsType object managed by this store. If the name of the BitsType object given
    * already exist in the store, then no BitsType instances will be created and the already existed
    * BitsType instancew will be returned.
@@ -189,12 +205,10 @@ public:
   /**
    * @brief Create a PointerType object managed by this store.
    *
-   * @param pointeeType the type of the pointee, a.k.a. the type of the value pointed to by the
-   * pointer.
    * @param id the ID of this type.
    * @return CAFStoreRef<PointerType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<PointerType> CreatePointerType(CAFStoreRef<Type> pointeeType, uint64_t id);
+  CAFStoreRef<PointerType> CreatePointerType(uint64_t id);
 
   /**
    * @brief Create an ArrayType object managed by this store.
@@ -204,26 +218,16 @@ public:
    * @param id the ID of this type.
    * @return CAFStoreRef<ArrayType> pointer to the created object, or empty if failed.
    */
-  CAFStoreRef<ArrayType> CreateArrayType(size_t size, CAFStoreRef<Type> elementType, uint64_t id);
+  CAFStoreRef<ArrayType> CreateArrayType(size_t size, uint64_t id);
 
   /**
-   * @brief Create a StructType object managed by this store. If the name of the given struct type
-   * already exist in the store, then no StructType instances will be created and the already
-   * existed instance will be returned.
+   * @brief Create a StructType object managed by this store.
    *
    * @param name the name of the struct.
    * @param id the ID of this type.
    * @return CAFStoreRef<StructType> pointer to the created object, or empty if failed.
    */
   CAFStoreRef<StructType> CreateStructType(std::string name, uint64_t id);
-
-  /**
-   * @brief Create an unnamed struct type and add it to this store.
-   *
-   * @param id the ID of this type.
-   * @return CAFStoreRef<StructType> the created unnamed struct type.
-   */
-  CAFStoreRef<StructType> CreateUnnamedStructType(uint64_t id);
 
   /**
    * @brief Create a FunctionType object managed by this store.
@@ -233,6 +237,23 @@ public:
    * @return CAFStoreRef<FunctionType> popinter to the created object, or empty if failed.
    */
   CAFStoreRef<FunctionType> CreateFunctionType(uint64_t signatureId, uint64_t id);
+
+  /**
+   * @brief Create an AggregateType object managed by this store.
+   *
+   * @param name the name of the aggregate type.
+   * @param id the ID of the aggregate type.
+   * @return CAFStoreRef<AggregateType> the created aggregate type.
+   */
+  CAFStoreRef<AggregateType> CreateAggregateType(std::string name, uint64_t id);
+
+  /**
+   * @brief Create an unnamed aggregate type and add it to this store.
+   *
+   * @param id the ID of the type.
+   * @return CAFStoreRef<AggregateType> the created aggregate type.
+   */
+  CAFStoreRef<AggregateType> CreateUnnamedAggregateType(uint64_t id);
 
   /**
    * @brief Create a Function object representing an API in this store. If the name of the API

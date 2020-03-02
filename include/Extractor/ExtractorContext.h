@@ -64,7 +64,7 @@ public:
    * @param constructingTypeName the name of the type being constructed by the given constructor.
    * @param ctor the constructor function.
    */
-  void AddConstructor(std::string constructingTypeName, const llvm::Function* ctor);
+  void AddConstructor(const llvm::Type* type, const llvm::Function* ctor);
 
   /**
    * @brief Add the given function as a callback function candidate to the context.
@@ -264,7 +264,7 @@ private:
   class FrozenContext;
 
   std::vector<const llvm::Function *> _apis;
-  std::unordered_multimap<std::string, const llvm::Function *> _ctors;
+  std::unordered_multimap<const llvm::Type *, const llvm::Function *> _ctors;
   std::vector<const llvm::Function *> _callbackFunctions;
   std::unique_ptr<FrozenContext> _frozen;
 

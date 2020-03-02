@@ -26,6 +26,17 @@ public:
   { }
 
   /**
+   * @brief Seed the current random number generator.
+   *
+   * @tparam T type of the seed.
+   * @param seed the new seed.
+   */
+  template <typename T>
+  void seed(T seed) {
+    _rng.seed(seed);
+  }
+
+  /**
    * @brief Get a random integer number in range [min, max].
    *
    * This function takes part in overload resolution only if T is an integral type.

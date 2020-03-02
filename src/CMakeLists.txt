@@ -11,6 +11,7 @@ set(CAF_INFRASTRUCTURE_SOURCES
     ${CAF_INCLUDE_DIR}/Infrastructure/Memory.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Optional.h
     ${CAF_INCLUDE_DIR}/Infrastructure/Random.h
+    ${CAF_INCLUDE_DIR}/Infrastructure/Stream.h
     ${CAF_INCLUDE_DIR}/Infrastructure/TMP.h)
 add_library(CAFInfrastructure INTERFACE)
 target_sources(CAFInfrastructure INTERFACE
@@ -23,3 +24,4 @@ add_subdirectory(Extractor)
 add_subdirectory(Instrumentor)
 # add_subdirectory(ConstructorWrapper)
 add_subdirectory(CtorWrapper)
+add_subdirectory(CLI)

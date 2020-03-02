@@ -1,6 +1,7 @@
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Casting.h"
 #include "Basic/BitsType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/FunctionType.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
@@ -8,6 +9,7 @@
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/PlaceholderValue.h"
+#include "Fuzzer/AggregateValue.h"
 #include "Fuzzer/TestCaseMutator.h"
 
 #include <climits>
@@ -329,6 +331,33 @@ Value* TestCaseMutator::MutatePlaceholderValue(
   // Generate a Value of the corresponding type to the placeholder.
   return _valueGen.GenerateValue(value->type());
 }
+
+Value* TestCaseMutator::MutateAggregateValue(
+    const AggregateValue* value, MutationContext& context) {
+  auto tc = context.testCase();
+  auto pool = value->pool();
+
+  auto type = caf::dyn_cast<AggregateType>(value->type());
+  if (type->GetFieldsCount() == 0) {
+    return pool->CreateValue<AggregateValue>(*value);
+  }
+
+  // Choose a field to mutate.
+  auto fieldIndex = _rnd.Index(type->fields());
+  auto fieldType = type->GetField(fieldIndex).get();
+  auto fieldValue = _valueGen.GenerateNewValue(fieldType);
+
+  auto newValue = pool->CreateValue<AggregateValue>(pool, type);
+  for (size_t i = 0; i < fieldIndex; ++i) {
+    newValue->AddField(value->GetField(i));
+  }
+  newValue->AddField(fieldValue);
+  for (size_t i = fieldIndex + 1; i < type->GetFieldsCount(); ++i) {
+    newValue->AddField(value->GetField(i));
+  }
+
+  return newValue;
+};
 
 Value* TestCaseMutator::MutateValue(const Value* value, MutationContext& context) {
   switch (value->kind()) {

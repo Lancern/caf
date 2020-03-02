@@ -14,6 +14,7 @@ class PointerType;
 class ArrayType;
 class StructType;
 class FunctionType;
+class AggregateType;
 class FunctionSignature;
 class Function;
 class Constructor;
@@ -112,6 +113,14 @@ private:
    * @param json the JSON container.
    */
   void Serialize(const FunctionType& object, nlohmann::json& json) const;
+
+  /**
+   * @brief Serialize the given AggregateType object into the given JSON container.
+   *
+   * @param object the AggregateType object to serialize.
+   * @param json the JSON container.
+   */
+  void Serialize(const AggregateType& object, nlohmann::json& json) const;
 
   /**
    * @brief Serialize the given @see FunctionSignature object into the given JSON container.

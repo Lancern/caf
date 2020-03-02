@@ -8,6 +8,7 @@
 #include "Basic/ArrayType.h"
 #include "Basic/StructType.h"
 #include "Basic/FunctionType.h"
+#include "Basic/AggregateType.h"
 #include "Basic/Function.h"
 #include "Basic/Constructor.h"
 #include "Basic/JsonSerializer.h"
@@ -46,6 +47,8 @@ void JsonSerializer::Serialize(const Type& object, nlohmann::json& json) const {
     Serialize(caf::dyn_cast<ArrayType>(object), json);
   } else if (caf::is_a<FunctionType>(object)) {
     Serialize(caf::dyn_cast<FunctionType>(object), json);
+  } else if (caf::is_a<AggregateType>(object)) {
+    Serialize(caf::dyn_cast<AggregateType>(object), json);
   } else {
     CAF_UNREACHABLE;
   }
@@ -96,6 +99,16 @@ void JsonSerializer::Serialize(const FunctionType& object, nlohmann::json& json)
   Serialize(object.signature(), signatureJson);
   json["signature"] = std::move(signatureJson);
   json["signatureId"] = object.signatureId();
+}
+
+void JsonSerializer::Serialize(const AggregateType& object, nlohmann::json& json) const {
+  auto fieldsJson = nlohmann::json::array();
+  for (auto field : object.fields()) {
+    auto fieldJson = nlohmann::json::object();
+    Serialize(*field, fieldJson);
+    fieldsJson.push_back(std::move(fieldJson));
+  }
+  json["fields"] = std::move(fieldsJson);
 }
 
 void JsonSerializer::Serialize(const FunctionSignature& object, nlohmann::json& json) const {

@@ -69,6 +69,13 @@ public:
     return nullptr;
   }
 
+  /**
+   * @brief Get the number of constructors.
+   *
+   * @return size_t the number of constructors.
+   */
+  size_t GetConstructorsCount() const { return _ctors.size(); }
+
 #ifdef CAF_LLVM
   /**
    * @brief Test whether the given object is an instance of StructType.

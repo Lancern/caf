@@ -2,30 +2,32 @@
 #define CAF_VALUE_GENERATOR_H
 
 #include "Infrastructure/Random.h"
+#include "Fuzzer/Corpus.h"
 #include "Fuzzer/FunctionCall.h"
 
 namespace caf {
 
-class CAFCorpus;
 class Type;
 class Value;
 class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
+class AggregateType;
 class BitsValue;
 class PointerValue;
 class FunctionPointerValue;
 class ArrayValue;
 class StructValue;
+class AggregateValue;
 class PlaceholderValue;
 class TestCase;
 
 /**
- * @brief Generate test case values.
+ * @brief Generate test cases.
  *
  */
-class ValueGenerator {
+class TestCaseGenerator {
 public:
   /**
    * @brief Construct a new Value Generator object
@@ -33,7 +35,7 @@ public:
    * @param corpus the test case corpus. New values will be generated into this corpus.
    * @param rnd the random number generator to use.
    */
-  explicit ValueGenerator(CAFCorpus* corpus, Random<>& rnd)
+  explicit TestCaseGenerator(CAFCorpus* corpus, Random<>& rnd)
     : _corpus(corpus),
       _rnd(rnd)
   { }
@@ -79,6 +81,14 @@ public:
   StructValue* GenerateNewStructType(const StructType* type);
 
   /**
+   * @brief Generate a new aggregate type value.
+   *
+   * @param type the type of the aggregate value to be generated.
+   * @return AggregateValue* the generated value.
+   */
+  AggregateValue* GenerateNewAggregateType(const AggregateType* type);
+
+  /**
    * @brief Generate a new value of the given type.
    *
    * @param type type of the value to be generated.
@@ -120,6 +130,14 @@ public:
    * @return FunctionCall the generated function call.
    */
   FunctionCall GenerateCall();
+
+  /**
+   * @brief Generate a new test case.
+   *
+   * @param maxCalls the maximum number of calls to generate.
+   * @return TestCase the generated test case.
+   */
+  CAFCorpusTestCaseRef GenerateTestCase(int maxCalls);
 
 private:
   CAFCorpus* _corpus;

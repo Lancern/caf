@@ -84,7 +84,7 @@ public:
    */
   bool hasValue() const { return _hasValue; }
 
-  operator bool() const { return hasValue(); }
+  explicit operator bool() const { return hasValue(); }
 
   /**
    * @brief Destroy the old contained value and construct a new value using the given arguments in

@@ -395,7 +395,7 @@ private:
 
         for (auto c : ctorsLLVM) {
           auto funcType = c->getFunctionType();
-          auto ctorId = _frozenContext->GetConstructorId(c);
+          auto ctorId = _frozenContext->GetConstructorId(c).take();
 
           std::vector<CAFStoreRef<Type>> paramTypes;
           paramTypes.reserve(funcType->getNumParams());

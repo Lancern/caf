@@ -53,9 +53,11 @@ bool CanAlloca(const llvm::Type* type) {
 
 void CAFCodeGenerator::GenerateStub() {
   auto ctors = _extraction->GetConstructors();
+
+  llvm::errs() << "GetConstructors(): " << ctors.size() << "\n";
   for(auto iter: ctors) {
     auto constructingType = _extraction->GetConstructingType(iter).take();
-    auto typeId = _extraction->GetTypeId(constructingType);
+    auto typeId = _extraction->GetTypeId(constructingType).take();
     CreateDispatchFunction(true, typeId);
   }
 
@@ -397,10 +399,6 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint
     llvm::errs() << "apis num: " << apis.size() << "\n";
     int caseCounter = 0;
     for (auto func: apis) {
-      if(func->isIntrinsic()){
-        llvm::errs() << "CodeGen.cpp: this is a intrinsic function: " << func->getName() << "\n";
-        continue;
-      }
       cases.push_back(CreateCallApiCase(
           const_cast<llvm::Function *>(func), dispatchFunc, caseCounter++));
       // llvm::errs() << caseCounter << " cases have been created successfully.\n";
@@ -408,6 +406,10 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint
   } else {
     auto type = _extraction->GetTypeById(typeId).take();
     auto ctors = _extraction->GetConstructorsOfType(type);
+    // llvm::errs() << " *** *** *** *** *** *** \n";
+    // type->dump();
+    // llvm::errs() << "typeId = " << typeId << " - ctors.size() = " << ctors.size() << "\n";
+    // llvm::errs() << " *** *** *** *** *** *** \n";
     int caseCounter = 0;
     for (auto ctor: ctors) {
       cases.push_back(CreateCallApiCase(
@@ -717,7 +719,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     } else {
       llvm::errs() << "Trying to alloca unrecognized type: "
           << type->getTypeID() << "\n";
-      type->dump();
+      // type->dump(); 
       elseRet = builder.CreateAlloca(type);
     }
     // builder.SetInsertPoint(elseBlock);

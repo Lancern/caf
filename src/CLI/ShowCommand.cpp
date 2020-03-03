@@ -1,6 +1,7 @@
 #include "Command.h"
 #include "RegisterCommand.h"
 #include "Diagnostics.h"
+#include "Printer.h"
 #include "TestCaseDumper.h"
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Stream.h"
@@ -29,10 +30,9 @@ public:
     if (storeFile.fail()) {
       PRINT_LAST_OS_ERR_AND_EXIT("failed to load CAF store file");
     }
-    StdStreamAdapter<std::ifstream> storeFileWrapper { storeFile };
 
     JsonDeserializer storeReader;
-    auto store = storeReader.DeserializeCAFStoreFrom(storeFileWrapper);
+    auto store = storeReader.DeserializeCAFStoreFrom(storeFile);
     if (!store) {
       PRINT_ERR_AND_EXIT("failed to load CAF store data");
     }
@@ -48,7 +48,8 @@ public:
     TestCaseDeserializer tcReader { corpus.get() };
     auto tc = tcReader.Read(tcFileWrapper);
 
-    TestCaseDumper dumper;
+    Printer printer { std::cout };
+    TestCaseDumper dumper { printer };
     dumper.Dump(*tc);
 
     return 0;

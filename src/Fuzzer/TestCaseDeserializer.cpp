@@ -24,6 +24,10 @@ void TestCaseDeserializationContext::SkipNextValueIndex() {
   _values.push_back(nullptr);
 }
 
+void TestCaseDeserializationContext::SkipNextPlaceholderIndex() {
+  _placeholderIndexAlloc.next();
+}
+
 void TestCaseDeserializationContext::ReservePlaceholderIndex() {
   auto plcaeholderIndex = _placeholderIndexAlloc.next();
   auto objectPoolIndex = _values.size();

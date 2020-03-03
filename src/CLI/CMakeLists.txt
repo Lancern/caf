@@ -5,6 +5,8 @@ add_executable(CAFCLI
     Diagnostics.h
     GenerateTestCaseCommand.cpp
     main.cpp
+    Printer.cpp
+    Printer.h
     RegisterCommand.h
     ShowCommand.cpp
     StatCommand.cpp

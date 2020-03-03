@@ -18,6 +18,14 @@ class IncrementIdAllocator {
 
 public:
   /**
+   * @brief Construct a new IncrementIdAllocator object.
+   *
+   */
+  explicit IncrementIdAllocator()
+    : _id(0)
+  { }
+
+  /**
    * @brief Generate next ID in ID sequence.
    *
    * @return T the next ID.

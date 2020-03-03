@@ -185,6 +185,26 @@ public:
   Optional<const llvm::Type *> GetTypeById(uint64_t id) const;
 
   /**
+   * @brief Get all frozen types.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return std::vector<const llvm::Type *> a list of all frozen types.
+   */
+  std::vector<const llvm::Type *> GetTypes() const;
+
+  /**
+   * @brief Get the type IDs of all frozen types.
+   *
+   * This function should only be called after this context has been frozen. Otherwise this function
+   * will trigger an assertion failure.
+   *
+   * @return std::vector<uint64_t> a list of all type IDs of all frozen types.
+   */
+  std::vector<uint64_t> GetTypeIds() const;
+
+  /**
    * @brief Get the number of types.
    *
    * This function should only be called after this context has been frozen. Otherwise this function

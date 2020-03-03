@@ -236,6 +236,24 @@ public:
     return find(_idToType, id);
   }
 
+  std::vector<const llvm::Type *> GetTypes() const {
+    std::vector<const llvm::Type *> types;
+    types.reserve(_types.size());
+    for (const auto& t : _types) {
+      types.push_back(t.first);
+    }
+    return types;
+  }
+
+  std::vector<uint64_t> GetTypeIds() const {
+    std::vector<uint64_t> ids;
+    ids.reserve(_types.size());
+    for (const auto& t : _types) {
+      ids.push_back(t.second);
+    }
+    return ids;
+  }
+
   size_t GetTypesCount() const {
     return _types.size();
   }
@@ -640,6 +658,16 @@ Optional<const llvm::Function *> ExtractorContext::GetConstructorById(uint64_t i
 Optional<const llvm::Type *> ExtractorContext::GetTypeById(uint64_t id) const {
   EnsureFrozen();
   return _frozen->GetTypeById(id);
+}
+
+std::vector<const llvm::Type *> ExtractorContext::GetTypes() const {
+  EnsureFrozen();
+  return _frozen->GetTypes();
+}
+
+std::vector<uint64_t> ExtractorContext::GetTypeIds() const {
+  EnsureFrozen();
+  return _frozen->GetTypeIds();
 }
 
 size_t ExtractorContext::GetTypesCount() const {

@@ -16,8 +16,8 @@ public:
 
     CAFCodeGenerator generator { };
     generator.SetContext(module, extractions);
-    generator.GenerateStub();
     generator.GenerateCallbackFunctionCandidateArray(extractions.GetCallbackFunctionCandidates());
+    generator.GenerateStub();
 
     return true;
   }

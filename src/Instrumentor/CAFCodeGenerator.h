@@ -157,8 +157,15 @@ private:
    *
    * @return llvm::Function* the function generated.
    */
-  llvm::Function* CreateDispatchFunction(bool ctorDispatch = false, uint64_t typeId = 0);
+  llvm::Function* CreateDispatchFunctionForApi();
 
+  /**
+   * @brief Generate the dispatch function for invoke ctors in the module.
+   * 
+   * @param ctorTypeId 
+   * @return llvm::Function* 
+   */
+  llvm::Function* CreateDispatchFunctionForCtors(uint64_t ctorTypeId);
   /**
    * @brief Generate code to allocate a value of a struct type on the stack.
    *

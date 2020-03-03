@@ -52,17 +52,20 @@ bool CanAlloca(const llvm::Type* type) {
 } // namespace anonymous
 
 void CAFCodeGenerator::GenerateStub() {
-  auto ctors = _extraction->GetConstructors();
+  // auto ctors = _extraction->GetConstructors();
+  auto types = _extraction->GetTypes();
 
-  llvm::errs() << "GetConstructors(): " << ctors.size() << "\n";
-  for(auto iter: ctors) {
-    auto constructingType = _extraction->GetConstructingType(iter).take();
-    auto typeId = _extraction->GetTypeId(constructingType).take();
-    CreateDispatchFunction(true, typeId);
+  llvm::errs() << "typeIds.size(): " << types.size() << "\n";
+  for(auto type: types) {
+    if(!llvm::isa<llvm::StructType>(type)) continue;
+    auto ctors = _extraction->GetConstructorsOfType(type);
+    if(ctors.size() == 0)continue;
+    auto typeId = _extraction->GetTypeId(type).take();
+    CreateDispatchFunctionForCtors(typeId);
   }
 
 
-  auto dispatchFunc = CreateDispatchFunction();
+  auto dispatchFunc = CreateDispatchFunctionForApi();
   //
   // ============= insert my new main function. =======================
   //
@@ -149,7 +152,7 @@ void CAFCodeGenerator::GenerateStub() {
 
     auto loadApiId = builder.CreateLoad(apiId);
     CreatePrintfCall(builder, "api_id = %d\n", loadApiId);
-    // auto apiRetObj = builder.CreateCall(dispatchFunc, loadApiId);
+    builder.CreateCall(dispatchFunc, loadApiId);
   }
   builder.CreateBr(mainWhileCond);
 
@@ -358,30 +361,22 @@ llvm::CallInst* CAFCodeGenerator::CreateScanfCall(
   return scanfRes;
 }
 
-llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint64_t typeId) {
-  std::string dispatchType("api");
-  if(ctorDispatch == true)dispatchType = std::string("ctor");
+llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTypeId) {
+  auto ctorType = _extraction->GetTypeById(ctorTypeId).take();
+  auto ctors = _extraction->GetConstructorsOfType(ctorType);
 
+  std::string dispatchType = std::string("ctor");
   llvm::Function* dispatchFunc;
-  if(ctorDispatch == false) {
-    dispatchFunc = llvm::cast<llvm::Function>(
-      _module->getOrInsertFunction(
-          "__caf_dispatch_api",
-          llvm::Type::getInt8PtrTy(_module->getContext()),
-          // llvm::Type::getVoidTy(_module->getContext()),
-          llvm::Type::getInt32Ty(_module->getContext())
-      )
-    );
-  } else {
-    dispatchFunc = llvm::cast<llvm::Function>(
-      _module->getOrInsertFunction(
-          "__caf_dispatch_ctor_" + std::to_string(typeId),
-          llvm::Type::getInt8PtrTy(_module->getContext()),
-          // llvm::Type::getVoidTy(_module->getContext()),
-          llvm::Type::getInt32Ty(_module->getContext())
-      )
-    );
-  }
+  auto type = _extraction->GetTypeById(ctorTypeId).take();
+  dispatchFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+        // "__caf_dispatch_ctor_" + type->getStructName().str(),
+        "__caf_dispatch_ctor_" + std::to_string(ctorTypeId),
+        llvm::Type::getInt8PtrTy(_module->getContext()),
+        // llvm::Type::getVoidTy(_module->getContext()),
+        llvm::Type::getInt32Ty(_module->getContext())
+    )
+  );
   dispatchFunc->setCallingConv(llvm::CallingConv::C);
 
   auto argApiId = dispatchFunc->arg_begin();
@@ -394,27 +389,15 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint
       dispatchFunc);
 
   std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> cases { };
-  if(ctorDispatch == false) {
-    const auto& apis = _extraction->GetApiFunctions();
-    llvm::errs() << "apis num: " << apis.size() << "\n";
-    int caseCounter = 0;
-    for (auto func: apis) {
-      cases.push_back(CreateCallApiCase(
-          const_cast<llvm::Function *>(func), dispatchFunc, caseCounter++));
-      // llvm::errs() << caseCounter << " cases have been created successfully.\n";
-    }
-  } else {
-    auto type = _extraction->GetTypeById(typeId).take();
-    auto ctors = _extraction->GetConstructorsOfType(type);
-    // llvm::errs() << " *** *** *** *** *** *** \n";
-    // type->dump();
-    // llvm::errs() << "typeId = " << typeId << " - ctors.size() = " << ctors.size() << "\n";
-    // llvm::errs() << " *** *** *** *** *** *** \n";
-    int caseCounter = 0;
-    for (auto ctor: ctors) {
-      cases.push_back(CreateCallApiCase(
-          const_cast<llvm::Function *>(ctor), dispatchFunc, caseCounter++, true));
-    }
+
+  // llvm::errs() << " *** *** *** *** *** *** \n";
+  // type->dump();
+  // llvm::errs() << "ctorTypeId = " << ctorTypeId << " - ctors.size() = " << ctors.size() << "\n";
+  // llvm::errs() << " *** *** *** *** *** *** \n";
+  int caseCounter = 0;
+  for (auto ctor: ctors) {
+    cases.push_back(CreateCallApiCase(
+        const_cast<llvm::Function *>(ctor), dispatchFunc, caseCounter++, true));
   }
   llvm::errs() << dispatchFunc->getName().str() << " - callee num: " << cases.size() << "\n";
 
@@ -453,7 +436,80 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunction(bool ctorDispatch, uint
     builder.CreateStore(builder.getInt8(0), retObjPtr);
     builder.CreateRet(retObjPtr);
   }
-  llvm::errs() << "dispatchFunc created successfully.\n";
+  llvm::errs() << "ctor dispatchFunc created successfully.\n";
+  return dispatchFunc;
+}
+
+llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForApi() {
+  std::string dispatchType("api");
+
+  llvm::Function* dispatchFunc;
+  dispatchFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+        "__caf_dispatch_api",
+        llvm::Type::getInt8PtrTy(_module->getContext()),
+        // llvm::Type::getVoidTy(_module->getContext()),
+        llvm::Type::getInt32Ty(_module->getContext())
+    )
+  );
+  dispatchFunc->setCallingConv(llvm::CallingConv::C);
+
+  auto argApiId = dispatchFunc->arg_begin();
+  argApiId->setName(dispatchType);
+
+  llvm::IRBuilder<> builder { dispatchFunc->getContext() };
+  auto invokeApiEntry = llvm::BasicBlock::Create(
+      dispatchFunc->getContext(),
+      "caf.dispatch.entry",
+      dispatchFunc);
+
+  std::vector<std::pair<llvm::ConstantInt *, llvm::BasicBlock *>> cases { };
+  const auto& apis = _extraction->GetApiFunctions();
+  llvm::errs() << "apis num: " << apis.size() << "\n";
+  int caseCounter = 0;
+  for (auto func: apis) {
+    cases.push_back(CreateCallApiCase(
+        const_cast<llvm::Function *>(func), dispatchFunc, caseCounter++));
+    // llvm::errs() << caseCounter << " cases have been created successfully.\n";
+  }
+  llvm::errs() << dispatchFunc->getName().str() << " - callee num: " << cases.size() << "\n";
+
+  if (cases.size() == 0) {
+    builder.SetInsertPoint(invokeApiEntry);
+    {
+    auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
+    builder.CreateStore(builder.getInt8(0), retObjPtr);
+    builder.CreateRet(retObjPtr);
+    }
+    return dispatchFunc;
+  }
+
+  auto invokeApiDefault = llvm::BasicBlock::Create(
+      dispatchFunc->getContext(),
+      dispatchType + ".invoke.defualt",
+      dispatchFunc);
+  auto invokeApiEnd = llvm::BasicBlock::Create(
+      dispatchFunc->getContext(),
+      dispatchType + ".invoke.end",
+      dispatchFunc);
+
+  builder.SetInsertPoint(invokeApiEntry);
+  llvm::SwitchInst* invokeApiSI = builder.CreateSwitch(
+      argApiId, cases.front().second, cases.size());
+  for (auto& c: cases) {
+    invokeApiSI->addCase(c.first, c.second);
+  }
+  invokeApiSI->setDefaultDest(invokeApiDefault);
+  builder.SetInsertPoint(invokeApiDefault);
+  builder.CreateBr(invokeApiEnd);
+  builder.SetInsertPoint(invokeApiEnd);
+  // if(ctorDispatch == true)
+  {
+    auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
+    builder.CreateStore(builder.getInt8(0), retObjPtr);
+    builder.CreateRet(retObjPtr);
+  }
+  llvm::errs() << "api dispatchFunc created successfully.\n";
   return dispatchFunc;
 }
 
@@ -625,12 +681,6 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
 llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     llvm::IRBuilder<>& builder, llvm::Type* type, int depth, bool init) {
 
-  // auto beginBlock = llvm::BasicBlock::Create(
-  //     builder.getContext(), "begin.malloc.object",
-  //     builder.GetInsertBlock()->getParent());
-  // builder.CreateBr(beginBlock);
-  // builder.SetInsertPoint(beginBlock);
-
   llvm::Value* inputKindValue;
   if(init == true) {
     auto inputKind = builder.CreateAlloca(
@@ -646,11 +696,11 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
     } else if(type->isPointerTy()) {
       inputKindValue = builder.getInt32(1);
     } else if(type->isArrayTy() || type->isVectorTy()) {
-      inputKindValue = builder.getInt32(2);
-    } else if(type->isStructTy()) {
       inputKindValue = builder.getInt32(3);
+    } else if(type->isStructTy()) {
+      inputKindValue = builder.getInt32(4);
     } else if(type->isFunctionTy()) {
-      inputKindValue = builder.getInt32(5);
+      inputKindValue = builder.getInt32(2);
     }
   }
 

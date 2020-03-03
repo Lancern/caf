@@ -10,7 +10,7 @@ namespace caf {
 
 class BitsValue;
 class PointerValue;
-class FunctionPointerValue;
+class FunctionValue;
 class ArrayValue;
 class StructValue;
 class PlaceholderValue;
@@ -75,7 +75,7 @@ private:
 
   Value* MutatePointerValue(const PointerValue* value, MutationContext& context);
 
-  Value* MutateFunctionPointerValue(const FunctionPointerValue* value);
+  Value* MutateFunctionValue(const FunctionValue* value);
 
   Value* MutateArrayValue(const ArrayValue* value, MutationContext& context);
 

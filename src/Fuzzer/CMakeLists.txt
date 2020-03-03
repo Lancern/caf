@@ -13,7 +13,7 @@ add_library(CAFFuzzer STATIC
     ${CAF_INCLUDE_DIR}/Fuzzer/BitsValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/Corpus.h
     ${CAF_INCLUDE_DIR}/Fuzzer/FunctionCall.h
-    ${CAF_INCLUDE_DIR}/Fuzzer/FunctionPointerValue.h
+    ${CAF_INCLUDE_DIR}/Fuzzer/FunctionValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/ObjectPool.h
     ${CAF_INCLUDE_DIR}/Fuzzer/PlaceholderValue.h
     ${CAF_INCLUDE_DIR}/Fuzzer/PointerValue.h

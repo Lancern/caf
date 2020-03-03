@@ -13,10 +13,11 @@ class BitsType;
 class PointerType;
 class ArrayType;
 class StructType;
+class FunctionType;
 class AggregateType;
 class BitsValue;
 class PointerValue;
-class FunctionPointerValue;
+class FunctionValue;
 class ArrayValue;
 class StructValue;
 class AggregateValue;
@@ -57,12 +58,12 @@ public:
   PointerValue* GenerateNewPointerType(const PointerType* type);
 
   /**
-   * @brief Generate a new function pointer type value.
+   * @brief Generate a new function type value.
    *
-   * @param type type of the function pointer.
-   * @return FunctionPointerValue* the generated value.
+   * @param type type of the function.
+   * @return FunctionValue* the generated value.
    */
-  FunctionPointerValue* GenerateNewFunctionPointerType(const PointerType* type);
+  FunctionValue* GenerateNewFunctionType(const FunctionType* type);
 
   /**
    * @brief Generate a new array type value.

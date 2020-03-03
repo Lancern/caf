@@ -24,10 +24,10 @@ enum class ValueKind : int {
   PointerValue,
 
   /**
-   * @brief The value is an instance of `PointerType` and the pointee is a function.
+   * @brief The value is an instance of `FunctionType`.
    *
    */
-  FunctionPointerValue,
+  FunctionValue,
 
   /**
    * @brief The value is an instance of `ArrayType`.

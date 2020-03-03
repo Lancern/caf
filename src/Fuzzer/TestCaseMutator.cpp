@@ -5,7 +5,7 @@
 #include "Basic/FunctionType.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
-#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/FunctionValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/PlaceholderValue.h"
@@ -266,20 +266,19 @@ Value* TestCaseMutator::MutatePointerValue(const PointerValue* value, MutationCo
       caf::dyn_cast<PointerType>(value->type()));
 }
 
-Value* TestCaseMutator::MutateFunctionPointerValue(const FunctionPointerValue* value) {
+Value* TestCaseMutator::MutateFunctionValue(const FunctionValue* value) {
   auto objectPool = value->pool();
   if (_rnd.WithProbability(0.5)) {
-    return objectPool->CreateValue<FunctionPointerValue>(*value);
+    return objectPool->CreateValue<FunctionValue>(*value);
   }
 
   auto store = _corpus->store();
-  auto pointerType = caf::dyn_cast<PointerType>(value->type());
-  auto functionType = caf::dyn_cast<FunctionType>(pointerType->pointeeType().get());
+  auto functionType = caf::dyn_cast<FunctionType>(value->type());
   auto candidates = store->GetCallbackFunctions(functionType->signatureId());
   assert(candidates && "No callback function candidates viable.");
 
-  auto pointeeFunctionId = _rnd.Select(*candidates);
-  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, pointerType);
+  auto funcId = _rnd.Select(*candidates);
+  return objectPool->CreateValue<FunctionValue>(objectPool, funcId, functionType);
 }
 
 Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value, MutationContext& context) {
@@ -371,8 +370,8 @@ Value* TestCaseMutator::MutateValue(const Value* value, MutationContext& context
     case ValueKind::PointerValue: {
       return MutatePointerValue(caf::dyn_cast<PointerValue>(value), context);
     }
-    case ValueKind::FunctionPointerValue: {
-      return MutateFunctionPointerValue(caf::dyn_cast<FunctionPointerValue>(value));
+    case ValueKind::FunctionValue: {
+      return MutateFunctionValue(caf::dyn_cast<FunctionValue>(value));
     }
     case ValueKind::ArrayValue: {
       return MutateArrayValue(caf::dyn_cast<ArrayValue>(value), context);

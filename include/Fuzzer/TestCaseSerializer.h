@@ -8,7 +8,7 @@
 #include "Fuzzer/Value.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
-#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/FunctionValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/AggregateValue.h"
@@ -198,9 +198,9 @@ private:
         Write(o, *pointerValue.pointee(), context, true);
         break;
       }
-      case ValueKind::FunctionPointerValue: {
+      case ValueKind::FunctionValue: {
         // Write the ID of the pointee function.
-        const auto& functionValue = caf::dyn_cast<FunctionPointerValue>(value);
+        const auto& functionValue = caf::dyn_cast<FunctionValue>(value);
         WriteInt<4>(o, functionValue.functionId());
         break;
       }

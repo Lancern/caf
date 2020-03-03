@@ -19,7 +19,7 @@
 #include "Fuzzer/Value.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/PointerValue.h"
-#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/FunctionValue.h"
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/StructValue.h"
 #include "Fuzzer/AggregateValue.h"
@@ -261,10 +261,9 @@ private:
         value = pool->CreateValue<PointerValue>(pool, pointee, ptrType);
         break;
       }
-      case ValueKind::FunctionPointerValue: {
+      case ValueKind::FunctionValue: {
         auto funcId = ReadInt<uint64_t, 4>(in);
-        value = pool->CreateValue<FunctionPointerValue>(
-            pool, funcId, caf::dyn_cast<PointerType>(type));
+        value = pool->CreateValue<FunctionValue>(pool, funcId, caf::dyn_cast<FunctionType>(type));
         break;
       }
       case ValueKind::ArrayValue: {

@@ -8,7 +8,7 @@
 #include "Fuzzer/ArrayValue.h"
 #include "Fuzzer/BitsValue.h"
 #include "Fuzzer/Corpus.h"
-#include "Fuzzer/FunctionPointerValue.h"
+#include "Fuzzer/FunctionValue.h"
 #include "Fuzzer/PlaceholderValue.h"
 #include "Fuzzer/PointerValue.h"
 #include "Fuzzer/StructValue.h"
@@ -66,17 +66,14 @@ StructValue* TestCaseGenerator::GenerateNewStructType(const StructType* type) {
   return value;
 }
 
-FunctionPointerValue* TestCaseGenerator::GenerateNewFunctionPointerType(const PointerType *type) {
-  assert(type->isFunctionPointer() && "The given pointer type is not a function pointer type.");
-
-  auto functionType = type->pointeeType().unchecked_dyn_cast<FunctionType>();
-  auto candidates = _corpus->store()->GetCallbackFunctions(functionType->signatureId());
+FunctionValue* TestCaseGenerator::GenerateNewFunctionType(const FunctionType *type) {
+  auto candidates = _corpus->store()->GetCallbackFunctions(type->signatureId());
   assert(candidates && "No callback function candidates viable.");
 
-  auto pointeeFunctionId = _rnd.Select(*candidates);
+  auto funcId = _rnd.Select(*candidates);
 
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
-  return objectPool->CreateValue<FunctionPointerValue>(objectPool, pointeeFunctionId, type);
+  return objectPool->CreateValue<FunctionValue>(objectPool, funcId, type);
 }
 
 AggregateValue* TestCaseGenerator::GenerateNewAggregateType(const AggregateType *type) {
@@ -97,17 +94,16 @@ Value* TestCaseGenerator::GenerateNewValue(const Type* type) {
     }
     case TypeKind::Pointer: {
       auto pointerType = caf::dyn_cast<PointerType>(type);
-      if (pointerType->isFunctionPointer()) {
-        return GenerateNewFunctionPointerType(pointerType);
-      } else {
-        return GenerateNewPointerType(pointerType);
-      }
+      return GenerateNewPointerType(pointerType);
     }
     case TypeKind::Array: {
       return GenerateNewArrayType(caf::dyn_cast<ArrayType>(type));
     }
     case TypeKind::Struct: {
       return GenerateNewStructType(caf::dyn_cast<StructType>(type));
+    }
+    case TypeKind::Function: {
+      return GenerateNewFunctionType(caf::dyn_cast<FunctionType>(type));
     }
     case TypeKind::Aggregate: {
       return GenerateNewAggregateType(caf::dyn_cast<AggregateType>(type));

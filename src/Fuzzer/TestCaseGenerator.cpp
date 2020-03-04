@@ -59,7 +59,7 @@ StructValue* TestCaseGenerator::GenerateNewStructType(const StructType* type) {
   auto value =  objectPool->CreateValue<StructValue>(objectPool, type, &constructor);
 
   // Generate arguments passed to the constructor.
-  for (size_t i = 1; i < constructorArgs.size(); ++i) {
+  for (size_t i = 0; i < constructorArgs.size(); ++i) {
     value->AddArg(GenerateValue(constructorArgs[i].get()));
   }
 

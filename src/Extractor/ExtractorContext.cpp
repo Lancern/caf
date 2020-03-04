@@ -415,10 +415,16 @@ private:
           auto funcType = c->getFunctionType();
           auto ctorId = _frozenContext->GetConstructorId(c).take();
 
+          assert(funcType->getNumParams() >= 1 && "Constructor should have at least 1 parameter.");
+          assert(funcType->getParamType(0)->isPointerTy() &&
+              funcType->getParamType(0)->getPointerElementType() == type &&
+              "Invalid constructor.");
+
           std::vector<CAFStoreRef<Type>> paramTypes;
-          paramTypes.reserve(funcType->getNumParams());
-          for (auto paramType : funcType->params()) {
-            paramTypes.push_back(AddLLVMType(paramType));
+          paramTypes.reserve(funcType->getNumParams() - 1);
+          // Skip the first parameter since it is `this` pointer.
+          for (size_t i = 1; i < funcType->getNumParams(); ++i) {
+            paramTypes.push_back(AddLLVMType(funcType->getParamType(i)));
           }
 
           FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };

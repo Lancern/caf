@@ -188,6 +188,8 @@ private:
         // Write the number of bytes followed by the raw binary data of the value to the output
         // stream.
         const auto& bitsValue = caf::dyn_cast<BitsValue>(value);
+        assert(bitsValue.size() == caf::dyn_cast<BitsType>(value.type())->size() &&
+            "BitsValue size does not match BitsType size.");
         WriteInt<4>(o, bitsValue.size());
         o.write(bitsValue.data(), bitsValue.size());
         break;
@@ -207,6 +209,8 @@ private:
       case ValueKind::ArrayValue: {
         // Write the number of elements and each element into the output stream.
         const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
+        assert(arrayValue.size() == caf::dyn_cast<ArrayType>(arrayValue.type())->size() &&
+            "ArrayValue size does not match ArrayType size.");
         WriteInt<4>(o, arrayValue.size());
         for (auto el : arrayValue.elements()) {
           Write(o, *el, context, true);
@@ -216,6 +220,8 @@ private:
       case ValueKind::StructValue: {
         // Write the ID of the constructor and arguments to the constructor to the output stream.
         const auto& structValue = caf::dyn_cast<StructValue>(value);
+        assert(structValue.args().size() == structValue.ctor()->GetArgCount() &&
+            "Constructor arguments count does not match Constructor parameters count.");
         WriteInt<4>(o, structValue.ctor()->id());
         for (auto arg : structValue.args()) {
           Write(o, *arg, context, true);
@@ -225,6 +231,9 @@ private:
       case ValueKind::AggregateValue: {
         // Write all the fields to the output stream.
         const auto& aggregateValue = caf::dyn_cast<AggregateValue>(value);
+        assert(aggregateValue.GetFieldsCount() ==
+              caf::dyn_cast<AggregateType>(aggregateValue.type())->GetFieldsCount() &&
+            "AggregateValue fields count does not match AggregateType fields count.");
         for (auto field : aggregateValue.fields()) {
           Write(o, *field, context, true);
         }
@@ -254,6 +263,9 @@ private:
   template <typename Output>
   void Write(Output& o, const FunctionCall& funcCall,
       details::TestCaseSerializationContext& context) const {
+    assert(funcCall.args().size() == funcCall.func()->signature().GetArgCount() &&
+        "Function arguments count does not match function parameters count.");
+
     // Write function ID.
     WriteInt<4>(o, funcCall.func()->id());
 

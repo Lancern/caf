@@ -247,7 +247,12 @@ void TestCaseDumper::DumpStructValue(const StructValue& value, DumpContext& cont
 
   auto indentGuard1 = _printer.PushIndent();
   _printer.PrintWithColor(KeywordColor, "CTOR ");
-  _printer << "#" << value.ctor()->id();
+  _printer << "#" << value.ctor()->id() << ": ";
+  if (value.ctor()->name().empty()) {
+    _printer << "(no name)";
+  } else {
+    DumpSymbolName(value.ctor()->name().c_str());
+  }
 
   auto indentGuard2 = _printer.PushIndent();
   for (size_t i = 0; i < value.GetArgsCount(); ++i) {

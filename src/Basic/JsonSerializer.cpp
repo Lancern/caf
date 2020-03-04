@@ -136,6 +136,7 @@ void JsonSerializer::Serialize(const Function& object, nlohmann::json& json) con
 
 void JsonSerializer::Serialize(const Constructor& object, nlohmann::json& json) const {
   json["id"] = object.id();
+  json["name"] = object.name();
 
   auto signatureJson = nlohmann::json::object();
   Serialize(object.signature(), signatureJson);

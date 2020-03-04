@@ -428,7 +428,8 @@ private:
           }
 
           FunctionSignature ctorSignature { CAFStoreRef<Type> { }, std::move(paramTypes) };
-          structType->AddConstructor(Constructor { std::move(ctorSignature), ctorId });
+          structType->AddConstructor(
+              Constructor { c->getName().str(), std::move(ctorSignature), ctorId });
         }
 
         return structType;

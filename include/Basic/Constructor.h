@@ -17,8 +17,9 @@ public:
    * @param signature the signature of the constructor.
    * @param id the ID of the constructor.
    */
-  explicit Constructor(FunctionSignature signature, uint64_t id) noexcept
+  explicit Constructor(std::string name, FunctionSignature signature, uint64_t id) noexcept
     : _id(id),
+      _name(std::move(name)),
       _signature(std::move(signature))
   { }
 
@@ -28,6 +29,13 @@ public:
    * @return uint64_t ID of this constructor.
    */
   uint64_t id() const { return _id; }
+
+  /**
+   * @brief Get the name of the constructor function.
+   *
+   * @return const std::string& name of the constructor function.
+   */
+  const std::string& name() const { return _name; }
 
   /**
    * @brief Set the ID of this constructor.
@@ -60,6 +68,7 @@ public:
 
 private:
   uint64_t _id;
+  std::string _name;
   FunctionSignature _signature;
 };
 

@@ -151,9 +151,10 @@ std::unique_ptr<Function> JsonDeserializer::DeserializeApiFunction(
 
 Constructor JsonDeserializer::DeserializeConstructor(const nlohmann::json& json) const {
   auto id = json["id"].get<uint64_t>();
+  auto name = json["name"].get<std::string>();
   auto signature = DeserializeFunctionSignature(json["signature"]);
 
-  return Constructor { std::move(signature), id };
+  return Constructor { std::move(name), std::move(signature), id };
 }
 
 } // namespace caf

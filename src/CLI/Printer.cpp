@@ -62,8 +62,8 @@ Printer& Printer::PrintLine() {
 }
 
 void Printer::PopIndent() {
-  --_indentWidth;
-  assert(_indentWidth >= 0 && "Inbalance indentation level.");
+  --_indentLevel;
+  assert(_indentLevel >= 0 && "Inbalance indentation level.");
 }
 
 void Printer::ClearColor() {

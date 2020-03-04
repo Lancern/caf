@@ -11,7 +11,7 @@ bool TestCaseSerializationContext::HasValue(const Value* value) const {
 }
 
 size_t TestCaseSerializationContext::GetValueIndex(const Value* value) const {
-  return _valueIds.find(value)->second;
+  return _valueIds.at(value);
 }
 
 void TestCaseSerializationContext::AddValue(const Value* value) {

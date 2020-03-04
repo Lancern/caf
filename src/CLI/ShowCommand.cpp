@@ -20,6 +20,8 @@ public:
     app.add_option("-s", _opts.StoreFileName, "Path to the cafstore.json file")
         ->required()
         ->check(CLI::ExistingFile);
+    app.add_flag("-d,--demangle", _opts.Demangle, "Demangle symbol names before printing");
+    app.add_flag("--no-color", _opts.NoColor, "Disable coloring output");
     app.add_option("tc", _opts.TestCaseFileName, "Path to the test case file")
         ->required()
         ->check(CLI::ExistingFile);
@@ -49,9 +51,14 @@ public:
     auto tc = tcReader.Read(tcFileWrapper);
 
     Printer printer { std::cout };
+    printer.SetColorOn(!_opts.NoColor);
+
     TestCaseDumper dumper { printer };
+    dumper.SetDemangle(_opts.Demangle);
+
     dumper.Dump(*tc);
 
+    printer << Printer::endl;
     return 0;
   }
 
@@ -59,6 +66,8 @@ private:
   struct Opts {
     std::string StoreFileName;
     std::string TestCaseFileName;
+    bool Demangle = false;
+    bool NoColor = false;
   }; // struct Opts
 
   Opts _opts;

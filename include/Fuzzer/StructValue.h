@@ -23,10 +23,10 @@ public:
    */
   explicit StructValue(CAFObjectPool* pool, const StructType* type,
       const Constructor* constructor, std::vector<Value *> args)
-    : Value { pool, ValueKind::StructValue, type },
-      _constructor(constructor),
-      _args(std::move(args))
-  { }
+    : StructValue { pool, type, constructor }
+  {
+    _args = std::move(args);
+  }
 
   /**
    * @brief Construct a new StructValue object.
@@ -69,6 +69,21 @@ public:
    * @return const std::vector<Value *> & list of arguments passed to the activator.
    */
   const std::vector<Value *>& args() const { return _args; }
+
+  /**
+   * @brief Get the number of arguments passed to the constructor.
+   *
+   * @return size_t the number of arguments passed to the constructor.
+   */
+  size_t GetArgsCount() const { return _args.size(); }
+
+  /**
+   * @brief Get the constructor argument at the given index.
+   *
+   * @param index the index of the constructor argument.
+   * @return Value* the value of the constructor argument.
+   */
+  Value* GetArg(size_t index) const { return _args[index]; }
 
 private:
   const Constructor *_constructor;

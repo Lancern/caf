@@ -212,9 +212,6 @@ private:
     FunctionCall fc { func.get() };
 
     for (auto argType : func->signature().args()) {
-      // Skip the next placeholder index since the next placeholder index is reserved for the
-      // current function argument.
-      context.SkipNextPlaceholderIndex();
       auto value = ReadValue(in, argType.get(), context);
       fc.AddArg(value);
     }
@@ -251,53 +248,57 @@ private:
       case ValueKind::BitsValue: {
         auto size = ReadInt<size_t, 4>(in);
         auto bitsValue = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
+        context.SetValue(valueIndex, bitsValue);
         in.read(bitsValue->data(), size);
         value = bitsValue;
         break;
       }
       case ValueKind::PointerValue: {
         auto ptrType = caf::dyn_cast<PointerType>(type);
-        auto pointee = ReadValue(in, ptrType->pointeeType().get(), context);
-        value = pool->CreateValue<PointerValue>(pool, pointee, ptrType);
+        auto ptrValue = pool->CreateValue<PointerValue>(pool, ptrType);
+        context.SetValue(valueIndex, ptrValue);
+        ptrValue->SetPointee(ReadValue(in, ptrType->pointeeType().get(), context));
+        value = ptrValue;
         break;
       }
       case ValueKind::FunctionValue: {
         auto funcId = ReadInt<uint64_t, 4>(in);
         value = pool->CreateValue<FunctionValue>(pool, funcId, caf::dyn_cast<FunctionType>(type));
+        context.SetValue(valueIndex, value);
         break;
       }
       case ValueKind::ArrayValue: {
         auto arrayType = caf::dyn_cast<ArrayType>(type);
+        auto arrayValue = pool->CreateValue<ArrayValue>(pool, arrayType);
+        context.SetValue(valueIndex, arrayValue);
         auto size = ReadInt<size_t, 4>(in);
-        std::vector<Value *> elements;
-        elements.reserve(size);
         for (size_t ei = 0; ei < size; ++ei) {
-          elements.push_back(ReadValue(in, arrayType->elementType().get(), context));
+          arrayValue->AddElement(ReadValue(in, arrayType->elementType().get(), context));
         }
-        value = pool->CreateValue<ArrayValue>(pool, arrayType, std::move(elements));
+        value = arrayValue;
         break;
       }
       case ValueKind::StructValue: {
         auto structType = caf::dyn_cast<StructType>(type);
         auto ctorId = ReadInt<uint64_t, 4>(in);
         auto ctor = structType->GetConstructor(ctorId);
-        std::vector<Value *> ctorArgs;
-        ctorArgs.reserve(ctor->GetArgCount());
+        auto structValue = pool->CreateValue<StructValue>(pool, structType, ctor);
+        context.SetValue(valueIndex, structValue);
         for (size_t ai = 0; ai < ctor->GetArgCount(); ++ai) {
           auto argType = ctor->GetArgType(ai);
-          ctorArgs.push_back(ReadValue(in, argType.get(), context));
+          structValue->AddArg(ReadValue(in, argType.get(), context));
         }
-        value = pool->CreateValue<StructValue>(pool, structType, ctor, std::move(ctorArgs));
+        value = structValue;
         break;
       }
       case ValueKind::AggregateValue: {
         auto aggregateType = caf::dyn_cast<AggregateType>(type);
-        std::vector<Value *> fields;
-        fields.reserve(aggregateType->GetFieldsCount());
+        auto aggregateValue = pool->CreateValue<AggregateValue>(pool, aggregateType);
+        context.SetValue(valueIndex, aggregateValue);
         for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
-          fields.push_back(ReadValue(in, aggregateType->GetField(i).get(), context));
+          aggregateValue->AddField(ReadValue(in, aggregateType->GetField(i).get(), context));
         }
-        value = pool->CreateValue<AggregateValue>(pool, aggregateType, std::move(fields));
+        value = aggregateValue;
         break;
       }
       case ValueKind::PlaceholderValue: {
@@ -316,6 +317,7 @@ private:
       }
     }
 
+    assert(value && "value should not be nullptr.");
     return value;
   }
 }; // class TestCaseDeserializer

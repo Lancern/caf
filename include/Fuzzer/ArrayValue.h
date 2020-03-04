@@ -67,6 +67,14 @@ public:
    */
   const std::vector<Value *>& elements() const { return _elements; }
 
+  /**
+   * @brief Get the element at the given index.
+   *
+   * @param index the index of the element.
+   * @return Value* the value at the given index.
+   */
+  Value* GetElement(size_t index) const { return _elements[index]; }
+
 private:
   size_t _size;
   std::vector<Value *> _elements;

@@ -94,7 +94,9 @@ public:
   explicit Printer(std::ostream& out)
     : _out(out),
       _color(true),
-      _indentWidth(2)
+      _indentWidth(2),
+      _indentLevel(0),
+      _startOfLine(false)
   { }
 
   /**
@@ -188,6 +190,22 @@ public:
   }
 
   /**
+   * @brief Output the given values to this printer.
+   *
+   * @tparam Head the type of the first value in the value list.
+   * @tparam Tail the types of the values except the first value in the value list.
+   * @param h the first value.
+   * @param t the rest values in the value list.
+   * @return Printer& the current Printer object.
+   */
+  template <typename Head, typename ...Tail>
+  Printer& Print(Head&& h, Tail&&... t) {
+    Print(h);
+    Print(std::forward<Tail>(t)...);
+    return *this;
+  }
+
+  /**
    * @brief Output a new line character.
    *
    * @return Printer& the current Printer object.
@@ -205,22 +223,6 @@ public:
   Printer& PrintLine(T&&... values) {
     Print(std::forward<T>(values)...);
     operator<<(endl);
-    return *this;
-  }
-
-  /**
-   * @brief Output the given values to this printer.
-   *
-   * @tparam Head the type of the first value in the value list.
-   * @tparam Tail the types of the values except the first value in the value list.
-   * @param h the first value.
-   * @param t the rest values in the value list.
-   * @return Printer& the current Printer object.
-   */
-  template <typename Head, typename ...Tail>
-  Printer& Print(Head&& h, Tail&&... t) {
-    Print(h);
-    Print(std::forward<Tail>(t)...);
     return *this;
   }
 

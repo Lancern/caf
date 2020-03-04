@@ -117,6 +117,7 @@ void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
   if (context.HasValue(&value)) {
     _printer.PrintWithColor(KeywordColor, "XREF ");
     _printer << "$" << context.GetValueIndex(&value);
+    context.SkipNextValue();
   } else {
     if (value.kind() != ValueKind::PlaceholderValue) {
       context.SetNextValue(&value);

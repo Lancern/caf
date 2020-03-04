@@ -238,10 +238,14 @@ private:
   template <typename Input>
   Value* ReadValue(
       Input& in, const Type* type, details::TestCaseDeserializationContext& context) const {
-    auto valueIndex = context.AllocValueIndex();
-
     auto pool = _corpus->GetOrCreateObjectPool(type->id());
     auto kind = static_cast<ValueKind>(ReadInt<int, 4>(in));
+
+    // Note that placeholder values does not reserve a test case object pool.
+    size_t valueIndex;
+    if (kind != ValueKind::PlaceholderValue) {
+      valueIndex = context.AllocValueIndex();
+    }
 
     Value* value = nullptr;
     switch (kind) {

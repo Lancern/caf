@@ -97,10 +97,10 @@ void TestCaseDumper::DumpFunctionCall(const FunctionCall& value, DumpContext& co
   DumpSymbolName(value.func()->name().c_str());
 
   // Print arguments
+  auto indentGuard = _printer.PushIndent();
   for (size_t i = 0; i < value.GetArgCount(); ++i) {
     _printer << Printer::endl;
     auto arg = value.GetArg(i);
-    auto indentGuard = _printer.PushIndent();
 
     // Print: ARG #<index>: $<slot>
     _printer.PrintWithColor(KeywordColor, "ARG ");
@@ -108,21 +108,31 @@ void TestCaseDumper::DumpFunctionCall(const FunctionCall& value, DumpContext& co
     DumpValue(*arg, context);
   }
 
+  _printer << Printer::endl;
+  _printer.PrintWithColor(KeywordColor, "RET ");
+  _printer << "$" << context.PeekNextValueIndex();
+
   // The next value index is reserved for the return value of the current function.
   context.SkipNextValue();
 }
 
 void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
-  _printer << "T" << value.type()->id() << " $" << context.PeekNextValueIndex() << ": ";
+  _printer << "T" << value.type()->id() << " $";
+  if (value.kind() == ValueKind::PlaceholderValue) {
+    _printer << '?';
+  } else {
+    _printer << context.PeekNextValueIndex();
+  }
+  _printer << ": ";
+
   if (context.HasValue(&value)) {
     _printer.PrintWithColor(KeywordColor, "XREF ");
     _printer << "$" << context.GetValueIndex(&value);
     context.SkipNextValue();
   } else {
+    // Placeholder value does not reserve a test case object pool slot.
     if (value.kind() != ValueKind::PlaceholderValue) {
       context.SetNextValue(&value);
-    } else {
-      context.SkipNextValue();
     }
 
     switch (value.kind()) {

@@ -172,12 +172,8 @@ private:
       return;
     }
 
-    if (value.kind() == ValueKind::PlaceholderValue) {
-      // Placeholder values will not be registered to the serialization context due to ownership
-      // issues. But the slot of the placeholder value in the serialization context should be
-      // reserved.
-      context.SkipCurrentIndex();
-    } else {
+    // Placeholder values does not reserve a valud index in the test case object pool.
+    if (value.kind() != ValueKind::PlaceholderValue) {
       context.AddValue(&value);
     }
 

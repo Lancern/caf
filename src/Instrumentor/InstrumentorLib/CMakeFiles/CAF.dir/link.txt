@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../lib/libCAF.a  CMakeFiles/CAF.dir/caflib.cpp.o
+/usr/bin/ranlib ../../../lib/libCAF.a

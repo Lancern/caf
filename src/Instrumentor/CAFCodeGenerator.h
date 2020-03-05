@@ -132,6 +132,16 @@ private:
     llvm::IRBuilder<>& builder, llvm::Value* objIdx);
 
   /**
+   * @brief Create a Get Random Bytes Call 
+   * 
+   * @param builder 
+   * @param bytesSize 
+   * @return llvm::CallInst* 
+   */
+  llvm::CallInst* CreateGetRandomBytesCall(
+    llvm::IRBuilder<>& builder, int bytesSize);
+
+  /**
    * @brief Create a call to `printf` to print the given string.
    *
    * @param builder the IR builder to use.

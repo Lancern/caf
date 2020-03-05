@@ -119,7 +119,7 @@ Value* TestCaseGenerator::GenerateValue(const Type* type) {
     return GenerateNewValue(type);
   }
 
-  if (_rnd.WithProbability(0.1)) {
+  if (_rnd.WithProbability(1 / std::pow(objectPool->size(), 0.3))) {
     return GenerateNewValue(type);
   } else {
     return _rnd.Select(objectPool->values()).get();

@@ -1,0 +1,146 @@
+#include "Command.h"
+#include "RegisterCommand.h"
+#include "Diagnostics.h"
+#include "CAFConfig.h"
+
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <utility>
+#include <string>
+
+#include <unistd.h>
+
+#define AFL_EXECUTABLE_NAME "afl-fuzz"
+
+namespace caf {
+
+namespace {
+
+bool IsValidExecutable(const char* path) {
+  return access(path, X_OK) == 0;
+}
+
+std::string LookupAflExecutable(std::string dir) {
+  if (!dir.empty() && dir[dir.size() - 1] != '/') {
+    dir.push_back('/');
+  }
+  dir.append(AFL_EXECUTABLE_NAME);
+  if (IsValidExecutable(dir.c_str())) {
+    return dir;
+  }
+
+  return std::string();
+}
+
+std::string LookupAflExecutable() {
+  if (IsValidExecutable(AFL_EXECUTABLE_NAME)) {
+    return std::string(AFL_EXECUTABLE_NAME);
+  }
+
+  auto pathVar = std::getenv("PATH");
+  if (!pathVar) {
+    return std::string();
+  }
+
+  while (*pathVar++) {
+    auto pathEnd = std::strpbrk(pathVar, ":");
+    if (pathEnd == pathVar) {
+      continue;
+    }
+    if (pathEnd) {
+      *pathEnd = 0;
+    }
+
+    auto dir = std::string(pathVar);
+    if (pathEnd) {
+      *pathEnd = ':';
+    }
+
+    auto path = LookupAflExecutable(std::move(dir));
+    if (!path.empty()) {
+      return path;
+    }
+
+    if (!pathEnd) {
+      break;
+    }
+    pathVar = pathEnd + 1;
+  }
+
+  return std::string();
+}
+
+char* DuplicateString(const char* s) {
+  auto len = std::strlen(s);
+  auto buffer = new char[len + 1];
+  std::strcpy(buffer, s);
+  return buffer;
+}
+
+} // namespace <anonymous>
+
+// TODO: Implement FuzzCommand.
+
+class FuzzCommand : public Command {
+public:
+  void SetupArgs(CLI::App &app) override {
+    app.add_option("-s", _opts.StoreFileName, "Path to the cafstore.json file")
+        ->required()
+        ->check(CLI::ExistingFile);
+    app.add_option("-d", _opts.SeedDir, "Path to the seed directory")
+        ->required()
+        ->check(CLI::ExistingDirectory);
+    app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
+        ->check(CLI::ExistingFile);
+    app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
+    app.add_option("target", _opts.Target, "The target executable")
+        ->required()
+        ->check(CLI::ExistingFile);
+  }
+
+  int Execute(CLI::App &app) override {
+    if (_opts.AflExecutable.empty()) {
+      _opts.AflExecutable = LookupAflExecutable();
+      if (_opts.AflExecutable.empty()) {
+        PRINT_ERR_AND_EXIT("Cannot locate valid AFLplusplus executables.");
+      }
+    }
+
+    if (_opts.Verbose) {
+      std::cout << "AFLplusplus located at " << _opts.AflExecutable << std::endl;
+    }
+
+    std::string storeVar = "CAF_STORE=";
+    storeVar.append(_opts.StoreFileName);
+
+    std::string mutatorLibVar = "AFL_CUSTOM_MUTATOR_LIBRARY=";
+    mutatorLibVar.append(CAF_LIB_DIR);
+    mutatorLibVar.append("/libCAFMutator.so");
+
+    std::vector<char *> aflEnv;
+    for (auto e = environ; *e; ++e) {
+      aflEnv.push_back(*e);
+    }
+    aflEnv.push_back(DuplicateString(storeVar.c_str()));
+    aflEnv.push_back(DuplicateString(mutatorLibVar.c_str()));
+    aflEnv.push_back(DuplicateString("AFL_CUSTOM_MUTATOR_ONLY=1"));
+
+    return 0;
+  }
+
+private:
+  struct Opts {
+    std::string StoreFileName;
+    std::string SeedDir;
+    std::string AflExecutable;
+    std::string Target;
+    bool Verbose;
+  }; // struct Opts
+
+  Opts _opts;
+}; // class FuzzCommand
+
+static RegisterCommand<FuzzCommand> X { "fuzz", "Fuzz a target using CAF" };
+
+} // namespace caf

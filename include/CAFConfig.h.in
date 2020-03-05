@@ -1,0 +1,7 @@
+#ifndef CAF_CONFIG_H
+#define CAF_CONFIG_H
+
+#cmakedefine CAF_LIB_DIR "${CAF_LIB_DIR}"
+#cmakedefine CAF_BIN_DIR "${CAF_BIN_DIR}"
+
+#endif

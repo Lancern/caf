@@ -3,6 +3,7 @@ add_executable(CAFCLI
     CommandManager.cpp
     CommandManager.h
     Diagnostics.h
+    FuzzCommand.cpp
     GenerateTestCaseCommand.cpp
     main.cpp
     Printer.cpp

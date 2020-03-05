@@ -98,11 +98,11 @@ public:
    * @return false if the generated value is equal to or greater than p.
    */
   bool WithProbability(double p) {
-    if (p < 0) {
-      p = 0;
+    if (p <= 0) {
+      return false;
     }
-    if (p > 1) {
-      p = 1;
+    if (p >= 1) {
+      return true;
     }
 
     return Next<double>() < p;

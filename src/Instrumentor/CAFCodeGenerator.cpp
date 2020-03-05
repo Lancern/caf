@@ -13,7 +13,7 @@
 #include <cxxabi.h>
 
 #ifndef CAF_RECURSIVE_MAX_DEPTH
-#define CAF_RECURSIVE_MAX_DEPTH 16
+#define CAF_RECURSIVE_MAX_DEPTH 1024
 #endif
 
 namespace caf {
@@ -569,9 +569,8 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
     CreatePrintfCall(builder, "structType: ");
     CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
   }
-  
 
-  if(init == false)return argAlloca;
+  if(init == false || depth >= CAF_RECURSIVE_MAX_DEPTH)return argAlloca;
 
   auto ctorId = builder.CreateAlloca(
     llvm::IntegerType::getInt32Ty(_module->getContext()),
@@ -583,9 +582,12 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
 
   auto stype = llvm::dyn_cast<llvm::StructType>(type);
 
-  std::string tname = type->getStructName().str();
-  auto found = tname.find("."); //class.basename / struct.basename
-  std::string basename = tname.substr(found + 1);
+  std::string tname("");
+  if(!type->isLiteral()) {
+    std::string tname = type->getStructName().str();
+    auto found = tname.find("."); //class.basename / struct.basename
+    std::string basename = tname.substr(found + 1);
+  }
   // llvm::errs() << "asked struct type: " << tname << "\n";
 
   auto dispatchFunc = _module->getFunction(
@@ -601,10 +603,10 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
     unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(type);
     CreateMemcpyCall(builder, argAlloca, ctorSret, llvm::ConstantInt::get(builder.getInt64Ty(), TypeSize));
   } else {
-    llvm::errs() << tname << " has no ctors.";
+    // llvm::errs() << tname << " has no ctors.";
     int elementId = 0;
     for(auto elementType: type->elements()) {
-      llvm::Value* element = AllocaValueOfType(builder, elementType, 0, init);
+      llvm::Value* element = AllocaValueOfType(builder, elementType, depth + 1, init);
       llvm::Value* elementValue = builder.CreateLoad(element);
       llvm::Value *GEPIndices[] = { builder.getInt32(0), builder.getInt32(elementId++) };
       llvm::Value * curAddr = builder.CreateInBoundsGEP(argAlloca, GEPIndices);
@@ -630,7 +632,7 @@ llvm::Value* CAFCodeGenerator::AllocaPointerType(
 
   llvm::Type* pointeeType = type->getPointerElementType();
 
-  if (depth >= CAF_RECURSIVE_MAX_DEPTH || !CanAlloca(pointeeType)) {
+  if (depth >= CAF_RECURSIVE_MAX_DEPTH || !CanAlloca(pointeeType) || init == false) {
     auto nil = llvm::ConstantPointerNull::get(
         llvm::dyn_cast<llvm::PointerType>(type));
     builder.CreateStore(nil, argAlloca);
@@ -653,7 +655,7 @@ llvm::Value* CAFCodeGenerator::AllocaArrayType(
   
   // auto arrayAddr = builder.CreateAlloca(type);
 
-  if(init == true) {
+  if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) {
     auto arraySize = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -667,7 +669,7 @@ llvm::Value* CAFCodeGenerator::AllocaArrayType(
     uint64_t elementSize = elementType->getScalarSizeInBits();
     for(uint64_t i = 0; i < arrsize; i++)
     {
-      llvm::Value* element = AllocaValueOfType(builder, elementType, 0, init);
+      llvm::Value* element = AllocaValueOfType(builder, elementType, depth + 1, init);
       llvm::Value* elementValue = builder.CreateLoad(element);
       llvm::Value *GEPIndices[] = { builder.getInt32(0), builder.getInt32(i) };
       llvm::Value * curAddr = builder.CreateInBoundsGEP(arrayAddr, GEPIndices);
@@ -689,7 +691,7 @@ llvm::Value* CAFCodeGenerator::AllocaVectorType(
   
   // auto vectorAddr = builder.CreateAlloca(type);
 
-  if(init == true) {
+  if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) {
     auto vectorSize = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -703,7 +705,7 @@ llvm::Value* CAFCodeGenerator::AllocaVectorType(
     uint64_t elementSize = elementType->getScalarSizeInBits();
     for(uint64_t i = 0; i < vecsize; i++)
     {
-      llvm::Value* element = AllocaValueOfType(builder, elementType, 0, init);
+      llvm::Value* element = AllocaValueOfType(builder, elementType, depth + 1, init);
       llvm::Value* elementValue = builder.CreateLoad(element);
       llvm::Value *GEPIndices[] = { builder.getInt32(0), builder.getInt32(i) };
       llvm::Value * curAddr = builder.CreateInBoundsGEP(vectorAddr, GEPIndices);
@@ -720,7 +722,7 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
   auto pointerType = type->getPointerTo();
   // auto pointerAlloca = builder.CreateAlloca(pointerType);
   llvm::Value* pointerAlloca = CreateMallocCall(builder, pointerType);
-  if(init == true) {
+  if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) {
     auto funcId = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
@@ -821,7 +823,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
       }
   
       // insertBefore->eraseFromParent();
-      if(init == true) { // input_kind = 0
+      if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) { // input_kind = 0
         auto inputSize = builder.CreateAlloca(
           llvm::IntegerType::getInt32Ty(_module->getContext()),
           nullptr,
@@ -849,7 +851,7 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
           << type->getTypeID() << "\n";
       // type->dump(); 
       elseRet = CreateMallocCall(builder, type);
-      if(init) {
+      if(init && depth < CAF_RECURSIVE_MAX_DEPTH) {
         CreatePrintfCall(builder, "unknownType: ");
         CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(elseRet, builder.getInt64Ty()));
       }

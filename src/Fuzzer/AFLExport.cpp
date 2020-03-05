@@ -2,15 +2,12 @@
 #include "Fuzzer/TestCaseMutator.h"
 #include "Fuzzer/TestCaseSerializer.h"
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 
 namespace {
-
-std::unique_ptr<caf::CAFCorpus> corpus;
-
-std::vector<uint8_t> testcaseBuffer;
 
 class MemoryStream {
 public:
@@ -45,19 +42,30 @@ private:
 
 } // namespace <anonymous>
 
+static std::unique_ptr<caf::CAFCorpus> Corpus;
+static caf::Random<> Rng;
+static std::vector<uint8_t> TestCaseBuffer;
+
 extern "C" {
 
-size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
-                          size_t max_size, unsigned int seed) {
-  if (!corpus) {
-    corpus = caf::InitCorpus();
-  }
+// For a detailed document about all the exported afl_* functions, please see
+// https://github.com/vanhauser-thc/AFLplusplus/blob/master/docs/custom_mutators.md
 
-  auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = corpus->GetTestCase(index);
+void afl_custom_init(unsigned int seed) {
+  Rng.seed(seed);
+  Corpus = caf::InitCorpus();
+  assert(Corpus && "Load corpus failed.");
+}
 
-  caf::Random<> rnd { };
-  caf::TestCaseMutator mutator { corpus.get(), rnd };
+size_t afl_custom_fuzz(
+    uint8_t* buf, size_t buf_size,
+    uint8_t* add_buf, size_t add_buf_size,
+    uint8_t *mutated_out, size_t max_size) {
+  assert(buf_size == sizeof(size_t) && "Incorrect buffer size.");
+  auto index = *reinterpret_cast<size_t *>(buf);
+  auto testCase = Corpus->GetTestCase(index);
+
+  caf::TestCaseMutator mutator { Corpus.get(), Rng };
 
   auto mutatedTestCase = mutator.Mutate(testCase);
   *reinterpret_cast<size_t *>(mutated_out) = mutatedTestCase.index();
@@ -65,20 +73,32 @@ size_t afl_custom_mutator(uint8_t *data, size_t size, uint8_t *mutated_out,
   return sizeof(size_t);
 }
 
-size_t afl_pre_save_handler(uint8_t *data, size_t size, uint8_t **new_data) {
-  assert(corpus && "Corpus has not been loaded.");
-
-  auto index = *reinterpret_cast<size_t *>(data);
-  auto testCase = corpus->GetTestCase(index);
+size_t afl_custom_pre_save(uint8_t *buf, size_t buf_size, uint8_t **out_buf) {
+  auto index = *reinterpret_cast<size_t *>(buf);
+  auto testCase = Corpus->GetTestCase(index);
 
   caf::TestCaseSerializer serializer { };
-  testcaseBuffer.clear();
-  MemoryStream s { testcaseBuffer };
+  TestCaseBuffer.clear();
+  MemoryStream s { TestCaseBuffer };
 
   serializer.Write(s, *testCase);
 
-  *new_data = testcaseBuffer.data();
-  return static_cast<size_t>(testcaseBuffer.size());
+  *out_buf = TestCaseBuffer.data();
+  return static_cast<size_t>(TestCaseBuffer.size());
+}
+
+uint32_t afl_custom_init_trim(uint8_t* buf, size_t buf_size) {
+  // We don't need AFL to trim our test case.
+  return 0;
+}
+
+void afl_custom_trim(uint8_t** out_buf, size_t* out_buf_size) {
+  assert(false && "afl_custom_trim should be unreachable.");
+}
+
+uint32_t afl_custom_post_trim(uint8_t success) {
+  assert(false && "afl_custom_post_trim should be unreachable.");
+  return 1;
 }
 
 }

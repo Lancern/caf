@@ -79,6 +79,10 @@ char* DuplicateString(const char* s) {
   return buffer;
 }
 
+void PopulateAFLSeeds(const char* inputDir, const char* seedsDir, bool verbose) {
+  // TODO: Implement PopulateAFLSeeds.
+}
+
 } // namespace <anonymous>
 
 class FuzzCommand : public Command {
@@ -87,10 +91,12 @@ public:
     app.add_option("-s", _opts.StoreFileName, "Path to the cafstore.json file")
         ->required()
         ->check(CLI::ExistingFile);
-    app.add_option("-i", _opts.SeedDir, "Path to the seed directory")
+    app.add_option("-d", _opts.SeedDir, "Path to the seed directory")
         ->required()
         ->check(CLI::ExistingDirectory);
-    app.add_option("-o", _opts.FindingsDir, "Path to the findings directory")
+    app.add_option("-i", _opts.InputDir, "Path to the AFL input directory")
+        ->required();
+    app.add_option("-o", _opts.FindingsDir, "Path to the AFL findings directory")
         ->required();
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
         ->check(CLI::ExistingFile);
@@ -112,12 +118,20 @@ public:
       std::cout << "AFLplusplus located at " << _opts.AflExecutable << std::endl;
     }
 
+    PopulateAFLSeeds(_opts.InputDir.c_str(), _opts.SeedDir.c_str(), _opts.Verbose);
+
     std::string storeVar = "CAF_STORE=";
     storeVar.append(_opts.StoreFileName);
+    if (_opts.Verbose) {
+      std::cout << "export CAF_STORE=" << _opts.StoreFileName << std::endl;
+    }
 
     std::string mutatorLibVar = "AFL_CUSTOM_MUTATOR_LIBRARY=";
     mutatorLibVar.append(CAF_LIB_DIR);
     mutatorLibVar.append("/libCAFMutator.so");
+    if (_opts.Verbose) {
+      std::cout << "export AFL_CUSTOM_MUTATOR_LIBRARY=" << CAF_LIB_DIR << "/libCAFMutator.so";
+    }
 
     std::vector<char *> aflEnv;
     for (auto e = environ; *e; ++e) {
@@ -140,6 +154,18 @@ public:
     }
     aflArgs.push_back(nullptr);
 
+    if (_opts.Verbose) {
+      std::cout << "Launching AFLplusplus:" << std::endl << "\t";
+      for (auto arg : aflArgs) {
+        if (std::strpbrk(arg, " ")) {
+          std::cout << std::quoted(arg) << ' ';
+        } else {
+          std::cout << arg << ' ';
+        }
+      }
+      std::cout << std::endl;
+    }
+
     execve(aflArgs[0], aflArgs.data(), aflEnv.data());
     PRINT_LAST_OS_ERR_AND_EXIT("execve failed");
 
@@ -150,6 +176,7 @@ private:
   struct Opts {
     std::string StoreFileName;
     std::string SeedDir;
+    std::string InputDir;
     std::string FindingsDir;
     std::string AflExecutable;
     std::vector<std::string> Target;

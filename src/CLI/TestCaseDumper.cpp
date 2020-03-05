@@ -118,7 +118,7 @@ void TestCaseDumper::DumpFunctionCall(const FunctionCall& value, DumpContext& co
 
 void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
   _printer << "T" << value.type()->id() << " $";
-  if (value.kind() == ValueKind::PlaceholderValue) {
+  if (value.kind() == ValueKind::PlaceholderValue || context.HasValue(&value)) {
     _printer << '?';
   } else {
     _printer << context.PeekNextValueIndex();
@@ -128,7 +128,6 @@ void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
   if (context.HasValue(&value)) {
     _printer.PrintWithColor(KeywordColor, "XREF ");
     _printer << "$" << context.GetValueIndex(&value);
-    context.SkipNextValue();
   } else {
     // Placeholder value does not reserve a test case object pool slot.
     if (value.kind() != ValueKind::PlaceholderValue) {

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <utility>
 #include <string>
+#include <vector>
 
 #include <unistd.h>
 
@@ -80,23 +81,23 @@ char* DuplicateString(const char* s) {
 
 } // namespace <anonymous>
 
-// TODO: Implement FuzzCommand.
-
 class FuzzCommand : public Command {
 public:
   void SetupArgs(CLI::App &app) override {
     app.add_option("-s", _opts.StoreFileName, "Path to the cafstore.json file")
         ->required()
         ->check(CLI::ExistingFile);
-    app.add_option("-d", _opts.SeedDir, "Path to the seed directory")
+    app.add_option("-i", _opts.SeedDir, "Path to the seed directory")
         ->required()
         ->check(CLI::ExistingDirectory);
+    app.add_option("-o", _opts.FindingsDir, "Path to the findings directory")
+        ->required();
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
         ->check(CLI::ExistingFile);
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
-    app.add_option("target", _opts.Target, "The target executable")
+    app.add_option("target", _opts.Target, "The target executable and its params")
         ->required()
-        ->check(CLI::ExistingFile);
+        ->expected(1);
   }
 
   int Execute(CLI::App &app) override {
@@ -125,16 +126,33 @@ public:
     aflEnv.push_back(DuplicateString(storeVar.c_str()));
     aflEnv.push_back(DuplicateString(mutatorLibVar.c_str()));
     aflEnv.push_back(DuplicateString("AFL_CUSTOM_MUTATOR_ONLY=1"));
+    aflEnv.push_back(nullptr);
 
-    return 0;
+    std::vector<char *> aflArgs {
+      DuplicateString(_opts.AflExecutable.c_str()),
+      DuplicateString("-i"),
+      DuplicateString(_opts.SeedDir.c_str()),
+      DuplicateString("-o"),
+      DuplicateString(_opts.FindingsDir.c_str())
+    };
+    for (const auto& arg : _opts.Target) {
+      aflArgs.push_back(DuplicateString(arg.c_str()));
+    }
+    aflArgs.push_back(nullptr);
+
+    execve(aflArgs[0], aflArgs.data(), aflEnv.data());
+    PRINT_LAST_OS_ERR_AND_EXIT("execve failed");
+
+    return 1;
   }
 
 private:
   struct Opts {
     std::string StoreFileName;
     std::string SeedDir;
+    std::string FindingsDir;
     std::string AflExecutable;
-    std::string Target;
+    std::vector<std::string> Target;
     bool Verbose;
   }; // struct Opts
 

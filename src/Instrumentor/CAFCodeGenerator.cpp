@@ -159,6 +159,16 @@ void CAFCodeGenerator::GenerateStub() {
   builder.SetInsertPoint(mainEnd);
   builder.CreateRet(builder.getInt32(0));
 
+  // add attribute: optnone unwind
+  {
+    llvm::AttrBuilder B;
+    B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute(llvm::Attribute::OptimizeNone);
+    B.addAttribute(llvm::Attribute::UWTable);
+    B.addAttribute(llvm::Attribute::NoRecurse);
+    newMain->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  }
+
   llvm::errs() << "main has been created successfully.\n";
 }
 
@@ -196,7 +206,7 @@ llvm::Value* CAFCodeGenerator::CreateMallocCall(
       TypeSize = _module->getDataLayout().getStructLayout(ST)->getSizeInBytes();
     }
 
-    auto insertBefore = CreatePrintfCall(builder, "caf info: malloc for a type\n");
+    auto insertBefore = CreatePrintfCall(builder, "caf info: create a malloc call\n");
     llvm::Value* valueAddr = llvm::CallInst::CreateMalloc(insertBefore,
                                                   builder.getInt32Ty(),
                                                   type,
@@ -287,6 +297,21 @@ llvm::CallInst* CAFCodeGenerator::CreateGetFromObjectListCall(
     return builder.CreateCall(getFromObjectListFunc, params);
 }
 
+llvm::CallInst* CAFCodeGenerator::CreateGetRandomBytesCall(
+  llvm::IRBuilder<>& builder, int bytesSize) {
+
+    auto getRandomBytesFunc = llvm::cast<llvm::Function>(
+        _module->getOrInsertFunction(
+            "_Z13getRandomBitsi",
+            builder.getInt8PtrTy(),
+            builder.getInt32Ty()
+        )
+    );
+    auto bytesSizeValue = builder.getInt32(bytesSize);
+    llvm::Value* params[] = { bytesSizeValue };
+    return builder.CreateCall(getRandomBytesFunc, params);
+}
+
 llvm::CallInst* CAFCodeGenerator::CreatePrintfCall(
     llvm::IRBuilder<>& builder, const std::string& printfFormat, llvm::Value* value) {
   auto printfDecl = llvm::cast<llvm::Function>(
@@ -368,10 +393,15 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTy
   std::string dispatchType = std::string("ctor");
   llvm::Function* dispatchFunc;
   auto type = _extraction->GetTypeById(ctorTypeId).take();
+
+  std::string tname = type->getStructName().str();
+  auto found = tname.find("."); //class.basename / struct.basename
+  std::string basename = tname.substr(found + 1);
+
   dispatchFunc = llvm::cast<llvm::Function>(
     _module->getOrInsertFunction(
-        // "__caf_dispatch_ctor_" + type->getStructName().str(),
-        "__caf_dispatch_ctor_" + std::to_string(ctorTypeId),
+        "__caf_dispatch_ctor_" + tname,
+        // "__caf_dispatch_ctor_" + std::to_string(ctorTypeId),
         llvm::Type::getInt8PtrTy(_module->getContext()),
         // llvm::Type::getVoidTy(_module->getContext()),
         llvm::Type::getInt32Ty(_module->getContext())
@@ -394,10 +424,11 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTy
   // type->dump();
   // llvm::errs() << "ctorTypeId = " << ctorTypeId << " - ctors.size() = " << ctors.size() << "\n";
   // llvm::errs() << " *** *** *** *** *** *** \n";
-  int caseCounter = 0;
+  // int caseCounter = 0;
   for (auto ctor: ctors) {
+    auto ctorId =  _extraction->GetConstructorId(ctor).take();
     cases.push_back(CreateCallApiCase(
-        const_cast<llvm::Function *>(ctor), dispatchFunc, caseCounter++, true));
+        const_cast<llvm::Function *>(ctor), dispatchFunc, ctorId, true));
   }
   llvm::errs() << dispatchFunc->getName().str() << " - callee num: " << cases.size() << "\n";
 
@@ -408,33 +439,41 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTy
     builder.CreateStore(builder.getInt8(0), retObjPtr);
     builder.CreateRet(retObjPtr);
     }
-    return dispatchFunc;
-  }
+    // return dispatchFunc;
+  } else {
+    auto invokeApiDefault = llvm::BasicBlock::Create(
+        dispatchFunc->getContext(),
+        dispatchType + ".invoke.defualt",
+        dispatchFunc);
+    auto invokeApiEnd = llvm::BasicBlock::Create(
+        dispatchFunc->getContext(),
+        dispatchType + ".invoke.end",
+        dispatchFunc);
 
-  auto invokeApiDefault = llvm::BasicBlock::Create(
-      dispatchFunc->getContext(),
-      dispatchType + ".invoke.defualt",
-      dispatchFunc);
-  auto invokeApiEnd = llvm::BasicBlock::Create(
-      dispatchFunc->getContext(),
-      dispatchType + ".invoke.end",
-      dispatchFunc);
-
-  builder.SetInsertPoint(invokeApiEntry);
-  llvm::SwitchInst* invokeApiSI = builder.CreateSwitch(
-      argApiId, cases.front().second, cases.size());
-  for (auto& c: cases) {
-    invokeApiSI->addCase(c.first, c.second);
+    builder.SetInsertPoint(invokeApiEntry);
+    llvm::SwitchInst* invokeApiSI = builder.CreateSwitch(
+        argApiId, cases.front().second, cases.size());
+    for (auto& c: cases) {
+      invokeApiSI->addCase(c.first, c.second);
+    }
+    invokeApiSI->setDefaultDest(invokeApiDefault);
+    builder.SetInsertPoint(invokeApiDefault);
+    builder.CreateBr(invokeApiEnd);
+    builder.SetInsertPoint(invokeApiEnd);
+    // if(ctorDispatch == true)
+    {
+      auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
+      builder.CreateStore(builder.getInt8(0), retObjPtr);
+      builder.CreateRet(retObjPtr);
+    }
   }
-  invokeApiSI->setDefaultDest(invokeApiDefault);
-  builder.SetInsertPoint(invokeApiDefault);
-  builder.CreateBr(invokeApiEnd);
-  builder.SetInsertPoint(invokeApiEnd);
-  // if(ctorDispatch == true)
+  // add attribute: optnone unwind
   {
-    auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
-    builder.CreateStore(builder.getInt8(0), retObjPtr);
-    builder.CreateRet(retObjPtr);
+    llvm::AttrBuilder B;
+    B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute(llvm::Attribute::OptimizeNone);
+    B.addAttribute(llvm::Attribute::UWTable);
+    dispatchFunc->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
   llvm::errs() << "ctor dispatchFunc created successfully.\n";
   return dispatchFunc;
@@ -481,33 +520,41 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForApi() {
     builder.CreateStore(builder.getInt8(0), retObjPtr);
     builder.CreateRet(retObjPtr);
     }
-    return dispatchFunc;
-  }
+    // return dispatchFunc;
+  } else {
+    auto invokeApiDefault = llvm::BasicBlock::Create(
+        dispatchFunc->getContext(),
+        dispatchType + ".invoke.defualt",
+        dispatchFunc);
+    auto invokeApiEnd = llvm::BasicBlock::Create(
+        dispatchFunc->getContext(),
+        dispatchType + ".invoke.end",
+        dispatchFunc);
 
-  auto invokeApiDefault = llvm::BasicBlock::Create(
-      dispatchFunc->getContext(),
-      dispatchType + ".invoke.defualt",
-      dispatchFunc);
-  auto invokeApiEnd = llvm::BasicBlock::Create(
-      dispatchFunc->getContext(),
-      dispatchType + ".invoke.end",
-      dispatchFunc);
-
-  builder.SetInsertPoint(invokeApiEntry);
-  llvm::SwitchInst* invokeApiSI = builder.CreateSwitch(
-      argApiId, cases.front().second, cases.size());
-  for (auto& c: cases) {
-    invokeApiSI->addCase(c.first, c.second);
+    builder.SetInsertPoint(invokeApiEntry);
+    llvm::SwitchInst* invokeApiSI = builder.CreateSwitch(
+        argApiId, cases.front().second, cases.size());
+    for (auto& c: cases) {
+      invokeApiSI->addCase(c.first, c.second);
+    }
+    invokeApiSI->setDefaultDest(invokeApiDefault);
+    builder.SetInsertPoint(invokeApiDefault);
+    builder.CreateBr(invokeApiEnd);
+    builder.SetInsertPoint(invokeApiEnd);
+    // if(ctorDispatch == true)
+    {
+      auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
+      builder.CreateStore(builder.getInt8(0), retObjPtr);
+      builder.CreateRet(retObjPtr);
+    }
   }
-  invokeApiSI->setDefaultDest(invokeApiDefault);
-  builder.SetInsertPoint(invokeApiDefault);
-  builder.CreateBr(invokeApiEnd);
-  builder.SetInsertPoint(invokeApiEnd);
-  // if(ctorDispatch == true)
+  // add attribute: optnone unwind
   {
-    auto retObjPtr = builder.CreateAlloca(builder.getInt8Ty());
-    builder.CreateStore(builder.getInt8(0), retObjPtr);
-    builder.CreateRet(retObjPtr);
+    llvm::AttrBuilder B;
+    B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute(llvm::Attribute::OptimizeNone);
+    B.addAttribute(llvm::Attribute::UWTable);
+    dispatchFunc->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
   llvm::errs() << "api dispatchFunc created successfully.\n";
   return dispatchFunc;
@@ -518,6 +565,11 @@ llvm::Value* CAFCodeGenerator::AllocaStructValue(
   // init = false;
   // llvm::Value* argAlloca = builder.CreateAlloca(type);
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
+  if(init) {
+    CreatePrintfCall(builder, "structType: ");
+    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
+  }
+  
 
   if(init == false)return argAlloca;
 
@@ -567,6 +619,12 @@ llvm::Value* CAFCodeGenerator::AllocaPointerType(
     llvm::IRBuilder<>& builder, llvm::PointerType* type, int depth, bool init) {
 
   llvm::Value* argAlloca = CreateMallocCall(builder, type);
+  
+  if(init) {
+    CreatePrintfCall(builder, "pointerType: ");
+    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
+  }
+  
   // auto argAlloca = builder.CreateAlloca(type); // 按类型分配地址空间
   // if(init == false)return argAlloca;
 
@@ -588,6 +646,11 @@ llvm::Value* CAFCodeGenerator::AllocaArrayType(
     llvm::IRBuilder<>& builder, llvm::ArrayType* type, int depth, bool init) {
 
   llvm::Value* arrayAddr = CreateMallocCall(builder, type);
+  if(init) {
+    CreatePrintfCall(builder, "arrayType: ");
+    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(arrayAddr, builder.getInt64Ty()));
+  }
+  
   // auto arrayAddr = builder.CreateAlloca(type);
 
   if(init == true) {
@@ -619,6 +682,11 @@ llvm::Value* CAFCodeGenerator::AllocaVectorType(
     llvm::IRBuilder<>& builder, llvm::VectorType* type, int depth, bool init) {
   // init = false;
   llvm::Value* vectorAddr = CreateMallocCall(builder, type);
+  if(init) {
+    CreatePrintfCall(builder, "vectorType: ");
+    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(vectorAddr, builder.getInt64Ty()));
+  }
+  
   // auto vectorAddr = builder.CreateAlloca(type);
 
   if(init == true) {
@@ -675,6 +743,11 @@ llvm::Value* CAFCodeGenerator::AllocaFunctionType(
     builder.CreateStore(func, pointerAlloca);
   }
   auto argAlloca = builder.CreateLoad(pointerAlloca);
+  if(init) {
+    CreatePrintfCall(builder, "functionType: ");
+    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
+  }
+  
   return argAlloca;
 }
 
@@ -742,6 +815,11 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   // {
     if (type->isIntegerTy() || type->isFloatingPointTy()) { // input_kind == 0
       llvm::Value* valueAddr = CreateMallocCall(builder, type);
+      if(init) {
+        CreatePrintfCall(builder, "bitsType: ");
+        CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(valueAddr, builder.getInt64Ty()));
+      }
+  
       // insertBefore->eraseFromParent();
       if(init == true) { // input_kind = 0
         auto inputSize = builder.CreateAlloca(
@@ -770,7 +848,13 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
       llvm::errs() << "Trying to alloca unrecognized type: "
           << type->getTypeID() << "\n";
       // type->dump(); 
-      elseRet = builder.CreateAlloca(type);
+      elseRet = CreateMallocCall(builder, type);
+      if(init) {
+        CreatePrintfCall(builder, "unknownType: ");
+        CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(elseRet, builder.getInt64Ty()));
+      }
+  
+      // elseRet = builder.CreateAlloca(type);
     }
     // builder.SetInsertPoint(elseBlock);
     builder.CreateBr(afterBlock);
@@ -778,13 +862,12 @@ llvm::Value* CAFCodeGenerator::AllocaValueOfType(
   // }
   builder.SetInsertPoint(afterBlock);
 
-
-  CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(phiObj, builder.getInt64Ty()));
+  // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(phiObj, builder.getInt64Ty()));
   return phiObj;
 }
 
 std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallApiCase(
-    llvm::Function* callee, llvm::Function* caller, int caseCounter, bool hasSret) {
+    llvm::Function* callee, llvm::Function* caller, int caseCounter, bool createForCtor) {
   llvm::IRBuilder<> builder { caller->getContext() };
   auto module = caller->getParent();
   auto& context = module->getContext();
@@ -803,21 +886,27 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
   std::vector<llvm::Value *> calleeArgs { };
   int arg_num = 1;
   for (const auto& arg: callee->args()) {
-    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && hasSret ? false: true);
+    auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && createForCtor ? false: true);
     // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(argAlloca, builder.getInt64Ty()));
 
     auto argValue = builder.CreateLoad(argAlloca);
     arg_num ++;
 
     calleeArgs.push_back(argValue);
+    // CreatePrintfCall(builder, "arg " + std::to_string(arg_num - 1) + " created.\n");
   }
+  // CreatePrintfCall(builder, "args created.\n");
   auto retObj = builder.CreateCall(callee, calleeArgs);
+  // CreatePrintfCall(builder, "after call api.\n");
 
   auto retType = retObj->getType();
   if(retType == builder.getVoidTy()) {
     auto voidRetPtr = CreateMallocCall(builder, builder.getInt64Ty());
     builder.CreateStore(builder.getInt64(0), voidRetPtr);
-    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(voidRetPtr, builder.getInt64Ty()));
+    if(createForCtor == false) {
+      CreatePrintfCall(builder, "retVoidType: ");
+      CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(voidRetPtr, builder.getInt64Ty()));
+    }
   } else {
     auto retObjMalloc = CreateMallocCall(builder, retType);
     unsigned TypeSize = _module->getDataLayout().getTypeAllocSize(retType);
@@ -826,11 +915,14 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
         TypeSize = _module->getDataLayout().getStructLayout(ST)->getSizeInBytes();
       }
     builder.CreateStore(retObj, retObjMalloc);
-    CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(retObjMalloc, builder.getInt64Ty()));
+    if(createForCtor == false) { // this callee is not a ctor, and this dispatchfuncion is not for invoke ctors.
+      CreatePrintfCall(builder, "retType: ");
+      CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(retObjMalloc, builder.getInt64Ty()));
+    }
   }
 
   llvm::Value* retObjPtr;
-  if(hasSret == false) {
+  if(createForCtor == false) {
     auto retType = retObj->getType(); // retType->dump();
     // callee->dump();
     if(retType == builder.getVoidTy()) {
@@ -908,6 +1000,15 @@ void CAFCodeGenerator::GenerateCallbackFunctionCandidateArray(
   builder.CreateBr(EndBlock);
   builder.SetInsertPoint(EndBlock);
   builder.CreateRetVoid();
+
+  // add attribute: optnone unwind
+  {
+    llvm::AttrBuilder B;
+    B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute(llvm::Attribute::OptimizeNone);
+    B.addAttribute(llvm::Attribute::UWTable);
+    callbackFuncArrDispatch->addAttributes(llvm::AttributeList::FunctionIndex, B);
+  }
 }
 
 static std::string getSignature(llvm::FunctionType *FTy) {
@@ -943,6 +1044,7 @@ llvm::Function* CAFCodeGenerator::generateEmptyFunctionWithSignature(LLVMFunctio
           funcType
       )
   );
+  
   auto EntryBlock = llvm::BasicBlock::Create(
       emptyFunc->getContext(), "entry", emptyFunc);
 
@@ -950,9 +1052,26 @@ llvm::Function* CAFCodeGenerator::generateEmptyFunctionWithSignature(LLVMFunctio
   if(retType == builder.getVoidTy()) {
     builder.CreateRetVoid();
   } else {
-    auto retValueAddr = AllocaValueOfType(builder, retType, 0, false);
-    auto retValue = builder.CreateLoad(retValueAddr);
+    // auto retValueAddr = builder.CreateAlloca(retType);
+
+    // // auto retValueAddr = AllocaValueOfType(builder, retType, 0, false);
+    // auto retValue = builder.CreateLoad(retValueAddr);
+    // builder.CreateRet(retValue);
+
+    auto randomBytesValue = CreateGetRandomBytesCall(
+      builder, (retType->getScalarSizeInBits() >> 3));
+    auto retAddr = builder.CreateBitCast(randomBytesValue, retType->getPointerTo());
+    auto retValue = builder.CreateLoad(retAddr);
     builder.CreateRet(retValue);
+  }
+
+  // add attribute: optnone unwind
+  {
+    llvm::AttrBuilder B;
+    B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute(llvm::Attribute::OptimizeNone);
+    B.addAttribute(llvm::Attribute::UWTable);
+    emptyFunc->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
 
   return emptyFunc;

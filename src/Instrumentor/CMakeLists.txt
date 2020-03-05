@@ -11,6 +11,8 @@ add_library(CAFInstrumentor MODULE
     CAFCodeGenerator.h
     InstrumentorPass.cpp)
 
+add_subdirectory(InstrumentorLib)
+
 target_compile_definitions(CAFInstrumentor PUBLIC CAF_LLVM)
 target_link_libraries(CAFInstrumentor PUBLIC CAFInfrastructure)
 target_link_libraries(CAFInstrumentor PUBLIC CAFBasicLLVM)

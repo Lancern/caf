@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -g  -shared  -o ../../lib/libCAFInstrumentor.so CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o ../../lib/libCAFBasicLLVM.a ../../lib/libCAFExtractorStatic.a ../../lib/libCAFBasicLLVM.a 

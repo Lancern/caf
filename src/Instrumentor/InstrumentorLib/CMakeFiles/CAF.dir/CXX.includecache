@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/zys/caf_refactory/src/Instrumentor/InstrumentorLib/caflib.cpp
+caflib.h
+/home/zys/caf_refactory/src/Instrumentor/InstrumentorLib/caflib.h
+stdlib.h
+-
+
+/home/zys/caf_refactory/src/Instrumentor/InstrumentorLib/caflib.h
+cstdio
+-
+vector
+-
+random
+-
+

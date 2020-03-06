@@ -170,6 +170,14 @@ private:
   llvm::Function* CreateDispatchFunctionForApi();
 
   /**
+   * @brief Create a Dispatch Function For Types 
+   * 
+   * @param type 
+   * @return llvm::Function* : the dispath function to create a value for the type
+   */
+  llvm::Function* CreateDispatchFunctionForTypes(llvm::Type* type);
+
+  /**
    * @brief Generate the dispatch function for invoke ctors in the module.
    * 
    * @param ctorTypeId 

@@ -18,7 +18,7 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "include"
   "dep"
-  "/home/zys/Resource/llvm7-patched/include"
+  "/home/zys/Resource/llvm-7.1.0/include"
   "deps/json/.."
   )
 

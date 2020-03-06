@@ -29,6 +29,7 @@ void inputBytesTo(char *dest, int size)
 std::vector<long>__caf_object_list;
 void saveToObjectList(long objPtr) // _Z16saveToObjectListl
 {
+    printf("save to object list\n");
     __caf_object_list.push_back(objPtr);
 }
 

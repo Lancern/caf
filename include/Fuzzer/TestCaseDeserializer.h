@@ -239,85 +239,81 @@ private:
   Value* ReadValue(
       Input& in, const Type* type, details::TestCaseDeserializationContext& context) const {
     auto pool = _corpus->GetOrCreateObjectPool(type->id());
-    auto kind = static_cast<ValueKind>(ReadInt<int, 4>(in));
+    auto isPlaceholder = static_cast<bool>(ReadInt<uint8_t, 1>(in));
 
     // Note that placeholder values does not reserve a test case object pool.
-    size_t valueIndex;
-    if (kind != ValueKind::PlaceholderValue) {
-      valueIndex = context.AllocValueIndex();
-    }
-
     Value* value = nullptr;
-    switch (kind) {
-      case ValueKind::BitsValue: {
-        auto size = ReadInt<size_t, 4>(in);
-        auto bitsValue = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
-        context.SetValue(valueIndex, bitsValue);
-        in.read(bitsValue->data(), size);
-        value = bitsValue;
-        break;
+    if (isPlaceholder) {
+      auto valueIndex = ReadInt<size_t, 4>(in);
+      if (context.IsPlaceholderIndex(valueIndex)) {
+        valueIndex = context.GetPlaceholderIndex(valueIndex);
+        value = _corpus->GetPlaceholderObjectPool()->CreateValue<PlaceholderValue>(
+            type, valueIndex);
+      } else {
+        value = context.GetValue(valueIndex);
       }
-      case ValueKind::PointerValue: {
-        auto ptrType = caf::dyn_cast<PointerType>(type);
-        auto ptrValue = pool->CreateValue<PointerValue>(pool, ptrType);
-        context.SetValue(valueIndex, ptrValue);
-        ptrValue->SetPointee(ReadValue(in, ptrType->pointeeType().get(), context));
-        value = ptrValue;
-        break;
-      }
-      case ValueKind::FunctionValue: {
-        auto funcId = ReadInt<uint64_t, 4>(in);
-        value = pool->CreateValue<FunctionValue>(pool, funcId, caf::dyn_cast<FunctionType>(type));
-        context.SetValue(valueIndex, value);
-        break;
-      }
-      case ValueKind::ArrayValue: {
-        auto arrayType = caf::dyn_cast<ArrayType>(type);
-        auto arrayValue = pool->CreateValue<ArrayValue>(pool, arrayType);
-        context.SetValue(valueIndex, arrayValue);
-        auto size = ReadInt<size_t, 4>(in);
-        for (size_t ei = 0; ei < size; ++ei) {
-          arrayValue->AddElement(ReadValue(in, arrayType->elementType().get(), context));
+    } else {
+      auto valueIndex = context.AllocValueIndex();
+      switch (type->kind()) {
+        case TypeKind::Bits: {
+          auto size = ReadInt<size_t, 4>(in);
+          auto bitsValue = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
+          context.SetValue(valueIndex, bitsValue);
+          in.read(bitsValue->data(), size);
+          value = bitsValue;
+          break;
         }
-        value = arrayValue;
-        break;
-      }
-      case ValueKind::StructValue: {
-        auto structType = caf::dyn_cast<StructType>(type);
-        auto ctorId = ReadInt<uint64_t, 4>(in);
-        auto ctor = structType->GetConstructor(ctorId);
-        auto structValue = pool->CreateValue<StructValue>(pool, structType, ctor);
-        context.SetValue(valueIndex, structValue);
-        for (size_t ai = 0; ai < ctor->GetArgCount(); ++ai) {
-          auto argType = ctor->GetArgType(ai);
-          structValue->AddArg(ReadValue(in, argType.get(), context));
+        case TypeKind::Pointer: {
+          auto ptrType = caf::dyn_cast<PointerType>(type);
+          auto ptrValue = pool->CreateValue<PointerValue>(pool, ptrType);
+          context.SetValue(valueIndex, ptrValue);
+          ptrValue->SetPointee(ReadValue(in, ptrType->pointeeType().get(), context));
+          value = ptrValue;
+          break;
         }
-        value = structValue;
-        break;
-      }
-      case ValueKind::AggregateValue: {
-        auto aggregateType = caf::dyn_cast<AggregateType>(type);
-        auto aggregateValue = pool->CreateValue<AggregateValue>(pool, aggregateType);
-        context.SetValue(valueIndex, aggregateValue);
-        for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
-          aggregateValue->AddField(ReadValue(in, aggregateType->GetField(i).get(), context));
+        case TypeKind::Function: {
+          auto funcId = ReadInt<uint64_t, 4>(in);
+          value = pool->CreateValue<FunctionValue>(pool, funcId, caf::dyn_cast<FunctionType>(type));
+          context.SetValue(valueIndex, value);
+          break;
         }
-        value = aggregateValue;
-        break;
-      }
-      case ValueKind::PlaceholderValue: {
-        auto valueIndex = ReadInt<size_t, 4>(in);
-        if (context.IsPlaceholderIndex(valueIndex)) {
-          valueIndex = context.GetPlaceholderIndex(valueIndex);
-          value = _corpus->GetPlaceholderObjectPool()->CreateValue<PlaceholderValue>(
-              type, valueIndex);
-        } else {
-          value = context.GetValue(valueIndex);
+        case TypeKind::Array: {
+          auto arrayType = caf::dyn_cast<ArrayType>(type);
+          auto arrayValue = pool->CreateValue<ArrayValue>(pool, arrayType);
+          context.SetValue(valueIndex, arrayValue);
+          auto size = ReadInt<size_t, 4>(in);
+          for (size_t ei = 0; ei < size; ++ei) {
+            arrayValue->AddElement(ReadValue(in, arrayType->elementType().get(), context));
+          }
+          value = arrayValue;
+          break;
         }
-        break;
-      }
-      default: {
-        CAF_UNREACHABLE;
+        case TypeKind::Struct: {
+          auto structType = caf::dyn_cast<StructType>(type);
+          auto ctorId = ReadInt<uint64_t, 4>(in);
+          auto ctor = structType->GetConstructor(ctorId);
+          auto structValue = pool->CreateValue<StructValue>(pool, structType, ctor);
+          context.SetValue(valueIndex, structValue);
+          for (size_t ai = 0; ai < ctor->GetArgCount(); ++ai) {
+            auto argType = ctor->GetArgType(ai);
+            structValue->AddArg(ReadValue(in, argType.get(), context));
+          }
+          value = structValue;
+          break;
+        }
+        case TypeKind::Aggregate: {
+          auto aggregateType = caf::dyn_cast<AggregateType>(type);
+          auto aggregateValue = pool->CreateValue<AggregateValue>(pool, aggregateType);
+          context.SetValue(valueIndex, aggregateValue);
+          for (size_t i = 0; i < aggregateType->GetFieldsCount(); ++i) {
+            aggregateValue->AddField(ReadValue(in, aggregateType->GetField(i).get(), context));
+          }
+          value = aggregateValue;
+          break;
+        }
+        default: {
+          CAF_UNREACHABLE;
+        }
       }
     }
 

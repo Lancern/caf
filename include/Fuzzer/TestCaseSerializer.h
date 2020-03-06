@@ -177,8 +177,8 @@ private:
       context.AddValue(&value);
     }
 
-    // Write kind of the value.
-    WriteInt<4>(o, static_cast<int>(value.kind()));
+    // Write a boolean indicating whether the current value is a placeholder value.
+    WriteInt<1>(o, static_cast<uint8_t>(value.kind() == ValueKind::PlaceholderValue));
     switch (value.kind()) {
       case ValueKind::BitsValue: {
         // Write the number of bytes followed by the raw binary data of the value to the output
@@ -203,11 +203,10 @@ private:
         break;
       }
       case ValueKind::ArrayValue: {
-        // Write the number of elements and each element into the output stream.
+        // Write each element into the output stream.
         const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
         assert(arrayValue.size() == caf::dyn_cast<ArrayType>(arrayValue.type())->size() &&
             "ArrayValue size does not match ArrayType size.");
-        WriteInt<4>(o, arrayValue.size());
         for (auto el : arrayValue.elements()) {
           Write(o, *el, context, true);
         }

@@ -9,10 +9,13 @@ Args ->
     Value Args |
     eps
 Value ->
-    <kind: u32 = 0> <size: u32> <data: [size x u8]>         /* BitsValue */         |
-    <kind: u32 = 1> Value                                   /* PointerValue */      |
-    <kind: u32 = 2> <funcId: u32>                           /* FunctionValue */     |
-    <kind: u32 = 3> <size: u32> <elements: [size x Value]>  /* ArrayValue */        |
-    <kind: u32 = 4> <ctorId: u32> Args                      /* StructValue */       |
-    <kind: u32 = 5> Args                                    /* AggregateValue */    |
-    <kind: u32 = 6> <index: u32>                            /* PlaceholderValue */
+    <isPlaceholder: u8 = 0> NonPlaceholderValue |
+    <isPlaceholder: u8 = 1> <index: u32>
+
+NonPlaceholderValue ->
+    <data: [size x u8]>         /* BitsValue */         |
+    Value                       /* PointerValue */      |
+    <funcId: u32>               /* FunctionValue */     |
+    <elements: [size x Value]>  /* ArrayValue */        |
+    <ctorId: u32> Args          /* StructValue */       |
+    Args                        /* AggregateValue */

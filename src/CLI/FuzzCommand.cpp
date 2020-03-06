@@ -6,11 +6,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <utility>
 #include <string>
 #include <vector>
 
 #include <unistd.h>
+#include <ftw.h>
 
 #define AFL_EXECUTABLE_NAME "afl-fuzz"
 
@@ -79,8 +81,42 @@ char* DuplicateString(const char* s) {
   return buffer;
 }
 
+int SeedsCount;
+
+int CountFiles(const char* fpath, const struct stat* sb, int typeflag, FTW* ftwbuf) {
+  if (typeflag == FTW_F) {
+    ++SeedsCount;
+  }
+  return 0;
+}
+
 void PopulateAFLSeeds(const char* inputDir, const char* seedsDir, bool verbose) {
-  // TODO: Implement PopulateAFLSeeds.
+  SeedsCount = 0;
+  auto ret = nftw(seedsDir, CountFiles, 4, 0);
+  if (ret != 0) {
+    PRINT_LAST_OS_ERR_AND_EXIT("failed to access seeds directory");
+  }
+
+  for (auto i = 0; i < SeedsCount; ++i) {
+    std::string inputFile(inputDir);
+    if (!inputFile.empty() && inputFile[inputFile.size() - 1] != '/') {
+      inputFile.push_back('/');
+    }
+    inputFile.append(std::to_string(i));
+    inputFile.append(".in");
+
+    if (verbose) {
+      std::cout << "Writing AFL seed file \"" << inputFile << "\"" << std::endl;
+    }
+
+    std::ofstream file { inputFile };
+    if (file.fail()) {
+      PRINT_LAST_OS_ERR_AND_EXIT_FMT("failed to create file \"%s\"", inputFile.c_str());
+    }
+
+    file.write(reinterpret_cast<const char *>(&i), sizeof(size_t));
+    file.flush();
+  }
 }
 
 } // namespace <anonymous>

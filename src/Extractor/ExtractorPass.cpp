@@ -84,8 +84,10 @@ bool ExtractorPass::runOnModule(llvm::Module &module) {
       _context.AddConstructor(caf::GetConstructingType(&func), &func);
     }
 
-    ++CallbackCandidatesCount;
-    _context.AddCallbackFunctionCandidate(&func);
+    if (!func.isIntrinsic()) {
+      ++CallbackCandidatesCount;
+      _context.AddCallbackFunctionCandidate(&func);
+    }
   }
 
   _context.Freeze();

@@ -186,7 +186,6 @@ private:
         const auto& bitsValue = caf::dyn_cast<BitsValue>(value);
         assert(bitsValue.size() == caf::dyn_cast<BitsType>(value.type())->size() &&
             "BitsValue size does not match BitsType size.");
-        WriteInt<4>(o, bitsValue.size());
         o.write(bitsValue.data(), bitsValue.size());
         break;
       }

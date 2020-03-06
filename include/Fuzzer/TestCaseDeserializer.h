@@ -256,10 +256,10 @@ private:
       auto valueIndex = context.AllocValueIndex();
       switch (type->kind()) {
         case TypeKind::Bits: {
-          auto size = ReadInt<size_t, 4>(in);
-          auto bitsValue = pool->CreateValue<BitsValue>(pool, caf::dyn_cast<BitsType>(type));
+          auto bitsType = caf::dyn_cast<BitsType>(type);
+          auto bitsValue = pool->CreateValue<BitsValue>(pool, bitsType);
           context.SetValue(valueIndex, bitsValue);
-          in.read(bitsValue->data(), size);
+          in.read(bitsValue->data(), bitsType->size());
           value = bitsValue;
           break;
         }
@@ -281,8 +281,7 @@ private:
           auto arrayType = caf::dyn_cast<ArrayType>(type);
           auto arrayValue = pool->CreateValue<ArrayValue>(pool, arrayType);
           context.SetValue(valueIndex, arrayValue);
-          auto size = ReadInt<size_t, 4>(in);
-          for (size_t ei = 0; ei < size; ++ei) {
+          for (size_t ei = 0; ei < arrayType->size(); ++ei) {
             arrayValue->AddElement(ReadValue(in, arrayType->elementType().get(), context));
           }
           value = arrayValue;
@@ -292,6 +291,7 @@ private:
           auto structType = caf::dyn_cast<StructType>(type);
           auto ctorId = ReadInt<uint64_t, 4>(in);
           auto ctor = structType->GetConstructor(ctorId);
+          assert(ctor && "Constructor does not exist.");
           auto structValue = pool->CreateValue<StructValue>(pool, structType, ctor);
           context.SetValue(valueIndex, structValue);
           for (size_t ai = 0; ai < ctor->GetArgCount(); ++ai) {

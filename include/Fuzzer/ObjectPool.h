@@ -10,7 +10,9 @@
 
 namespace caf {
 
+class Type;
 class Value;
+class PointerValue;
 
 /**
  * @brief Pool of objects that can be passed as function arguments of some specific type.
@@ -25,7 +27,8 @@ public:
    *
    */
   explicit CAFObjectPool()
-    : _values { }
+    : _values { },
+      _nullPtr(nullptr)
   { }
 
   CAFObjectPool(const CAFObjectPool &) = delete;
@@ -90,8 +93,19 @@ public:
     return random.Select(_values)->get();
   }
 
+  /**
+   * @brief Get or create a null pointer value in this object pool with the given type.
+   *
+   * This function will trigger an assertion failure if the given type is not a pointer type.
+   *
+   * @param pointerType type of the pointer value.
+   * @return Value* the null pointer value.
+   */
+  PointerValue* GetOrCreateNullPointerValue(const Type* pointerType);
+
 private:
   std::vector<std::unique_ptr<Value>> _values;
+  PointerValue* _nullPtr;
 };
 
 } // namespace caf

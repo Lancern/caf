@@ -192,7 +192,10 @@ private:
       case ValueKind::PointerValue: {
         // Write the underlying value pointed to by the pointer.
         const auto& pointerValue = caf::dyn_cast<PointerValue>(value);
-        Write(o, *pointerValue.pointee(), context, true);
+        WriteInt<1>(o, static_cast<uint8_t>(pointerValue.IsNull()));
+        if (!pointerValue.IsNull()) {
+          Write(o, *pointerValue.pointee(), context, true);
+        }
         break;
       }
       case ValueKind::FunctionValue: {

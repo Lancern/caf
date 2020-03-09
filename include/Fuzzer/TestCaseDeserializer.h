@@ -265,7 +265,14 @@ private:
         }
         case TypeKind::Pointer: {
           auto ptrType = caf::dyn_cast<PointerType>(type);
+          auto isNull = static_cast<bool>(ReadInt<uint8_t, 1>(in));
+          if (isNull) {
+            value = pool->GetOrCreateNullPointerValue(ptrType);
+            context.SetValue(valueIndex, value);
+            break;
+          }
           auto ptrValue = pool->CreateValue<PointerValue>(pool, ptrType);
+          // The pointer is not null.
           context.SetValue(valueIndex, ptrValue);
           ptrValue->SetPointee(ReadValue(in, ptrType->pointeeType().get(), context));
           value = ptrValue;

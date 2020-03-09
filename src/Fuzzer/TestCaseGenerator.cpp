@@ -34,6 +34,11 @@ BitsValue* TestCaseGenerator::GenerateNewBitsType(const BitsType* type) {
 
 PointerValue* TestCaseGenerator::GenerateNewPointerType(const PointerType* type) {
   auto objectPool = _corpus->GetOrCreateObjectPool(type->id());
+  if (_rnd.WithProbability(0.2)) {
+    // Generate a null pointer.
+    return objectPool->GetOrCreateNullPointerValue(type);
+  }
+
   auto value = objectPool->CreateValue<PointerValue>(objectPool, type);
   value->SetPointee(GenerateValue(type->pointeeType().get()));
   return value;

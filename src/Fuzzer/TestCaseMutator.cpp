@@ -261,6 +261,11 @@ Value* TestCaseMutator::MutateBitsValue(const BitsValue* value) {
 
 Value* TestCaseMutator::MutatePointerValue(const PointerValue* value, MutationContext& context) {
   auto objectPool = value->pool();
+  if (_rnd.WithProbability(0.2)) {
+    // Mutate to a null pointer.
+    return objectPool->GetOrCreateNullPointerValue(value->type());
+  }
+
   auto mutatedPointee = MutateValue(value->pointee(), context);
   return objectPool->CreateValue<PointerValue>(objectPool, mutatedPointee,
       caf::dyn_cast<PointerType>(value->type()));

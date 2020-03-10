@@ -572,7 +572,7 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
         "is_null_pointer.addr");
     CreateInputBtyesToCall(builder, isNullPointerAddr, builder.getInt32(1));
     auto isNullPointer = builder.CreateLoad(isNullPointerAddr);
-    CreatePrintfCall(builder, "is_null_pointer = %d\n", isPlaceHolder);
+    CreatePrintfCall(builder, "is_null_pointer = %d\n", isNullPointer);
 
     auto nullPtrBlock = llvm::BasicBlock::Create(
         builder.getContext(), "null.pointer.type." + std::to_string(typeId),

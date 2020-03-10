@@ -24,10 +24,8 @@ target_sources(CAFInfrastructure INTERFACE
     ${CAF_INFRASTRUCTURE_SOURCES})
 
 add_subdirectory(Basic)
-# add_subdirectory(LLVMPass)
 add_subdirectory(Fuzzer)
 add_subdirectory(Extractor)
 add_subdirectory(Instrumentor)
-# add_subdirectory(ConstructorWrapper)
-# add_subdirectory(CtorWrapper)
 add_subdirectory(CLI)
+add_subdirectory(ClangWrapper)

@@ -138,8 +138,7 @@ public:
         ->check(CLI::ExistingFile);
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
     app.add_option("target", _opts.Target, "The target executable and its params")
-        ->required()
-        ->expected(1);
+        ->required();
   }
 
   int Execute(CLI::App &app) override {

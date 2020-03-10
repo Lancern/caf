@@ -141,7 +141,7 @@ public:
    * @return TestCase* a raw pointer to the test case.
    */
   TestCase* GetTestCaseRaw(size_t index) {
-    return &_testCases[index];
+    return &_testCases.at(index);
   }
 
   /**

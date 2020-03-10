@@ -36,6 +36,14 @@ public:
   { }
 
   /**
+   * @brief Determine whether this pointer value is null.
+   *
+   * @return true if this pointer value is null.
+   * @return false if this pointer value is not null.
+   */
+  bool IsNull() const { return _pointee == nullptr; }
+
+  /**
    * @brief Get the value at the pointee's site.
    *
    * @return Value* value at the pointee's site.

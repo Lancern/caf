@@ -14,7 +14,8 @@ Value ->
 
 NonPlaceholderValue ->
     <data: [size x u8]>         /* BitsValue */         |
-    Value                       /* PointerValue */      |
+    <isNull: u8 = 0> Value      /* PointerValue */      |
+    <isNull: u8 = 1>            /* Null PointerValue */ |
     <funcId: u32>               /* FunctionValue */     |
     <elements: [size x Value]>  /* ArrayValue */        |
     <ctorId: u32> Args          /* StructValue */       |

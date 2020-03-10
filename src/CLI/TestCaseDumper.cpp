@@ -40,6 +40,7 @@ char GetHexDigit(uint8_t decimal) {
 
 constexpr static const PrinterColor KeywordColor = PrinterColor::BrightGreen;
 constexpr static const PrinterColor ValueTypeColor = PrinterColor::BrightCyan;
+constexpr static const PrinterColor SpecialValueColor = PrinterColor::Yellow;
 
 class TestCaseDumper::DumpContext {
 public:
@@ -209,10 +210,14 @@ void TestCaseDumper::DumpBitsValue(const BitsValue& value, DumpContext& context)
 
 void TestCaseDumper::DumpPointerValue(const PointerValue& value, DumpContext& context) {
   _printer.PrintWithColor(ValueTypeColor, "Pointer");
-  _printer << Printer::endl;
-  auto indentGuard = _printer.PushIndent();
-  _printer.PrintWithColor(KeywordColor, "POINTEE ");
-  DumpValue(*value.pointee(), context);
+  if (value.IsNull()) {
+    _printer.PrintWithColor(SpecialValueColor, " nullptr");
+  } else {
+    _printer << Printer::endl;
+    auto indentGuard = _printer.PushIndent();
+    _printer.PrintWithColor(KeywordColor, "POINTEE ");
+    DumpValue(*value.pointee(), context);
+  }
 }
 
 void TestCaseDumper::DumpFunctionValue(const FunctionValue& value, DumpContext& context) {

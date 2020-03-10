@@ -55,7 +55,22 @@ void CAFCodeGenerator::GenerateStub() {
   // auto ctors = _extraction->GetConstructors();
   auto types = _extraction->GetTypes();
 
-  llvm::errs() << "typeIds.size(): " << types.size() << "\n";
+  /**
+   * insert all the function decelaration into the module first.s
+   */
+  for(auto type: types) {
+    if(type->isVoidTy()) {
+      CreateDispatchFunctionDecelForTypes(const_cast<llvm::Type*>(type));
+    }
+    if(llvm::isa<llvm::StructType>(type)) {
+      auto ctors = _extraction->GetConstructorsOfType(type);
+      if(ctors.size() != 0) {
+        auto typeId = _extraction->GetTypeId(type).take();
+        CreateDispatchFunctionDecelForCtors(typeId);
+      }
+    }
+  }
+
   for(auto type: types) {
     if(!llvm::isa<llvm::StructType>(type)) continue;
     auto ctors = _extraction->GetConstructorsOfType(type);
@@ -65,7 +80,12 @@ void CAFCodeGenerator::GenerateStub() {
   }
 
   for(auto type: types) {
+    // if(!type->isSized()) {
+    //   llvm::errs() << "!type->isSized():\n";
+    //   type->dump();
+    // }
     if(type->isVoidTy())continue;
+    // type->dump();
     CreateDispatchFunctionForTypes(const_cast<llvm::Type*>(type));
   }
 
@@ -391,17 +411,33 @@ llvm::CallInst* CAFCodeGenerator::CreateScanfCall(
   return scanfRes;
 }
 
-llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* type) {
+void CAFCodeGenerator::CreateDispatchFunctionDecelForTypes(llvm::Type* type) {
   auto typeId = _extraction->GetTypeId(type).take();
   auto dispatchFunc = llvm::cast<llvm::Function>(
     _module->getOrInsertFunction(
         "__caf_dispatch_malloc_for_type_" + std::to_string(typeId),
         llvm::Type::getInt8PtrTy(_module->getContext())
-        // ,llvm::Type::getInt8Ty(_module->getContext()) 
+        ,llvm::Type::getInt8Ty(_module->getContext()) // save this object or not.
+        // depth: must <= CAF_RECURSIVE_MAX_DEPTH. Otherwise, do not initialize
+    )
+  );
+}
+
+llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* type) {  
+  // type->dump();
+  auto typeId = _extraction->GetTypeId(type).take();
+  auto dispatchFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+        "__caf_dispatch_malloc_for_type_" + std::to_string(typeId),
+        llvm::Type::getInt8PtrTy(_module->getContext())
+        ,llvm::Type::getInt8Ty(_module->getContext()) // save this object or not.
         // depth: must <= CAF_RECURSIVE_MAX_DEPTH. Otherwise, do not initialize
     )
   );
   dispatchFunc->setCallingConv(llvm::CallingConv::C);
+  auto args = dispatchFunc->arg_begin();
+  auto saveOrNot = (args++);
+  saveOrNot->setName("save_or_not");
 
   llvm::IRBuilder<> builder { dispatchFunc->getContext() };
 
@@ -413,9 +449,65 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
       dispatchFunc->getContext(),
        + "malloc.type." + std::to_string(typeId) + ".end",
       dispatchFunc);
+  
+  builder.SetInsertPoint(mallocTypeEnd);
+  auto phiRet = builder.CreatePHI(type->getPointerTo(), 3);
     
   builder.SetInsertPoint(mallocTypeEntry);
 
+  llvm::Value* mallocOfType;
+  llvm::Value* mallocOfPointerType;
+  if(type->isFunctionTy() || !type->isSized()) {
+    // llvm::errs() << "this type is unsized:\n";
+    // type->dump();
+    auto pointerType = type->getPointerTo();
+    mallocOfPointerType = CreateMallocCall(builder, pointerType);
+    mallocOfType = builder.CreateLoad(mallocOfPointerType);
+  }else {
+    mallocOfType = CreateMallocCall(builder, type);
+  }
+
+  auto saveObjectBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "save.object.type." + std::to_string(typeId),
+      builder.GetInsertBlock()->getParent());
+  auto noSaveObjectBlock = llvm::BasicBlock::Create(
+      builder.getContext(), "no.save.object.type." + std::to_string(typeId),
+      builder.GetInsertBlock()->getParent());
+
+  auto doSave = builder.CreateICmpEQ(saveOrNot, builder.getInt8(1), "save_or_not");
+  builder.CreateCondBr(doSave, saveObjectBlock, noSaveObjectBlock);
+  builder.SetInsertPoint(noSaveObjectBlock);
+
+  /* pointer need always to be initialized,
+   * pointing to a chunk of malloced memory.
+   * Unless the pointee type is unsized.
+  */
+  if(type->isPointerTy()) {
+    llvm::Type* pointeeType = type->getPointerElementType();
+    if(!pointeeType->isSized()) {
+      auto nil = llvm::ConstantPointerNull::get(
+        llvm::dyn_cast<llvm::PointerType>(type));
+      builder.CreateStore(nil, mallocOfType);
+    } else {
+      auto pointeeTypeId = _extraction->GetTypeId(pointeeType).take();
+      auto mallocForPointeeTypeFunc = llvm::cast<llvm::Function>(
+        _module->getOrInsertFunction(
+            "__caf_dispatch_malloc_for_type_" + std::to_string(pointeeTypeId),
+            llvm::Type::getInt8PtrTy(_module->getContext())
+            , llvm::Type::getInt8Ty(_module->getContext()) 
+        )
+      );
+      auto pointeeOfInt8ptr = builder.CreateCall(mallocForPointeeTypeFunc, { builder.getInt8(0) } );
+      auto pointeeValue = builder.CreateBitCast(pointeeOfInt8ptr, pointeeType->getPointerTo());
+      builder.CreateStore(pointeeValue, mallocOfType);
+    }
+  }
+  builder.CreateBr(mallocTypeEnd);
+  phiRet->addIncoming(mallocOfType, builder.GetInsertBlock());
+
+  builder.SetInsertPoint(saveObjectBlock);
+  
+  // type->dump();
   llvm::Value* isPlaceHolderAddr = builder.CreateAlloca(
         builder.getInt8Ty(),
         nullptr,
@@ -424,16 +516,6 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
     auto isPlaceHolder = builder.CreateLoad(isPlaceHolderAddr);
     CreatePrintfCall(builder, "is_placeholder = %d\n", isPlaceHolder);
 
-  llvm::Value* mallocOfType;
-  llvm::Value* mallocOfPointerType;
-  if(type->isFunctionTy()) {
-    auto pointerType = type->getPointerTo();
-    mallocOfPointerType = CreateMallocCall(builder, pointerType);
-    mallocOfType = builder.CreateLoad(mallocOfPointerType);
-  }else {
-    mallocOfType = CreateMallocCall(builder, type);
-  }
-  type->dump();
 
   auto placeHolderBlock = llvm::BasicBlock::Create(
       builder.getContext(), "placeholder.type." + std::to_string(typeId),
@@ -444,9 +526,6 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
 
   auto hasPlaceHolder = builder.CreateICmpEQ(isPlaceHolder, builder.getInt8(1), "init_or_not");
   builder.CreateCondBr(hasPlaceHolder, placeHolderBlock, noPlaceHolderBlock);
-
-  builder.SetInsertPoint(mallocTypeEnd);
-  auto phiRet = builder.CreatePHI(type->getPointerTo(), 2);
 
   // no initialize the type.
   builder.SetInsertPoint(placeHolderBlock);
@@ -468,34 +547,73 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
   // initialize the type.
   builder.SetInsertPoint(noPlaceHolderBlock);
   CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+
   if(type->isIntegerTy() || type->isFloatingPointTy()) { // kind = 0, bitsValue
       CreatePrintfCall(builder, "bitsType:\tsave to object list.\n");
-      auto inputSize = builder.CreateAlloca(
-        llvm::IntegerType::getInt32Ty(_module->getContext()),
-        nullptr,
-        "input_size");
-      CreateInputIntToCall(builder, inputSize);
-      auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
-      CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
+      // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+      
+      // auto inputSize = builder.CreateAlloca(
+      //   llvm::IntegerType::getInt32Ty(_module->getContext()),
+      //   nullptr,
+      //   "input_size");
+      // CreateInputIntToCall(builder, inputSize);
+      // auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
+      // CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
+      auto bitsSize = type->getScalarSizeInBits();
 
-      CreateInputBtyesToCall(builder, mallocOfType, inputSizeValue);
+      CreateInputBtyesToCall(builder, mallocOfType, builder.getInt32(bitsSize >> 3));
       CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(mallocOfType));
   } else if(type->isPointerTy()) { // kind = 1, pointerValue
     CreatePrintfCall(builder, "pointerType:\tsave to object list.\n");
+    // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+    llvm::Value* isNullPointerAddr = builder.CreateAlloca(
+        builder.getInt8Ty(),
+        nullptr,
+        "is_null_pointer.addr");
+    CreateInputBtyesToCall(builder, isNullPointerAddr, builder.getInt32(1));
+    auto isNullPointer = builder.CreateLoad(isNullPointerAddr);
+    CreatePrintfCall(builder, "is_null_pointer = %d\n", isPlaceHolder);
+
+    auto nullPtrBlock = llvm::BasicBlock::Create(
+        builder.getContext(), "null.pointer.type." + std::to_string(typeId),
+        builder.GetInsertBlock()->getParent());
+    auto noNullPtrBlock = llvm::BasicBlock::Create(
+        builder.getContext(), "no.null.pointer.type." + std::to_string(typeId),
+        builder.GetInsertBlock()->getParent());
+    auto finalPtrBlock = llvm::BasicBlock::Create(
+        builder.getContext(), "final.pointer.type." + std::to_string(typeId),
+        builder.GetInsertBlock()->getParent());
+    builder.SetInsertPoint(finalPtrBlock);
+    auto finalPtr = builder.CreatePHI(type->getPointerTo(), 2);
+
+    builder.SetInsertPoint(noPlaceHolderBlock);
+    auto isNullPtr = builder.CreateICmpEQ(isNullPointer, builder.getInt8(1), "nullptr_or_not");
+    builder.CreateCondBr(isNullPtr, nullPtrBlock, noNullPtrBlock);
+
+    builder.SetInsertPoint(nullPtrBlock);
+    auto nullPtr = builder.getInt8(0);
+    auto nullPtrWithType = builder.CreateIntToPtr(nullPtr, type);
+    builder.CreateStore(nullPtrWithType, mallocOfType);
+    builder.CreateBr(finalPtrBlock);
+    finalPtr->addIncoming(mallocOfType, builder.GetInsertBlock());
+
+    builder.SetInsertPoint(noNullPtrBlock);
     llvm::Type* pointeeType = type->getPointerElementType();
     auto pointeeTypeId = _extraction->GetTypeId(pointeeType).take();
     auto mallocForPointeeTypeFunc = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
           "__caf_dispatch_malloc_for_type_" + std::to_string(pointeeTypeId),
           llvm::Type::getInt8PtrTy(_module->getContext())
-          //, llvm::Type::getInt8Ty(_module->getContext()) 
+          , llvm::Type::getInt8Ty(_module->getContext()) 
       )
     );
-    auto pointeeOfInt8ptr = builder.CreateCall(mallocForPointeeTypeFunc);
+    auto pointeeOfInt8ptr = builder.CreateCall(mallocForPointeeTypeFunc, { builder.getInt8(1) } );
     auto pointeeValue = builder.CreateBitCast(pointeeOfInt8ptr, pointeeType->getPointerTo());
     builder.CreateStore(pointeeValue, mallocOfType);
+    builder.CreateBr(finalPtrBlock);
+    finalPtr->addIncoming(mallocOfType, builder.GetInsertBlock());
+    builder.SetInsertPoint(finalPtrBlock);
   } else if(type->isFunctionTy()) {
-    CreatePrintfCall(builder, "functionType:\tsave to object list.\n");
     auto pointerType = type->getPointerTo();
     auto funcId = builder.CreateAlloca(
       llvm::IntegerType::getInt32Ty(_module->getContext()),
@@ -517,8 +635,14 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
     auto funcAsInt64 = builder.CreateLoad(funcAddrToLoad);
     auto func = builder.CreateIntToPtr(funcAsInt64, pointerType);
     builder.CreateStore(func, mallocOfPointerType);
-  } else if(type->isArrayTy() || type->isVectorTy()) {
+
+    mallocOfType = builder.CreateLoad(mallocOfPointerType);
+    CreatePrintfCall(builder, "functionType:\tsave to object list.\n");
+    // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+    
+  } else if(type->isArrayTy()) {
     CreatePrintfCall(builder, "arrayOrVectorType:\tsave to object list.\n");
+    // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
     // auto arraySize = builder.CreateAlloca(
     //   llvm::IntegerType::getInt32Ty(_module->getContext()),
     //   nullptr,
@@ -527,20 +651,53 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
     // auto arraySizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(arraySize));
     // CreatePrintfCall(builder, "array size = %d\n", arraySizeValue);
 
-    uint64_t arrsize = type->getArrayNumElements();
-    llvm::Type * elementType = type->getArrayElementType();
+    auto arrayType = llvm::cast<llvm::ArrayType>(type);
+    uint64_t arrsize = arrayType->getArrayNumElements();
+    llvm::Type * elementType = arrayType->getArrayElementType();
     auto elementTypeId = _extraction->GetTypeId(elementType).take();
     auto mallocForElementTypeFunc = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
           "__caf_dispatch_malloc_for_type_" + std::to_string(elementTypeId),
           llvm::Type::getInt8PtrTy(_module->getContext())
-          //, llvm::Type::getInt8Ty(_module->getContext()) 
+          , llvm::Type::getInt8Ty(_module->getContext()) 
       )
     );
     // uint64_t elementSize = elementType->getScalarSizeInBits();
     for(uint64_t i = 0; i < arrsize; i++)
     {
-      llvm::Value* elementOfInt8Ptr = builder.CreateCall(mallocForElementTypeFunc);
+      llvm::Value* elementOfInt8Ptr = builder.CreateCall(mallocForElementTypeFunc, { builder.getInt8(1) } );
+      // llvm::Value* elementOfInt8Ptr = AllocaValueOfType(builder, elementType);
+      auto element = builder.CreateBitCast(elementOfInt8Ptr, elementType->getPointerTo());
+      llvm::Value* elementValue = builder.CreateLoad(element);
+      llvm::Value *GEPIndices[] = { builder.getInt32(0), builder.getInt32(i) };
+      llvm::Value * curAddr = builder.CreateInBoundsGEP(mallocOfType, GEPIndices);
+      builder.CreateStore(elementValue, curAddr);
+    }
+  }else if(type->isVectorTy()) {
+    CreatePrintfCall(builder, "arrayOrVectorType:\tsave to object list.\n");
+    // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+    // auto arraySize = builder.CreateAlloca(
+    //   llvm::IntegerType::getInt32Ty(_module->getContext()),
+    //   nullptr,
+    //   "array_size");
+    // CreateInputIntToCall(builder, arraySize);
+    // auto arraySizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(arraySize));
+    // CreatePrintfCall(builder, "array size = %d\n", arraySizeValue);
+    auto vectorType = llvm::cast<llvm::VectorType>(type);
+    uint64_t arrsize = vectorType->getVectorNumElements();
+    llvm::Type * elementType = vectorType->getVectorElementType();
+    auto elementTypeId = _extraction->GetTypeId(elementType).take();
+    auto mallocForElementTypeFunc = llvm::cast<llvm::Function>(
+      _module->getOrInsertFunction(
+          "__caf_dispatch_malloc_for_type_" + std::to_string(elementTypeId),
+          llvm::Type::getInt8PtrTy(_module->getContext())
+          , llvm::Type::getInt8Ty(_module->getContext()) 
+      )
+    );
+    // uint64_t elementSize = elementType->getScalarSizeInBits();
+    for(uint64_t i = 0; i < arrsize; i++)
+    {
+      llvm::Value* elementOfInt8Ptr = builder.CreateCall(mallocForElementTypeFunc, { builder.getInt8(1) } );
       // llvm::Value* elementOfInt8Ptr = AllocaValueOfType(builder, elementType);
       auto element = builder.CreateBitCast(elementOfInt8Ptr, elementType->getPointerTo());
       llvm::Value* elementValue = builder.CreateLoad(element);
@@ -561,6 +718,8 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
     );
     if(dispatchFunc) {
       CreatePrintfCall(builder, "structType:\tsave to object list.\n");
+      // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+      
       auto ctorId = builder.CreateAlloca(
         llvm::IntegerType::getInt32Ty(_module->getContext()),
         nullptr,
@@ -575,6 +734,8 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
       CreateMemcpyCall(builder, mallocOfType, ctorSret, llvm::ConstantInt::get(builder.getInt64Ty(), TypeSize));
     } else {
       CreatePrintfCall(builder, "aggregateType:\tsave to object list.\n");
+      // CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(mallocOfType, builder.getInt64Ty()));
+      
       int elementId = 0;
       for(auto elementType: stype->elements()) {
         auto elementTypeId = _extraction->GetTypeId(elementType).take();
@@ -582,10 +743,10 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
           _module->getOrInsertFunction(
               "__caf_dispatch_malloc_for_type_" + std::to_string(elementTypeId),
               llvm::Type::getInt8PtrTy(_module->getContext())
-              //, llvm::Type::getInt8Ty(_module->getContext()) 
+              , llvm::Type::getInt8Ty(_module->getContext()) 
           )
         );
-        llvm::Value* elementOfInt8Ptr = builder.CreateCall(mallocForElementTypeFunc);
+        llvm::Value* elementOfInt8Ptr = builder.CreateCall(mallocForElementTypeFunc, { builder.getInt8(1) } );
         // llvm::Value* elementOfInt8Ptr = AllocaValueOfType(builder, elementType);
         auto element = builder.CreateBitCast(elementOfInt8Ptr, elementType->getPointerTo());
         llvm::Value* elementValue = builder.CreateLoad(element);
@@ -595,13 +756,15 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
       }
     }
   }else {
-
+    llvm::errs() << "unknown type:\n";
+    type->dump();
   }
   builder.CreateBr(mallocTypeEnd);
   phiRet->addIncoming(mallocOfType, builder.GetInsertBlock());
 
   builder.SetInsertPoint(mallocTypeEnd);
   auto mallocOfInt8Ptr = builder.CreateBitCast(phiRet, builder.getInt8PtrTy());
+  // CreatePrintfCall(builder, "value of type " + std::to_string(typeId) + " generation finished.\n");
   builder.CreateRet(mallocOfInt8Ptr);
   // add attribute: optnone unwind
   {
@@ -612,11 +775,30 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForTypes(llvm::Type* typ
     dispatchFunc->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
 
-  // dispatchFunc->dump();
+  // if(typeId == 8) dispatchFunc->dump();
 
   return dispatchFunc;
 }
 
+void CAFCodeGenerator::CreateDispatchFunctionDecelForCtors(uint64_t ctorTypeId) {
+  auto ctorType = _extraction->GetTypeById(ctorTypeId).take();
+
+  std::string dispatchType = std::string("ctor");
+  llvm::Function* dispatchFunc;
+  auto type = _extraction->GetTypeById(ctorTypeId).take();
+
+  std::string tname = type->getStructName().str();
+  auto found = tname.find("."); //class.basename / struct.basename
+  std::string basename = tname.substr(found + 1);
+
+  dispatchFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+        "__caf_dispatch_ctor_" + tname,
+        llvm::Type::getInt8PtrTy(_module->getContext()),
+        llvm::Type::getInt32Ty(_module->getContext())
+    )
+  );
+}
 
 llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTypeId) {
   auto ctorType = _extraction->GetTypeById(ctorTypeId).take();
@@ -659,6 +841,7 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForCtors(uint64_t ctorTy
   // int caseCounter = 0;
   llvm::errs() << tname + " ctor dispatch function creating ...\n";
   for (auto ctor: ctors) {
+    // llvm::errs() << tname << " ctor: " << ctor->getName() << "\n";
     auto ctorId =  _extraction->GetConstructorId(ctor).take();
     // llvm::errs() << "generate case for ctorId: " << ctorId << "\n";
     cases.push_back(CreateCallApiCase(
@@ -741,8 +924,25 @@ llvm::Function* CAFCodeGenerator::CreateDispatchFunctionForApi() {
   llvm::errs() << "apis num: " << apis.size() << "\n";
   int caseCounter = 0;
   for (auto func: apis) {
+    auto api = const_cast<llvm::Function *>(func);
+    auto apiId = _extraction->GetApiFunctionId(func).take();
+    // llvm::errs() << "api: " << apiId << " " << func->getName().str() << "\n";
+    // for(auto &arg: func->args()) {
+    //   llvm::errs() << "  " << _extraction->GetTypeId(arg.getType()).take() << "\n";
+    //   arg.getType()->dump();
+    // }
+
+    // add attribute: optnone noinline
+    {
+      if(api->hasFnAttribute(llvm::Attribute::OptimizeForSize)) 
+        api->removeFnAttr(llvm::Attribute::OptimizeForSize);
+      llvm::AttrBuilder B;
+      B.addAttribute(llvm::Attribute::NoInline);
+      B.addAttribute(llvm::Attribute::OptimizeNone);
+      api->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    }
     cases.push_back(CreateCallApiCase(
-        const_cast<llvm::Function *>(func), dispatchFunc, caseCounter++));
+        api, dispatchFunc, apiId));
     // llvm::errs() << caseCounter << " cases have been created successfully.\n";
   }
   llvm::errs() << dispatchFunc->getName().str() << " - callee num: " << cases.size() << "\n";
@@ -1051,63 +1251,63 @@ auto isPlaceHolder = builder.CreateICmpEQ(inputKindValue, builder.getInt32(6), "
   llvm::Value* elseRet;
   builder.SetInsertPoint(elseBlock);
   // {
-    // if (type->isIntegerTy() || type->isFloatingPointTy()) { // input_kind == 0
-    //   llvm::Value* valueAddr = CreateMallocCall(builder, type);
-    //   if(init) {
-    //     CreatePrintfCall(builder, "bitsType: ");
-    //     CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(valueAddr, builder.getInt64Ty()));
-    //   }
+    if (type->isIntegerTy() || type->isFloatingPointTy()) { // input_kind == 0
+      llvm::Value* valueAddr = CreateMallocCall(builder, type);
+      if(init) {
+        CreatePrintfCall(builder, "bitsType: ");
+        CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(valueAddr, builder.getInt64Ty()));
+      }
   
-    //   // insertBefore->eraseFromParent();
-    //   if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) { // input_kind = 0
-    //     auto inputSize = builder.CreateAlloca(
-    //       llvm::IntegerType::getInt32Ty(_module->getContext()),
-    //       nullptr,
-    //       "input_size");
-    //     CreateInputIntToCall(builder, inputSize);
-    //     auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
-    //     CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
+      // insertBefore->eraseFromParent();
+      if(init == true && depth < CAF_RECURSIVE_MAX_DEPTH) { // input_kind = 0
+        auto inputSize = builder.CreateAlloca(
+          llvm::IntegerType::getInt32Ty(_module->getContext()),
+          nullptr,
+          "input_size");
+        CreateInputIntToCall(builder, inputSize);
+        auto inputSizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputSize));
+        CreatePrintfCall(builder, "input size = %d\n", inputSizeValue);
 
-    //     CreateInputBtyesToCall(builder, valueAddr, inputSizeValue);
-    //     CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(valueAddr));
-    //   }
-    //   elseRet = valueAddr;
-    // } else if (type->isStructTy()) {  // input_kind = 1
-    //   elseRet = AllocaStructValue(builder, llvm::dyn_cast<llvm::StructType>(type), depth, init);
-    // } else if (type->isPointerTy()) { // input_kind = 2
-    //   elseRet = AllocaPointerType(builder, llvm::dyn_cast<llvm::PointerType>(type), depth, init);
-    // } else if (type->isArrayTy()) {  // input_kind = 3
-    //   elseRet = AllocaArrayType(builder, llvm::dyn_cast<llvm::ArrayType>(type), depth, init);
-    // } else if(type->isVectorTy()) {  // input_kind = 3
-    //   elseRet = AllocaVectorType(builder, llvm::dyn_cast<llvm::VectorType>(type), depth, init);
-    // } else if (type->isFunctionTy()) {  // input_kind = 5
-    //   elseRet = AllocaFunctionType(builder, llvm::dyn_cast<llvm::FunctionType>(type), depth, init);
-    // } else {
-    //   llvm::errs() << "Trying to alloca unrecognized type: "
-    //       << type->getTypeID() << "\n";
-    //   // type->dump(); 
-    //   elseRet = CreateMallocCall(builder, type);
-    //   if(init && depth < CAF_RECURSIVE_MAX_DEPTH) {
-    //     CreatePrintfCall(builder, "unknownType: ");
-    //     CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(elseRet, builder.getInt64Ty()));
-    //   }
+        CreateInputBtyesToCall(builder, valueAddr, inputSizeValue);
+        CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(valueAddr));
+      }
+      elseRet = valueAddr;
+    } else if (type->isStructTy()) {  // input_kind = 1
+      elseRet = AllocaStructValue(builder, llvm::dyn_cast<llvm::StructType>(type), depth, init);
+    } else if (type->isPointerTy()) { // input_kind = 2
+      elseRet = AllocaPointerType(builder, llvm::dyn_cast<llvm::PointerType>(type), depth, init);
+    } else if (type->isArrayTy()) {  // input_kind = 3
+      elseRet = AllocaArrayType(builder, llvm::dyn_cast<llvm::ArrayType>(type), depth, init);
+    } else if(type->isVectorTy()) {  // input_kind = 3
+      elseRet = AllocaVectorType(builder, llvm::dyn_cast<llvm::VectorType>(type), depth, init);
+    } else if (type->isFunctionTy()) {  // input_kind = 5
+      elseRet = AllocaFunctionType(builder, llvm::dyn_cast<llvm::FunctionType>(type), depth, init);
+    } else {
+      llvm::errs() << "Trying to alloca unrecognized type: "
+          << type->getTypeID() << "\n";
+      // type->dump(); 
+      elseRet = CreateMallocCall(builder, type);
+      if(init && depth < CAF_RECURSIVE_MAX_DEPTH) {
+        CreatePrintfCall(builder, "unknownType: ");
+        CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(elseRet, builder.getInt64Ty()));
+      }
   
-    //   // elseRet = builder.CreateAlloca(type);
-    // }
+      elseRet = builder.CreateAlloca(type);
+    }
 
-    auto typeId = _extraction->GetTypeId(type).take();
-    auto mallocForTypeFunc = llvm::cast<llvm::Function>(
-      _module->getOrInsertFunction(
-          "__caf_dispatch_malloc_for_type_" + std::to_string(typeId),
-          llvm::Type::getInt8PtrTy(_module->getContext()),
-          llvm::Type::getInt8Ty(_module->getContext()) 
-      )
-    );
-    CreatePrintfCall(builder, "__caf_dispatch_malloc_for_type_" + std::to_string(typeId));
-    auto malloc = builder.CreateCall(mallocForTypeFunc, {builder.getInt8(init)} );
+    // auto typeId = _extraction->GetTypeId(type).take();
+    // auto mallocForTypeFunc = llvm::cast<llvm::Function>(
+    //   _module->getOrInsertFunction(
+    //       "__caf_dispatch_malloc_for_type_" + std::to_string(typeId),
+    //       llvm::Type::getInt8PtrTy(_module->getContext()),
+    //       llvm::Type::getInt8Ty(_module->getContext()) 
+    //   )
+    // );
+    // CreatePrintfCall(builder, "__caf_dispatch_malloc_for_type_" + std::to_string(typeId));
+    // auto malloc = builder.CreateCall(mallocForTypeFunc, {builder.getInt8(init)} );
 
-    auto mallocOfType = builder.CreateBitCast(malloc, type->getPointerTo());
-    elseRet = mallocOfType;
+    // auto mallocOfType = builder.CreateBitCast(malloc, type->getPointerTo());
+    // elseRet = mallocOfType;
 
     // builder.SetInsertPoint(elseBlock);
     builder.CreateBr(afterBlock);
@@ -1145,13 +1345,13 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGenerator::CreateCallA
       _module->getOrInsertFunction(
           "__caf_dispatch_malloc_for_type_" + std::to_string(typeId),
           llvm::Type::getInt8PtrTy(_module->getContext())
-          //, llvm::Type::getInt8Ty(_module->getContext()) 
+          , llvm::Type::getInt8Ty(_module->getContext()) 
       )
     );
     // auto argAlloca = AllocaValueOfType(builder, arg.getType(), 0, arg_num == 1 && createForCtor ? false: true);
     // auto argValue = builder.CreateLoad(argAlloca);
 
-    auto malloc = builder.CreateCall(mallocForTypeFunc);
+    auto malloc = builder.CreateCall(mallocForTypeFunc, { builder.getInt8(arg_num == 1 && createForCtor ? false: true) } );
     auto mallocOfType = builder.CreateBitCast(malloc, type->getPointerTo());
     auto argValue = builder.CreateLoad(mallocOfType);
     arg_num ++;

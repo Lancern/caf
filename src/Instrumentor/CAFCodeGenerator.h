@@ -170,6 +170,19 @@ private:
   llvm::Function* CreateDispatchFunctionForApi();
 
   /**
+   * @brief Create a Dispatch Function Decel For Types
+   * 
+   * @param type 
+   */
+  void CreateDispatchFunctionDecelForTypes(llvm::Type* type);
+
+  /**
+   * @brief Create a Dispatch Function Decel For Ctors
+   * 
+   * @param ctorTypeId 
+   */
+  void CreateDispatchFunctionDecelForCtors(uint64_t ctorTypeId);
+  /**
    * @brief Create a Dispatch Function For Types 
    * 
    * @param type 

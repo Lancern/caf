@@ -5,10 +5,15 @@
 
 #include "llvm/Pass.h"
 
+namespace llvm {
+class AnalysisUsage;
+class Module;
+}
+
 namespace caf {
 
 /**
- * @brief CAF extractor analysis pass.
+ * @brief CAF extractor pass.
  *
  */
 class ExtractorPass : public llvm::ModulePass {
@@ -19,23 +24,21 @@ public:
    */
   explicit ExtractorPass();
 
-  /**
-   * @brief Get the context of the extractor pass.
-   *
-   * @return ExtractorContext& context of the extractor pass.
-   */
-  ExtractorContext& context() { return _context; }
-
-  /**
-   * @brief Get the context of the extractor pass.
-   *
-   * @return const ExtractorContext& context of the extractor pass.
-   */
-  const ExtractorContext& context() const { return _context; }
-
-  bool runOnModule(llvm::Module& module) override;
   void getAnalysisUsage(llvm::AnalysisUsage& usage) const override;
 
+  bool runOnModule(llvm::Module& module) override;
+
+  /**
+   * @brief Get the extractor context.
+   *
+   * @return const ExtractorContext& the extractor context.
+   */
+  const ExtractorContext& GetContext() const { return _context; }
+
+  /**
+   * @brief Reserved for LLVM use.
+   *
+   */
   static char ID;
 
 private:

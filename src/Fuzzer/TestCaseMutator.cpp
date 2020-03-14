@@ -1,429 +1,399 @@
-#include "Infrastructure/Memory.h"
-#include "Infrastructure/Casting.h"
-#include "Basic/BitsType.h"
-#include "Basic/AggregateType.h"
-#include "Basic/FunctionType.h"
-#include "Fuzzer/BitsValue.h"
-#include "Fuzzer/PointerValue.h"
-#include "Fuzzer/FunctionValue.h"
-#include "Fuzzer/ArrayValue.h"
-#include "Fuzzer/StructValue.h"
-#include "Fuzzer/PlaceholderValue.h"
-#include "Fuzzer/AggregateValue.h"
+#include "Infrastructure/Intrinsic.h"
 #include "Fuzzer/TestCaseMutator.h"
+#include "Fuzzer/Corpus.h"
+#include "Fuzzer/TestCase.h"
+#include "Fuzzer/FunctionCall.h"
+#include "Fuzzer/Value.h"
 
-#include <climits>
+#include <utility>
+#include <iterator>
+#include <algorithm>
 
 namespace caf {
 
-class TestCaseMutator::MutationContext {
-public:
-  explicit MutationContext(CAFCorpusTestCaseRef testCase)
-    : _testCase(testCase)
-  { }
+constexpr static const double GENERATE_NEW_VALUE_PROB = 0.1;
+constexpr static const double MUTATE_TYPE_PROB = 0.2;
 
-  CAFCorpusTestCaseRef testCase() const { return _testCase; }
+constexpr static const int32_t INTEGER_MAX_INCREMENT = 10;
+constexpr static const int32_t INTEGER_MIN_INCREMENT = -10;
 
-private:
-  CAFCorpusTestCaseRef _testCase;
-}; // class TestCaseMutator::MutationContext
+constexpr static const double FLOAT_MAX_INCREMENT = 100;
+constexpr static const double FLOAT_MIN_INCREMENT = -100;
 
-CAFCorpusTestCaseRef TestCaseMutator::Mutate(CAFCorpusTestCaseRef testCase) {
-  enum MutationStrategy : int {
-    Sequence,
-    Argument,
-    _MutationStrategyMax = Argument
-  };
-  auto strategy = static_cast<MutationStrategy>(
-      _rnd.Next<int>(0, static_cast<int>(_MutationStrategyMax)));
-  MutationContext context { testCase };
-  switch (strategy) {
-    case Sequence:
-      return MutateSequence(context);
-    case Argument:
-      return MutateArgument(context);
-    default:
-      CAF_UNREACHABLE;
+TestCaseRef TestCaseMutator::Mutate(TestCaseRef testCase) {
+  using Mutator = TestCaseRef (TestCaseMutator::*)(TestCaseRef);
+  Mutator mutators[7];
+  Mutator* head = mutators;
+
+  // Can we mutate the test case by `AddFunctionCall`?
+  if (testCase->GetFunctionCallsCount() < options().MaxCalls) {
+    *head++ = &TestCaseMutator::AddFunctionCall;
   }
+
+  // Can we mutate the test case by `RemoveFunctionCall`?
+  if (testCase->GetFunctionCallsCount() > 1) {
+    *head++ = &TestCaseMutator::RemoveFunctionCall;
+  }
+
+  // We can always mutate the test case by `Splice` and `MutateThis`.
+  *head++ = &TestCaseMutator::Splice;
+  *head++ = &TestCaseMutator::MutateThis;
+
+  // Can we mutate the test case by `AddArgument`?
+  for (const auto& call : *testCase) {
+    if (call.GetArgsCount() < options().MaxArguments) {
+      *head++ = &TestCaseMutator::AddArgument;
+      break;
+    }
+  }
+
+  // Can we mutate the test case by `RemoveArgument`?
+  for (const auto& call : *testCase) {
+    if (call.GetArgsCount() >= 1) {
+      *head++ = &TestCaseMutator::RemoveArgument;
+      break;
+    }
+  }
+
+  // Can we mutate the test case by `MutateArgument`?
+  for (const auto& call : *testCase) {
+    if (call.GetArgsCount() >= 1) {
+      *head++ = &TestCaseMutator::MutateArgument;
+      break;
+    }
+  }
+
+  assert(head > mutators && "No viable mutator.");
+  auto mutator = _rnd.Select(mutators, head);
+  return (this->*mutator)(testCase);
 }
 
-CAFCorpusTestCaseRef TestCaseMutator::Splice(MutationContext& context) {
-  auto previous = context.testCase();
-  auto source = _corpus->SelectTestCase(_rnd);
-  auto previousLen = previous->calls().size();
-  auto sourceLen = source->calls().size();
-
-  auto spliceIndex = _rnd.Next<size_t>(0, std::min(previousLen, sourceLen));
-
-  auto mutated = _corpus->CreateTestCase();
-  for (size_t i = 0; i < spliceIndex; ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-  for (size_t i = spliceIndex; i < sourceLen; ++i) {
-    mutated->AddFunctionCall(source->calls()[i]);
-  }
-
-  return mutated;
-}
-
-CAFCorpusTestCaseRef TestCaseMutator::InsertCall(MutationContext& context) {
-  auto previous = context.testCase();
-  auto insertIndex = _rnd.Index(previous->calls());
-  auto mutated = _corpus->CreateTestCase();
-  for (size_t i = 0; i < insertIndex; ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-  mutated->AddFunctionCall(_valueGen.GenerateCall());
-  for (size_t i = insertIndex; i < previous->calls().size(); ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-
-  return mutated;
-}
-
-CAFCorpusTestCaseRef TestCaseMutator::RemoveCall(MutationContext& context) {
-  auto previous = context.testCase();
-  auto mutated = _corpus->CreateTestCase();
-  auto previousSequenceLen = previous->calls().size();
-  if (previousSequenceLen == 1) {
-    // TODO: Maybe change here to reject the current mutation request.
-    return previous;
-  }
-
-  // Randomly choose an index at which the function call will be dropped.
-  auto drop = _rnd.Index(previous->calls());
-
-  for (size_t i = 0; i < drop; ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-  for (size_t i = drop + 1; i < previousSequenceLen; ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-
-  return mutated;
-}
-
-CAFCorpusTestCaseRef TestCaseMutator::MutateSequence(MutationContext& context) {
-  enum SequenceMutationStrategy : int {
-    Splice,
-    InsertCall,
-    RemoveCall,
-    _SequenceMutationStrategyMax = RemoveCall
-  };
-
-  auto strategy = static_cast<SequenceMutationStrategy>(
-      _rnd.Next(0, static_cast<int>(_SequenceMutationStrategyMax)));
-  CAFCorpusTestCaseRef tc;
-  switch (strategy) {
-    case Splice:
-      tc = this->Splice(context);
-    case InsertCall:
-      tc = this->InsertCall(context);
-    case RemoveCall:
-      tc = this->RemoveCall(context);
-    default:
-      CAF_UNREACHABLE;
-  }
-
-  FixPlaceholderValuesAfterSequenceMutation(tc);
+TestCaseRef TestCaseMutator::AddFunctionCall(TestCaseRef testCase) {
+  auto call = _gen.GenerateFunctionCall();
+  auto tc = _corpus.DuplicateTestCase(testCase);
+  tc->PushFunctionCall(std::move(call));
   return tc;
 }
 
-void TestCaseMutator::FixPlaceholderValuesAfterSequenceMutation(CAFCorpusTestCaseRef tc) {
-  for (size_t ci = 0; ci < tc->GetFunctionCallCount(); ++ci) {
-    auto& call = tc->GetFunctionCall(ci);
-    for (size_t ai = 0; ai < call.GetArgCount(); ++ai) {
-      auto arg = call.GetArg(ai);
-      if (caf::is_a<PlaceholderValue>(arg)) {
-        call.SetArg(ai, _valueGen.GenerateValue(arg->type()));
-      }
-    }
+TestCaseRef TestCaseMutator::RemoveFunctionCall(TestCaseRef testCase) {
+  auto callIndex = _rnd.Next<size_t>(0, testCase->GetFunctionCallsCount());
+  auto tc = _corpus.CreateTestCase();
+  tc->ReserveFunctionCalls(testCase->GetFunctionCallsCount() - 1);
+  for (size_t i = 0; i < callIndex; ++i) {
+    tc->PushFunctionCall(testCase->GetFunctionCall(i));
   }
+  for (size_t i = callIndex + 1; i < testCase->GetFunctionCallsCount(); ++i) {
+    tc->PushFunctionCall(testCase->GetFunctionCall(i));
+  }
+  return tc;
 }
 
-void TestCaseMutator::FlipBits(uint8_t* buffer, size_t size, size_t width) {
-  auto offset = _rnd.Next<size_t>(0, size * CHAR_BIT - width);
-  buffer[offset / CHAR_BIT] ^= ((1 << width) - 1) << (offset % CHAR_BIT);
+TestCaseRef TestCaseMutator::Splice(TestCaseRef testCase) {
+  // Randomly choose another test case from the corpus.
+  auto another = _corpus.SelectTestCase(_rnd);
+  auto prefixLen = _rnd.Next<size_t>(
+      0, std::min(options().MaxCalls, testCase->GetFunctionCallsCount()));
+  auto suffixLen = _rnd.Next<size_t>(
+      0, std::min(options().MaxCalls - prefixLen, another->GetFunctionCallsCount()));
+
+  auto tc = _corpus.CreateTestCase();
+  for (size_t i = 0; i < prefixLen; ++i) {
+    tc->PushFunctionCall(testCase->GetFunctionCall(i));
+  }
+  for (size_t i = another->GetFunctionCallsCount() - suffixLen;
+       i < another->GetFunctionCallsCount(); ++i) {
+    tc->PushFunctionCall(another->GetFunctionCall(i));
+  }
+
+  return tc;
 }
 
-void TestCaseMutator::FlipBytes(uint8_t* buffer, size_t size, size_t width) {
-  auto offset = _rnd.Next<size_t>(0, size - width);
-  switch (width) {
-    case 1:
-      buffer[offset] ^= 0xff;
-      break;
-    case 2:
-      *reinterpret_cast<uint16_t *>(buffer + offset) ^= 0xffff;
-      break;
-    case 4:
-      *reinterpret_cast<uint32_t *>(buffer + offset) ^= 0xffffffff;
-      break;
-    default:
-      CAF_UNREACHABLE;
-  }
-}
-
-void TestCaseMutator::Arith(uint8_t* buffer, size_t size, size_t width) {
-  auto offset = _rnd.Next<size_t>(0, size - width);
-  // TODO: Add code here to allow user modify the maximal absolute value of arithmetic delta.
-  auto delta = _rnd.Next(-35, 35);
-  switch (width) {
-    case 1:
-      *reinterpret_cast<int8_t *>(buffer + offset) += static_cast<int8_t>(delta);
-      break;
-    case 2:
-      *reinterpret_cast<int16_t *>(buffer + offset) += static_cast<int16_t>(delta);
-      break;
-    case 4:
-      *reinterpret_cast<int32_t *>(buffer + offset) += static_cast<int32_t>(delta);
-      break;
-    default:
-      CAF_UNREACHABLE;
-  }
-}
-
-Value* TestCaseMutator::MutateBitsValue(const BitsValue* value) {
-  auto objectPool = value->pool();
-  auto mutated = objectPool->CreateValue<BitsValue>(*value);
-
-  enum BitsValueMutationStrategy : int {
-    BitFlip1,
-    BitFlip2,
-    BitFlip4,
-    ByteFlip1,
-    ByteFlip2,
-    ByteFlip4,
-    ByteArith,
-    WordArith,
-    DWordArith,
-    _MutationStrategyMax = DWordArith
-  };
-
-  std::vector<BitsValueMutationStrategy> valid {
-    BitFlip1,
-    BitFlip2,
-    BitFlip4,
-    ByteFlip1,
-    ByteArith
-  };
-  if (value->size() >= 2) {
-    valid.push_back(ByteFlip2);
-    valid.push_back(WordArith);
-  }
-  if (value->size() >= 4) {
-    valid.push_back(ByteFlip4);
-    valid.push_back(DWordArith);
-  }
-
-  auto strategy = _rnd.Select(valid);
-  switch (strategy) {
-    case BitFlip1: {
-      FlipBits(mutated->data(), mutated->size(), 1);
-      break;
-    }
-    case BitFlip2: {
-      FlipBits(mutated->data(), mutated->size(), 2);
-      break;
-    }
-    case BitFlip4: {
-      FlipBits(mutated->data(), mutated->size(), 4);
-      break;
-    }
-    case ByteFlip1: {
-      FlipBytes(mutated->data(), mutated->size(), 1);
-      break;
-    }
-    case ByteFlip2: {
-      FlipBytes(mutated->data(), mutated->size(), 2);
-      break;
-    }
-    case ByteFlip4: {
-      FlipBytes(mutated->data(), mutated->size(), 4);
-      break;
-    }
-    case ByteArith: {
-      Arith(mutated->data(), mutated->size(), 1);
-      break;
-    }
-    case WordArith: {
-      Arith(mutated->data(), mutated->size(), 2);
-      break;
-    }
-    case DWordArith: {
-      Arith(mutated->data(), mutated->size(), 4);
-      break;
-    }
-    default: CAF_UNREACHABLE;
-  }
-
-  return mutated;
-}
-
-Value* TestCaseMutator::MutatePointerValue(const PointerValue* value, MutationContext& context) {
-  auto objectPool = value->pool();
-  if (_rnd.WithProbability(0.2)) {
-    // Mutate to a null pointer.
-    return objectPool->GetOrCreateNullPointerValue(value->type());
-  }
-
-  auto mutatedPointee = MutateValue(value->pointee(), context);
-  return objectPool->CreateValue<PointerValue>(objectPool, mutatedPointee,
-      caf::dyn_cast<PointerType>(value->type()));
-}
-
-Value* TestCaseMutator::MutateFunctionValue(const FunctionValue* value) {
-  auto objectPool = value->pool();
-  if (_rnd.WithProbability(0.5)) {
-    return objectPool->CreateValue<FunctionValue>(*value);
-  }
-
-  auto store = _corpus->store();
-  auto functionType = caf::dyn_cast<FunctionType>(value->type());
-  auto candidates = store->GetCallbackFunctions(functionType->signatureId());
-  assert(candidates && "No callback function candidates viable.");
-
-  auto funcId = _rnd.Select(*candidates);
-  return objectPool->CreateValue<FunctionValue>(objectPool, funcId, functionType);
-}
-
-Value* TestCaseMutator::MutateArrayValue(const ArrayValue* value, MutationContext& context) {
-  auto elementIndex = _rnd.Index(value->elements());
-  auto mutatedElement = MutateValue(value->elements()[elementIndex], context);
-
-  auto objectPool = value->pool();
-  auto mutated = objectPool->CreateValue<ArrayValue>(*value);
-  mutated->SetElement(elementIndex, mutatedElement);
-
-  return mutated;
-}
-
-Value* TestCaseMutator::MutateStructValue(const StructValue* value, MutationContext& context) {
-  enum StructValueMutationStrategy : int {
-    MutateConstructor,
-    MutateArgument,
-    _StrategyMax = MutateArgument
-  };
-
-  auto strategy = MutateConstructor;
-  if (!value->args().empty()) {
-    strategy = static_cast<StructValueMutationStrategy>(
-        _rnd.Next(0, static_cast<int>(_StrategyMax)));
-  }
-
-  switch (strategy) {
-    case MutateConstructor: {
-      return _valueGen.GenerateNewStructType(dynamic_cast<const StructType *>(value->type()));
-    }
-    case MutateArgument: {
-      auto argIndex = _rnd.Index(value->args());
-      auto mutatedArg = MutateValue(value->args()[argIndex], context);
-      auto objectPool = value->pool();
-      auto mutated = objectPool->CreateValue<StructValue>(*value);
-      mutated->SetArg(argIndex, mutatedArg);
-      return mutated;
-    }
-    default: CAF_UNREACHABLE;
-  }
-}
-
-Value* TestCaseMutator::MutatePlaceholderValue(
-    const PlaceholderValue* value, MutationContext& context) {
-  auto tc = context.testCase();
-  auto pool = value->pool();
-
-  if (_rnd.WithProbability(0.5)) {
-    // Noop.
-    return pool->CreateValue<PlaceholderValue>(*value);
-  }
-
-  // Generate a Value of the corresponding type to the placeholder.
-  return _valueGen.GenerateValue(value->type());
-}
-
-Value* TestCaseMutator::MutateAggregateValue(
-    const AggregateValue* value, MutationContext& context) {
-  auto tc = context.testCase();
-  auto pool = value->pool();
-
-  auto type = caf::dyn_cast<AggregateType>(value->type());
-  if (type->GetFieldsCount() == 0) {
-    return pool->CreateValue<AggregateValue>(*value);
-  }
-
-  // Choose a field to mutate.
-  auto fieldIndex = _rnd.Index(type->fields());
-  auto fieldType = type->GetField(fieldIndex).get();
-  auto fieldValue = _valueGen.GenerateNewValue(fieldType);
-
-  auto newValue = pool->CreateValue<AggregateValue>(pool, type);
-  for (size_t i = 0; i < fieldIndex; ++i) {
-    newValue->AddField(value->GetField(i));
-  }
-  newValue->AddField(fieldValue);
-  for (size_t i = fieldIndex + 1; i < type->GetFieldsCount(); ++i) {
-    newValue->AddField(value->GetField(i));
-  }
-
-  return newValue;
-};
-
-Value* TestCaseMutator::MutateValue(const Value* value, MutationContext& context) {
-  switch (value->kind()) {
-    case ValueKind::BitsValue: {
-      return MutateBitsValue(caf::dyn_cast<BitsValue>(value));
-    }
-    case ValueKind::PointerValue: {
-      return MutatePointerValue(caf::dyn_cast<PointerValue>(value), context);
-    }
-    case ValueKind::FunctionValue: {
-      return MutateFunctionValue(caf::dyn_cast<FunctionValue>(value));
-    }
-    case ValueKind::ArrayValue: {
-      return MutateArrayValue(caf::dyn_cast<ArrayValue>(value), context);
-    }
-    case ValueKind::StructValue: {
-      return MutateStructValue(caf::dyn_cast<StructValue>(value), context);
-    }
-    case ValueKind::PlaceholderValue: {
-      return MutatePlaceholderValue(caf::dyn_cast<PlaceholderValue>(value), context);
-    }
-    default: CAF_UNREACHABLE;
-  }
-}
-
-CAFCorpusTestCaseRef TestCaseMutator::MutateArgument(MutationContext& context) {
-  auto previous = context.testCase();
-  auto functionCallIndex = _rnd.Index(previous->calls());
-  auto mutated = _corpus->CreateTestCase();
-  for (size_t i = 0; i < functionCallIndex; ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
-  }
-
-  auto targetCall = previous->calls()[functionCallIndex];
-  if (targetCall.args().empty()) {
-    // TODO: Handle this case when the selected function call does not have any arguments.
-    return previous;
+TestCaseRef TestCaseMutator::MutateThis(TestCaseRef testCase) {
+  auto tc = _corpus.DuplicateTestCase(testCase);
+  // Choose a function call.
+  auto& call = tc->SelectFunctionCall(_rnd);
+  if (call.HasThis()) {
+    auto thisValue = call.GetThis();
+    call.SetThis(Mutate(thisValue));
   } else {
-    auto argIndex = _rnd.Index(targetCall.args());
+    call.SetThis(_gen.GenerateValue());
+  }
+  return tc;
+}
 
-    // With a probability of 0.1, we generate a new value for the argument.
-    if (_rnd.WithProbability(0.1)) {
-      auto value = _valueGen.GenerateValueOrPlaceholder(
-          previous.get(), functionCallIndex, argIndex);
-      targetCall.SetArg(argIndex, value);
-    } else {
-      // Mutate existing value.
-      auto value = targetCall.args()[argIndex];
-      value = MutateValue(value, context);
-      targetCall.SetArg(argIndex, value);
+TestCaseRef TestCaseMutator::AddArgument(TestCaseRef testCase) {
+  auto tc = _corpus.DuplicateTestCase(testCase);
+
+  // Collect all function calls that can accept an additional argument.
+  std::vector<size_t> candidates;
+  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
+    const auto& call = tc->GetFunctionCall(i);
+    if (call.GetArgsCount() < options().MaxArguments) {
+      candidates.push_back(i);
     }
   }
 
-  for (size_t i = functionCallIndex + 1; i < previous->calls().size(); ++i) {
-    mutated->AddFunctionCall(previous->calls()[i]);
+  assert(!candidates.empty() && "No candidate function call viable to add additional argument.");
+  auto callIndex = _rnd.Select(candidates);
+  auto& call = testCase->GetFunctionCall(callIndex);
+  call.PushArg(_gen.GenerateValue());
+
+  return tc;
+}
+
+TestCaseRef TestCaseMutator::RemoveArgument(TestCaseRef testCase) {
+  auto tc = _corpus.DuplicateTestCase(testCase);
+
+  // Collect all function calls that can remove an argument.
+  std::vector<size_t> candidates;
+  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
+    const auto& call = tc->GetFunctionCall(i);
+    if (call.GetArgsCount() > 0) {
+      candidates.push_back(i);
+    }
   }
 
-  return mutated;
+  assert(!candidates.empty() && "No candidate function call viable to remove argument.");
+  auto callIndex = _rnd.Select(candidates);
+  auto& call = tc->GetFunctionCall(callIndex);
+
+  auto removeIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
+  call.RemoveArg(removeIndex);
+
+  return tc;
+}
+
+TestCaseRef TestCaseMutator::MutateArgument(TestCaseRef testCase) {
+  auto tc = _corpus.DuplicateTestCase(testCase);
+
+  // Collect all function calls that can mutate an argument.
+  std::vector<size_t> candidates;
+  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
+    const auto& call = tc->GetFunctionCall(i);
+    if (call.GetArgsCount() > 0) {
+      candidates.push_back(i);
+    }
+  }
+
+  assert(!candidates.empty() && "No candidate function call viable to mutate argument.");
+  auto callIndex = _rnd.Select(candidates);
+  auto& call = tc->GetFunctionCall(callIndex);
+
+  auto mutateIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
+  call.SetArg(mutateIndex, Mutate(call.GetArg(mutateIndex)));
+
+  return tc;
+}
+
+Value* TestCaseMutator::Mutate(Value* value, int depth) {
+  if (depth > options().MaxDepth || _rnd.WithProbability(GENERATE_NEW_VALUE_PROB)) {
+    return _gen.GenerateValue();
+  }
+
+  switch (value->kind()) {
+    case ValueKind::Undefined:
+    case ValueKind::Null:
+    case ValueKind::Function:
+      return _gen.GenerateValue();
+    default:
+      CAF_NO_OP;
+  }
+
+  if (_rnd.WithProbability(MUTATE_TYPE_PROB)) {
+    return _gen.GenerateValue();
+  }
+
+  auto& pool = _corpus.pool();
+  switch (value->kind()) {
+    case ValueKind::Undefined:
+    case ValueKind::Null:
+    case ValueKind::Function:
+      CAF_UNREACHABLE;
+    case ValueKind::Boolean:
+      return pool.GetBooleanValue(!value->GetBooleanValue());
+    case ValueKind::String:
+      return MutateString(caf::dyn_cast<StringValue>(value));
+    case ValueKind::Integer:
+      return MutateInteger(caf::dyn_cast<IntegerValue>(value));
+    case ValueKind::Float:
+      return MutateFloat(caf::dyn_cast<FloatValue>(value));
+    case ValueKind::Array:
+      return MutateArray(caf::dyn_cast<ArrayValue>(value), depth);
+    case ValueKind::Placeholder:
+      return _gen.GenerateValue();
+    default:
+      CAF_UNREACHABLE;
+  }
+
+  return nullptr; // Make compiler happy
+}
+
+StringValue* TestCaseMutator::MutateString(StringValue* value) {
+  using StringMutator = StringValue* (TestCaseMutator::*)(StringValue *);
+  StringMutator mutators[3];
+  StringMutator* head = mutators;
+
+  // Can we mutate the string by `InsertCharacter`?
+  if (value->length() < options().MaxStringLength) {
+    *head++ = &TestCaseMutator::InsertCharacter;
+  }
+
+  // Can we mutate the string by `RemoveCharacter`?
+  if (value->length() > 0) {
+    *head++ = &TestCaseMutator::RemoveCharacter;
+  }
+
+  // Can we mutate the string by `ChangeCharacter`?
+  if (value->length() > 0) {
+    *head++ = &TestCaseMutator::ChangeCharacter;
+  }
+
+  assert(head != mutators && "No viable string value mutators.");
+  auto mutator = _rnd.Select(mutators, head);
+  return (this->*mutator)(value);
+}
+
+StringValue* TestCaseMutator::InsertCharacter(StringValue* value) {
+  auto s = value->value();
+  auto pos = _rnd.Next<size_t>(0, s.length());
+  auto ch = _gen.GenerateStringCharacter();
+  s.insert(pos, 1, ch);
+  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+}
+
+StringValue* TestCaseMutator::RemoveCharacter(StringValue* value) {
+  auto s = value->value();
+  auto pos = _rnd.Index(s);
+  s.erase(pos, 1);
+  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+}
+
+StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
+  auto s = value->value();
+  auto pos = _rnd.Index(s);
+  auto ch = _gen.GenerateStringCharacter();
+  s[pos] = ch;
+  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+}
+
+IntegerValue* TestCaseMutator::MutateInteger(IntegerValue* value) {
+  using IntegerMutator = IntegerValue* (TestCaseMutator::*)(IntegerValue *);
+  constexpr static const IntegerMutator mutators[] = {
+    &TestCaseMutator::Increment,
+    &TestCaseMutator::Negate,
+    &TestCaseMutator::Bitflip
+  };
+  auto mutator = _rnd.Select(mutators);
+  return (this->*mutator)(value);
+}
+
+IntegerValue* TestCaseMutator::Increment(IntegerValue* value) {
+  auto inc = _rnd.Next<int32_t>(INTEGER_MIN_INCREMENT, INTEGER_MAX_INCREMENT);
+  auto newValue = static_cast<int32_t>(
+      static_cast<uint32_t>(value->value()) + static_cast<uint32_t>(inc));
+  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+}
+
+IntegerValue* TestCaseMutator::Negate(IntegerValue* value) {
+  auto newValue = -value->value();
+  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+}
+
+IntegerValue* TestCaseMutator::Bitflip(IntegerValue* value) {
+  constexpr static const size_t MaskLengths[] = { 1, 2, 4, 8, 16, 32 };
+  auto maskLen = _rnd.Select(MaskLengths);
+  auto startOffset = _rnd.Next<size_t>(0, IntegerValue::BitLength - maskLen);
+  auto newValue = value->value() ^ (((1 << maskLen) - 1) << startOffset);
+  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+}
+
+FloatValue* TestCaseMutator::MutateFloat(FloatValue* value) {
+  if (std::isnan(value->value())) {
+    return value;
+  }
+
+  using FloatMutator = FloatValue* (TestCaseMutator::*)(FloatValue *);
+  constexpr static const FloatMutator mutators[2] = {
+    &TestCaseMutator::Increment,
+    &TestCaseMutator::Negate
+  };
+  auto mutator = _rnd.Select(mutators);
+  return (this->*mutator)(value);
+}
+
+FloatValue* TestCaseMutator::Increment(FloatValue* value) {
+  auto inc = _rnd.Next(FLOAT_MIN_INCREMENT, FLOAT_MAX_INCREMENT);
+  auto newValue = value->value() + inc;
+  return _corpus.pool().GetOrCreateFloatValue(newValue);
+}
+
+FloatValue* TestCaseMutator::Negate(FloatValue* value) {
+  auto newValue = -value->value();
+  return _corpus.pool().GetOrCreateFloatValue(newValue);
+}
+
+ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, int depth) {
+  using ArrayMutator = ArrayValue* (TestCaseMutator::*)(ArrayValue *, int);
+  ArrayMutator mutators[3];
+  ArrayMutator *head = mutators;
+
+  // Can we mutate the value using `PushElement`?
+  if (value->size() < options().MaxArrayLength) {
+    *head++ = &TestCaseMutator::PushElement;
+  }
+
+  // Can we mutate the value using `RemoveElement`?
+  if (value->size() > 0) {
+    *head++ = &TestCaseMutator::RemoveElement;
+  }
+
+  // Can we mutate the value using `MutateElement`?
+  if (value->size() > 0) {
+    *head++ = &TestCaseMutator::MutateElement;
+  }
+
+  assert(head != mutators && "No viable array mutators.");
+  auto mutator = _rnd.Select(mutators, head);
+  return (this->*mutator)(value, depth);
+}
+
+ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, int) {
+  auto element = _gen.GenerateValue();
+  auto newValue = _corpus.pool().CreateArrayValue();
+  newValue->reserve(value->size() + 1);
+  for (size_t i = 0; i < value->size(); ++i) {
+    newValue->Push(value->GetElement(i));
+  }
+  newValue->Push(element);
+  return newValue;
+}
+
+ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, int) {
+  auto pos = _rnd.Next<size_t>(0, value->size() - 1);
+  auto newValue = _corpus.pool().CreateArrayValue();
+  newValue->reserve(value->size() - 1);
+  for (size_t i = 0; i < pos; ++i) {
+    newValue->Push(value->GetElement(i));
+  }
+  for (size_t i = pos + 1; i < value->size(); ++i) {
+    newValue->Push(value->GetElement(i));
+  }
+  return newValue;
+}
+
+ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, int depth) {
+  auto pos = _rnd.Next<size_t>(0, value->size());
+  auto mutatedElement = Mutate(value->GetElement(pos), depth + 1);
+  auto newValue = _corpus.pool().CreateArrayValue();
+  newValue->reserve(value->size());
+  for (size_t i = 0; i < pos; ++i) {
+    newValue->Push(value->GetElement(i));
+  }
+  newValue->Push(mutatedElement);
+  for (size_t i = pos + 1; i < value->size(); ++i) {
+    newValue->Push(value->GetElement(i));
+  }
+  return newValue;
 }
 
 } // namespace caf

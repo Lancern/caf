@@ -1,102 +1,258 @@
 #ifndef CAF_TEST_CASE_MUTATOR_H
 #define CAF_TEST_CASE_MUTATOR_H
 
-#include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Random.h"
-#include "Fuzzer/Corpus.h"
 #include "Fuzzer/TestCaseGenerator.h"
 
 namespace caf {
 
-class BitsValue;
-class PointerValue;
-class FunctionValue;
-class ArrayValue;
-class StructValue;
-class PlaceholderValue;
+class Corpus;
+class TestCaseRef;
+class TestCase;
+class Value;
 
 /**
- * @brief Provide mutation strategy for test cases.
+ * @brief Test case mutator.
  *
  */
 class TestCaseMutator {
 public:
+  using Options = TestCaseGenerator::Options;
+
   /**
    * @brief Construct a new TestCaseMutator object.
    *
-   * @param corpus test corpus.
-   * @param rnd random number generator to use.
+   * @param corpus the test case corpus.
+   * @param rnd the random number generator.
    */
-  explicit TestCaseMutator(CAFCorpus* corpus, Random<>& rnd)
+  explicit TestCaseMutator(Corpus& corpus, Random<>& rnd)
     : _corpus(corpus),
       _rnd(rnd),
-      _valueGen { corpus, rnd }
+      _gen(corpus, rnd)
   { }
 
-  /**
-   * @brief Get the corpus.
-   *
-   * @return CAFCorpus* pointer to the corpus.
-   */
-  CAFCorpus* corpus() const { return _corpus; }
+  TestCaseMutator(const TestCaseMutator &) = delete;
+  TestCaseMutator(TestCaseMutator &&) noexcept = default;
 
   /**
-   * @brief Mutate the given test case and produce a new one.
+   * @brief Get the options.
    *
-   * @param corpus the corpus of test cases.
-   * @return TestCase the mutated test case.
+   * @return Options& the options.
    */
-  CAFCorpusTestCaseRef Mutate(CAFCorpusTestCaseRef testCase);
+  Options& options() { return _gen.options(); }
+
+  /**
+   * @brief Get the options.
+   *
+   * @return const Options& the options.
+   */
+  const Options& options() const { return _gen.options(); }
+
+  /**
+   * @brief Mutate the given test case.
+   *
+   * @param testCase the test case to mutate.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef Mutate(TestCaseRef testCase);
 
 private:
-  class MutationContext;
-
-  CAFCorpus* _corpus;
+  Corpus& _corpus;
   Random<>& _rnd;
-  TestCaseGenerator _valueGen;
+  TestCaseGenerator _gen;
 
-  CAFCorpusTestCaseRef Splice(MutationContext& context);
+  /**
+   * @brief Mutate the given test case by adding a function call to the tail of the function call
+   * sequence.
+   *
+   * @param testCase the test case to mutate.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef AddFunctionCall(TestCaseRef testCase);
 
-  CAFCorpusTestCaseRef InsertCall(MutationContext& context);
+  /**
+   * @brief Mutate the given test case by removing a function call from the function call sequence.
+   *
+   * @param testCase the test case to mutate.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef RemoveFunctionCall(TestCaseRef testCase);
 
-  CAFCorpusTestCaseRef RemoveCall(MutationContext& context);
+  /**
+   * @brief Mutate the given test case by splicing it with a randomly chosen test case from the
+   * corpus.
+   *
+   * @param testCase the test case to mutate.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef Splice(TestCaseRef testCase);
 
-  CAFCorpusTestCaseRef MutateSequence(MutationContext& context);
+  /**
+   * @brief Mutate the given test case by choosing a function call and mutating `this` object of
+   * the function call.
+   *
+   * @param testCase the test case to mutate.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef MutateThis(TestCaseRef testCase);
 
-  void FixPlaceholderValuesAfterSequenceMutation(CAFCorpusTestCaseRef tc);
+  /**
+   * @brief Mutate the given test case by choosing a function call and add an argument to the
+   * function call.
+   *
+   * @param testCase the test case.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef AddArgument(TestCaseRef testCase);
 
-  void FlipBits(uint8_t* buffer, size_t size, size_t width);
+  /**
+   * @brief Mutate the given test case by choosing a function call and remove an argument to the
+   * function call.
+   *
+   * @param testCase test case.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef RemoveArgument(TestCaseRef testCase);
 
-  void FlipBytes(uint8_t* buffer, size_t size, size_t width);
-
-  void Arith(uint8_t* buffer, size_t size, size_t width);
-
-  Value* MutateBitsValue(const BitsValue* value);
-
-  Value* MutatePointerValue(const PointerValue* value, MutationContext& context);
-
-  Value* MutateFunctionValue(const FunctionValue* value);
-
-  Value* MutateArrayValue(const ArrayValue* value, MutationContext& context);
-
-  Value* MutateStructValue(const StructValue* value, MutationContext& context);
-
-  Value* MutateAggregateValue(const AggregateValue* value, MutationContext& context);
-
-  Value* MutatePlaceholderValue(const PlaceholderValue* value, MutationContext& context);
+  /**
+   * @brief Mutate the given test case by choosing a function call and mutate an argument of it.
+   *
+   * @param testCase the test case.
+   * @return TestCaseRef the mutated test case.
+   */
+  TestCaseRef MutateArgument(TestCaseRef testCase);
 
   /**
    * @brief Mutate the given value.
    *
-   * @param value the value to be mutated.
-   * @param context the mutation context.
-   * @return Value* pointer to the mutated value.
+   * @param value the value to mutate.
+   * @param depth the current depth.
+   * @return Value* the mutated value.
    */
-  Value* MutateValue(const Value* value, MutationContext& context);
+  Value* Mutate(Value* value, int depth = 1);
 
-  CAFCorpusTestCaseRef MutateArgument(MutationContext& context);
+  /**
+   * @brief Mutate the given string value.
+   *
+   * @param value the string value to mutate.
+   * @return StringValue* the mutated string value.
+   */
+  StringValue* MutateString(StringValue* value);
+
+  /**
+   * @brief Mutate the given string value by inserting a character into the string.
+   *
+   * @param value the string value to mutate.
+   * @return StringValue* the mutated string value.
+   */
+  StringValue* InsertCharacter(StringValue* value);
+
+  /**
+   * @brief Mutate the given string value by removing a character from the string.
+   *
+   * @param value the string value to mutate.
+   * @return StringValue* the mutated string value.
+   */
+  StringValue* RemoveCharacter(StringValue* value);
+
+  /**
+   * @brief Mutate the given string value by changing a character in the string.
+   *
+   * @param value the string value to mutate.
+   * @return StringValue* the mutated string value.
+   */
+  StringValue* ChangeCharacter(StringValue* value);
+
+  /**
+   * @brief Mutate the given integer value.
+   *
+   * @param value the integer value to mutate.
+   * @return IntegerValue* the mutated integer value.
+   */
+  IntegerValue* MutateInteger(IntegerValue* value);
+
+  /**
+   * @brief Mutate the given integer value by incrementing it with a random value.
+   *
+   * @param value the integer value to mutate.
+   * @return IntegerValue* the mutated integer value.
+   */
+  IntegerValue* Increment(IntegerValue* value);
+
+  /**
+   * @brief Mutate the given integer value by negating its value.
+   *
+   * @param value the integer value to mutate.
+   * @return IntegerValue* the mutated integer value.
+   */
+  IntegerValue* Negate(IntegerValue* value);
+
+  /**
+   * @brief Mutate the given integer value by performing AFL's bitflip operation.
+   *
+   * @param value the integer value to mutate.
+   * @return IntegerValue* the mutated integer value.
+   */
+  IntegerValue* Bitflip(IntegerValue* value);
+
+  /**
+   * @brief Mutate the given floating point value.
+   *
+   * @param value the floating point value to mutate.
+   * @return FloatValue* the mutated floating point value.
+   */
+  FloatValue* MutateFloat(FloatValue* value);
+
+  /**
+   * @brief Mutate the given floating point value by incrementing it with a random value.
+   *
+   * @param value the floating point value to mutate.
+   * @return FloatValue* the mutated floating point value.
+   */
+  FloatValue* Increment(FloatValue* value);
+
+  /**
+   * @brief Mutate the given floating point value by negating it.
+   *
+   * @param value the floating point value to mutate.
+   * @return FloatValue* the mutated floating point value.
+   */
+  FloatValue* Negate(FloatValue* value);
+
+  /**
+   * @brief Mutate the given array value.
+   *
+   * @param value the array value to mutate.
+   * @param depth the current depth.
+   * @return ArrayValue* the mutated array value.
+   */
+  ArrayValue* MutateArray(ArrayValue* value, int depth);
+
+  /**
+   * @brief Mutate the given array value by adding a new element to the back.
+   *
+   * @param value the array value to mutate.
+   * @return ArrayValue* the mutated array value.
+   */
+  ArrayValue* PushElement(ArrayValue* value, int);
+
+  /**
+   * @brief Mutate the given array value by removing an element.
+   *
+   * @param value the array value to mutate.
+   * @return ArrayValue* the mutated array value.
+   */
+  ArrayValue* RemoveElement(ArrayValue* value, int);
+
+  /**
+   * @brief Mutate the given array value by mutating an element.
+   *
+   * @param value the array value to mutate.
+   * @param depth the current depth.
+   * @return ArrayValue* the mutated array value.
+   */
+  ArrayValue* MutateElement(ArrayValue* value, int depth);
 }; // class TestCaseMutator
-
 
 } // namespace caf
 

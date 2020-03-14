@@ -1,83 +1,17 @@
 #ifndef CAF_FUNCTION_H
 #define CAF_FUNCTION_H
 
-#include <vector>
-
-#include "Infrastructure/Hash.h"
-#include "Basic/CAFStore.h"
-
 #include "json/json.hpp"
+
+#include <string>
 
 namespace caf {
 
-class CAFStore;
-class Type;
-
 /**
- * @brief Represents signature of a function-like object.
+ * @brief Type of API function IDs.
  *
  */
-class FunctionSignature {
-public:
-  /**
-   * @brief Construct a new FunctionSignature object.
-   *
-   * @param returnType the return type of the function.
-   * @param args the types of arguments of the function.
-   */
-  explicit FunctionSignature(CAFStoreRef<Type> returnType, std::vector<CAFStoreRef<Type>> args)
-    : _returnType(returnType),
-      _args(std::move(args))
-  { }
-
-  /**
-   * @brief Construct a new FunctionSignature object.
-   *
-   */
-  explicit FunctionSignature()
-    : _returnType { },
-      _args { }
-  { }
-
-  FunctionSignature(const FunctionSignature &) = delete;
-  FunctionSignature(FunctionSignature &&) noexcept = default;
-
-  FunctionSignature& operator=(const FunctionSignature &) = delete;
-  FunctionSignature& operator=(FunctionSignature &&) noexcept = default;
-
-  /**
-   * @brief Get the return type of the function.
-   *
-   * @return CAFStoreRef<Type> the return type of the function.
-   */
-  CAFStoreRef<Type> returnType() const { return _returnType; }
-
-  /**
-   * @brief Get the types of arguments of the function.
-   *
-   * @return const std::vector<CAFStoreRef<Type>> & type of arguments of the function.
-   */
-  const std::vector<CAFStoreRef<Type>>& args() const { return _args; }
-
-  /**
-   * @brief Get the number of arguments.
-   *
-   * @return size_t the number of arguments.
-   */
-  size_t GetArgCount() const { return _args.size(); }
-
-  /**
-   * @brief Get the type of the argument at the given index.
-   *
-   * @param index the index of the argument.
-   * @return CAFStoreRef<Type> the type of the argument.
-   */
-  CAFStoreRef<Type> GetArgType(size_t index) const { return _args[index]; }
-
-private:
-  CAFStoreRef<Type> _returnType;
-  std::vector<CAFStoreRef<Type>> _args;
-};
+using FunctionIdType = uint32_t;
 
 /**
  * @brief Represent an API function.
@@ -88,59 +22,51 @@ public:
   /**
    * @brief Construct a new Function object.
    *
-   * @param store the store holding the Function object.
-   * @param name the name of the function.
-   * @param signature the signature of the function.
-   * @param id the ID of the function.
+   * @param id ID of the function.
+   * @param name name of the function.
    */
-  explicit Function(CAFStore* store, std::string name, FunctionSignature signature, uint64_t id)
-    : _store(store),
-      _id(id),
-      _name(std::move(name)),
-      _signature(std::move(signature))
+  explicit Function(uint64_t id, std::string name)
+    : _id(id), _name(std::move(name))
   { }
 
-  /**
-   * @brief Get the @see CAFStore owning this object.
-   *
-   * @return CAFStore* the @see CAFStore object owning this object.
-   */
-  CAFStore* store() const { return _store; }
+  Function(const Function &) = delete;
+  Function(Function &&) noexcept = default;
+
+  Function& operator=(const Function &) = delete;
+  Function& operator=(Function &&) = default;
 
   /**
-   * @brief Get the ID of this API function.
+   * @brief Deserialize a Function object from the given JSON container.
    *
-   * @return uint64_t ID of this API function.
+   * @param json the JSON container.
    */
-  uint64_t id() const { return _id; }
+  explicit Function(const nlohmann::json& json);
 
   /**
-   * @brief Set ID of this function.
+   * @brief Get the ID of this function.
    *
-   * @param id new ID of this function.
+   * @return FunctionIdType ID of this function.
    */
-  void SetId(uint64_t id) { _id = id; }
+  FunctionIdType id() const { return _id; }
 
   /**
-   * @brief Get the name of the function.
+   * @brief Get the name of this function.
    *
-   * @return const std::string& name of the function.
+   * @return const std::string& name of this function.
    */
   const std::string& name() const { return _name; }
 
   /**
-   * @brief Get the signature of this function.
+   * @brief Serialize this Function object into JSON form.
    *
-   * @return const FunctionSignature& signature of this function.
+   * @return nlohmann::json the JSON form of this Function object.
    */
-  const FunctionSignature& signature() const { return _signature; }
+  nlohmann::json ToJson() const;
 
 private:
-  CAFStore* _store;
-  uint64_t _id;
+  FunctionIdType _id;
   std::string _name;
-  FunctionSignature _signature;
-};
+}; // class Function
 
 } // namespace caf
 

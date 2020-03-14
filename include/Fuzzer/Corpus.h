@@ -1,209 +1,189 @@
 #ifndef CAF_CORPUS_H
 #define CAF_CORPUS_H
 
-#include "Infrastructure/Memory.h"
 #include "Infrastructure/Random.h"
-#include "Fuzzer/ObjectPool.h"
 #include "Fuzzer/TestCase.h"
+#include "Fuzzer/ObjectPool.h"
 
-#include <memory>
+#include <cassert>
+#include <utility>
 #include <vector>
-#include <unordered_map>
 
 namespace caf {
 
 class CAFStore;
-class CAFCorpus;
+class Corpus;
 
 /**
- * @brief Provide a smart pointer type that references to a test case owned by a `CAFCorpus`
- * instance.
+ * @brief A reference to a test case managed by a corpus.
  *
  */
-class CAFCorpusTestCaseRef {
+class TestCaseRef {
 public:
   /**
-   * @brief Construct a new CAFCorpusTestCaseRef object that represents an empty reference.
+   * @brief Construct a new TestCaseRef object that represents an empty reference.
    *
    */
-  explicit CAFCorpusTestCaseRef()
+  explicit TestCaseRef()
     : _corpus(nullptr),
       _index(0)
   { }
 
   /**
-   * @brief Construct a new CAFCorpusTestCaseRef object.
+   * @brief Construct a new TestCaseRef object.
    *
-   * @param corpus the corpus owning the referenced `TestCase` object.
-   * @param index the index of the @see TestCase object inside the corpus.
+   * @param corpus the corpus.
+   * @param index the index of the test case in the corpus.
    */
-  explicit CAFCorpusTestCaseRef(CAFCorpus* corpus, size_t index)
+  explicit TestCaseRef(Corpus* corpus, size_t index)
     : _corpus(corpus),
       _index(index)
   { }
 
   /**
-   * @brief Get the corpus instance owning the test case.
+   * @brief Determine whether the reference is empty.
    *
-   * @return CAFCorpus* the corpus instance owning the test case.
+   * @return true if the reference is empty.
+   * @return false if the reference is not empty.
    */
-  CAFCorpus* corpus() const { return _corpus; }
+  bool empty() const { return _corpus != nullptr; }
+
+  operator bool() const { return empty(); }
 
   /**
-   * @brief Get the index of the referenced `TestCase` instance inside the corpus.
+   * @brief Get the index of the referenced test case inside the corpus.
    *
-   * @return index_type the index of the referenced `TestCase` instance.
+   * @return size_t the index.
    */
-  size_t index() const { return _index; }
+  size_t index() const {
+    assert(!empty() && "Trying to dereference an empty TestCaseRef.");
+    return _index;
+  }
 
   /**
-   * @brief Determine whether this reference is valid, a.k.a. it actually references to a valid
-   * object.
+   * @brief Get a pointer to the referenced test case.
    *
-   * @return true if this reference is valid.
-   * @return false if this reference is not valid.
-   */
-  bool valid() const { return static_cast<bool>(_corpus); }
-
-  operator bool() const { return valid(); }
-
-  TestCase& operator*() const { return *get(); }
-
-  TestCase* operator->() const { return get(); }
-
-  /**
-   * @brief Get a raw pointer to the actual @see TestCase object pointed-to by this
-   * @see CAFCorpusTestCaseRef object.
-   *
-   * @return TestCase*
+   * @return TestCase* a pointer to the referenced test case.
    */
   inline TestCase* get() const;
 
+  TestCase& operator*() const {
+    assert(!empty() && "Trying to dereference an empty TestCaseRef.");
+    return *get();
+  }
+
+  TestCase* operator->() const {
+    assert(!empty() && "Trying to dereference an empty TestCaseRef.");
+    return get();
+  }
+
 private:
-  CAFCorpus* _corpus;
+  Corpus* _corpus;
   size_t _index;
 };
 
 /**
- * @brief Corpus of the fuzzer. This is the top-level object maintained in the fuzzer server.
- *
- * Instance of corpus contains two parts: a @see CAFStore object and a bunch of @see CAFObjectPool
- * objects. Each @see CAFObjectPool object is associated with the ID of the type of the objects
- * contained in that @see CAFObjtecPool.
+ * @brief Test case corpus.
  *
  */
-class CAFCorpus {
+class Corpus {
 public:
   /**
-   * @brief Construct a new CAFCorpus object.
+   * @brief Construct a new Corpus object.
    *
-   * @param store the `CAFStore` instance containing metadata about the target program's type
-   * information.
+   * @param store the metadata store.
    */
-  explicit CAFCorpus(std::unique_ptr<CAFStore> store)
-    : _store(std::move(store)),
-      _pools { }
-  { }
+  explicit Corpus(std::unique_ptr<CAFStore> store);
 
-  ~CAFCorpus();
+  Corpus(const Corpus &) = delete;
+  Corpus(Corpus &&) noexcept;
+
+  Corpus& operator=(const Corpus &) = delete;
+  Corpus& operator=(Corpus &&);
+
+  ~Corpus();
 
   /**
-   * @brief Get the @see CAFStore instance containing type information and API information in the
-   * target program.
+   * @brief Get the metadata store.
    *
-   * @return CAFStore* the @see CAFStore instance containing type information and API information in
-   * the target program.
+   * @return CAFStore* the metadata store.
    */
   CAFStore* store() const { return _store.get(); }
 
   /**
-   * @brief Get a list of test cases contained in the corpus.
+   * @brief Get the object pool contained in this corpus.
    *
-   * @return const std::vector<TestCase> & a list of test cases contained in the corpus.
+   * @return ObjectPool& the object pool.
    */
-  const std::vector<TestCase>& testCases() const { return _testCases; }
+  ObjectPool& pool() { return _pool; }
 
   /**
-   * @brief Get the @see TestCase object at the given index.
+   * @brief Get the object pool contained in this corpus.
    *
-   * @param index the index of the desired `TestCase` object.
-   * @return CAFCorpusTestCaseRef smart pointer to the test case object.
+   * @return ObjectPool& the object pool.
    */
-  CAFCorpusTestCaseRef GetTestCase(size_t index) {
-    return CAFCorpusTestCaseRef { this, index };
+  const ObjectPool& pool() const { return _pool; }
+
+  /**
+   * @brief Create a new test case managed by this corpus.
+   *
+   * @return TestCase* the test case created.
+   */
+  TestCaseRef CreateTestCase();
+
+  /**
+   * @brief Duplicate the given test case.
+   *
+   * @param existing the existing test case to duplicate.
+   * @return TestCaseRef the duplicated test case.
+   */
+  TestCaseRef DuplicateTestCase(TestCaseRef existing);
+
+  /**
+   * @brief Add the given test case to this corpus.
+   *
+   * @param testCase the test case.
+   */
+  TestCaseRef AddTestCase(TestCase testCase);
+
+  /**
+   * @brief Get the number of test cases inside this corpus.
+   *
+   * @return size_t the number of test cases inside this corpus.
+   */
+  size_t GetTestCasesCount() const { return _testCases.size(); }
+
+  /**
+   * @brief Get the test case at the given index.
+   *
+   * @param index the index.
+   * @return TestCase* the test case at the given index.
+   */
+  TestCaseRef GetTestCase(size_t index) {
+    assert(index >= 0 && index < _testCases.size() && "index is out of range.");
+    return TestCaseRef { this, index };
   }
 
-  /**
-   * @brief Get a raw pointer to the @see TestCase object at the given index. Note that this pointer
-   * might be invalidated after new test cases are added to this @see CAFCorpus.
-   *
-   * @param index the index of the test case.
-   * @return TestCase* a raw pointer to the test case.
-   */
-  TestCase* GetTestCaseRaw(size_t index) {
-    return &_testCases.at(index);
+  template <typename T>
+  TestCaseRef SelectTestCase(Random<T>& rnd) {
+    size_t index = rnd.Index(_testCases);
+    return TestCaseRef { this, index };
   }
 
-  /**
-   * @brief Create a new test case.
-   *
-   * @tparam Args types of arguments used to construct a new `TestCase` object.
-   * @param args arguments used to construct a new `TestCase` object.
-   * @return CAFCorpusTestCaseRef a `CAFCorpusTestCaseRef` instance representing a smart pointer
-   * to the created `TestCase` object.
-   */
-  template <typename ...Args>
-  CAFCorpusTestCaseRef CreateTestCase(Args&&... args) {
-    _testCases.emplace_back(std::forward<Args>(args)...);
-    return CAFCorpusTestCaseRef { this, _testCases.size() - 1 };
-  }
-
-  /**
-   * @brief Get the object pool associated with the given type ID.
-   *
-   * @param typeId the type ID of the object pool.
-   * @return CAFObjectPool* pointer to the desired object pool. If no such object pool is found,
-   * `nullptr` will be returned.
-   */
-  CAFObjectPool* GetObjectPool(uint64_t typeId) const;
-
-  /**
-   * @brief Get the object pool associated with the given type name. If the desired object pool does
-   * not exist, then create it.
-   *
-   * @param typeId the type ID of the object pool.
-   * @return CAFObjectPool* pointer to the object pool.
-   */
-  CAFObjectPool* GetOrCreateObjectPool(uint64_t typeId);
-
-  /**
-   * @brief Get a special object pool that owns all placeholder values.
-   *
-   * @return CAFObjectPool* pointer to a special object pool that owns all placeholder values.
-   */
-  CAFObjectPool* GetPlaceholderObjectPool();
-
-  /**
-   * @brief Randomly select a test case from this corpus, using the given random number generator.
-   *
-   * @tparam RNG the type of the random number generator.
-   * @param rnd the random number genreator to use.
-   * @return CAFCorpusTestCaseRef the selected test case.
-   */
-  template <typename RNG>
-  CAFCorpusTestCaseRef SelectTestCase(Random<RNG>& rnd) {
-    return CAFCorpusTestCaseRef { this, rnd.Index(_testCases) };
-  }
+  friend class TestCaseRef;
 
 private:
   std::unique_ptr<CAFStore> _store;
-  std::unordered_map<uint64_t, std::unique_ptr<CAFObjectPool>> _pools;
-  std::unique_ptr<CAFObjectPool> _placeholderPool;
   std::vector<TestCase> _testCases;
-};
+  ObjectPool _pool;
+}; // class Corpus
 
-inline TestCase* CAFCorpusTestCaseRef::get() const {
-  return _corpus->GetTestCaseRaw(_index);
+TestCase* TestCaseRef::get() const {
+  if (_corpus) {
+    return &_corpus->_testCases.at(_index);
+  } else {
+    return nullptr;
+  }
 }
 
 } // namespace caf

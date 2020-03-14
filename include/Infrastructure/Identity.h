@@ -1,8 +1,6 @@
 #ifndef CAF_IDENTITY_H
 #define CAF_IDENTITY_H
 
-#include "json/json.hpp"
-
 #include <type_traits>
 
 namespace caf {

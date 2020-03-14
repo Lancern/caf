@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <random>
 #include <limits>
+#include <string>
+#include <iterator>
 #include <type_traits>
 
 namespace caf {
@@ -91,6 +93,64 @@ public:
   }
 
   /**
+   * @brief Generate a new string whose characters are randomly selected from the given character
+   * string.
+   *
+   * @param length length of the string to be generated.
+   * @param charset the character string.
+   * @return std::string the generated string.
+   */
+  std::string NextString(size_t length, const std::string& charset) {
+    std::string s;
+    s.reserve(length);
+    for (size_t i = 0; i < length; ++i) {
+      s.push_back(Select(charset));
+    }
+    return s;
+  }
+
+  /**
+   * @brief Generate a random ASCII string.
+   *
+   * @param length the length of the string.
+   * @return std::string the generated string.
+   */
+  std::string NextString(size_t length) {
+    static const std::string Characters =
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789"
+        "~!@#$%^&*()-=_+"
+        "`[]\\{}|;':\",./<>?"
+        "\n\t\r";
+    return NextString(length, Characters);
+  }
+
+  /**
+   * @brief Generate a new string whose length is in the given range and characters are randomly
+   * selected from the given character string.
+   *
+   * @param minLength the minimum length of the string.
+   * @param maxLength the maximum length of the string.
+   * @param charset the character string.
+   * @return std::string the generated string.
+   */
+  std::string NextString(size_t minLength, size_t maxLength, const std::string& charset) {
+    return NextString(Next(minLength, maxLength), charset);
+  }
+
+  /**
+   * @brief Generate a new string whose length is in the given range.
+   *
+   * @param minLength the minimum length of the string.
+   * @param maxLength the maximum length of the string.
+   * @return std::string the generated string.
+   */
+  std::string NextString(size_t minLength, size_t maxLength) {
+    return NextString(Next(minLength, maxLength));
+  }
+
+  /**
    * @brief Generate a floating point value in [0, 1] and test whether it is less than p.
    *
    * @param p the probability of returning true.
@@ -125,6 +185,21 @@ public:
   }
 
   /**
+   * @brief Generate a random integer number that is greater than or equal to 0 and less than the
+   * size of the given array.
+   *
+   * The behavior is undefined if the given array is empty.
+   *
+   * @tparam T the type of the elements in the array.
+   * @tparam N the size of the array.
+   * @return size_t a randomly generated index of the array.
+   */
+  template <typename T, size_t N>
+  size_t Index(const T (&)[N]) {
+    return Next<size_t>(0, N - 1);
+  }
+
+  /**
    * @brief Randomly select an element from the given container.
    *
    * @tparam Container type of the container. The container type should satisfy C++ named
@@ -148,6 +223,46 @@ public:
   template <typename Container>
   typename Container::reference Select(Container& c) {
     return c[Index(c)];
+  }
+
+  /**
+   * @brief Randomly select an element from the given range.
+   *
+   * @tparam Iter type of the iterator referencing the rance.
+   * @param begin the begin iterator.
+   * @param end the end iterator.
+   * @return std::iterator_traits<Iter>::reference reference to the selected element.
+   */
+  template <typename Iter>
+  typename std::iterator_traits<Iter>::reference Select(Iter begin, Iter end) {
+    auto size = std::distance(begin, end);
+    return *std::next(begin, Next<size_t>(0, size - 1));
+  }
+
+  /**
+   * @brief Randomly select an element from the given array.
+   *
+   * @tparam T type of the elements in the array.
+   * @tparam N number of elements in the array.
+   * @param array the array.
+   * @return T& the selected element.
+   */
+  template <typename T, size_t N>
+  T& Select(T (&array)[N]) {
+    return array[Index(array)];
+  }
+
+  /**
+   * @brief Randomly select an element from the given array.
+   *
+   * @tparam T type of the elements in the array.
+   * @tparam N number of elements in the array.
+   * @param array the array.
+   * @return T& the selected element.
+   */
+  template <typename T, size_t N>
+  const T& Select(const T (&array)[N]) {
+    return array[Index(array)];
   }
 
 private:

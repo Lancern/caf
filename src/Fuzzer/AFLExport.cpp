@@ -1,50 +1,107 @@
-#include "CorpusInitialize.h"
+#include "Infrastructure/Memory.h"
+#include "Infrastructure/Random.h"
+#include "Infrastructure/Stream.h"
+#include "Basic/CAFStore.h"
+#include "Fuzzer/Corpus.h"
 #include "Fuzzer/TestCaseMutator.h"
 #include "Fuzzer/TestCaseSerializer.h"
+#include "Fuzzer/TestCaseDeserializer.h"
+
+#include "json/json.hpp"
+
+#include <ftw.h>
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
 #include <memory>
+#include <utility>
+
+static std::unique_ptr<caf::Corpus> Corpus;
+static caf::Random<> Rng;
+static std::vector<uint8_t> TestCaseBuffer;
 
 namespace {
 
-class MemoryStream {
-public:
-  /**
-   * @brief Construct a new MemoryStream object.
-   *
-   * @param mem the underlying memory buffer.
-   */
-  explicit MemoryStream(std::vector<uint8_t>& mem) noexcept
-    : _mem(mem)
-  { }
+constexpr static const int MAX_FD_COUNTS = 4;
 
-  /**
-   * @brief Write the content of the given buffer into the underlying memory buffer.
-   *
-   * @param data pointer to the buffer containing data.
-   * @param size size of the buffer pointed to by `data`.
-   * @return MemoryStream& return `this`.
-   */
-  MemoryStream& write(const void* data, size_t size) noexcept {
-    auto ptr = reinterpret_cast<const uint8_t *>(data);
-    while (size--) {
-      _mem.push_back(*ptr++);
-    }
-
-    return *this;
+std::unique_ptr<caf::CAFStore> LoadCAFStore(const char* filePath) {
+  std::ifstream file { filePath };
+  if (file.fail()) {
+    auto code = errno;
+    std::cerr << "error: failed to open " << filePath << ": "
+              << std::strerror(code) << " (" << code << ")"
+              << std::endl;
+    std::exit(1);
   }
 
-private:
-  std::vector<uint8_t>& _mem;
-};
+  nlohmann::json json;
+  file >> json;
+
+  return caf::make_unique<caf::CAFStore>(json);
+}
+
+int HandleSeedFile(const char* fpath, const struct stat* sb, int typeflag) {
+  if (typeflag != FTW_F) {
+    return 0;
+  }
+
+  std::ifstream file { fpath };
+  if (file.fail()) {
+    auto code = errno;
+    std::cerr << "error: failed to open " << fpath << ": "
+              << std::strerror(code) << " (" << code << ")"
+              << std::endl;
+    std::exit(1);
+  }
+
+  caf::StlInputStream fileStream { file };
+  caf::TestCaseDeserializer de { *Corpus.get(), fileStream };
+  auto tc = de.Deserialize();
+  if (!tc) {
+    std::cerr << "error: failed to deserialize test case from seed file " << fpath << std::endl;
+    std::exit(1);
+  }
+
+  return 0;
+}
+
+void PopulateCorpus(const char* seedDir) {
+  if (ftw(seedDir, &HandleSeedFile, MAX_FD_COUNTS) != 0) {
+    auto code = errno;
+    std::cerr << "error: ftw failed: "
+              << std::strerror(code) << " (" << code << ")"
+              << std::endl;
+    std::exit(1);
+  }
+}
+
+void InitCorpus() {
+  // The following environment variables should be set to initialize the corpus:
+  // - CAF_STORE: Path to the cafstore.json file;
+  // - CAF_SEED_DIR: Path to the directory containing seeds.
+  auto storeFilePath = std::getenv("CAF_STORE");
+  if (!storeFilePath) {
+    std::cerr << "CAF_STORE not set." << std::endl;
+    std::exit(1);
+  }
+
+  auto store = LoadCAFStore(storeFilePath);
+  Corpus = caf::make_unique<caf::Corpus>(std::move(store));
+
+  auto seedDir = std::getenv("CAF_SEED_DIR");
+  if (!seedDir) {
+    std::cerr << "CAF_SEED_DIR not set." << std::endl;
+    std::exit(1);
+  }
+
+  PopulateCorpus(seedDir);
+}
 
 } // namespace <anonymous>
-
-static std::unique_ptr<caf::CAFCorpus> Corpus;
-static caf::Random<> Rng;
-static std::vector<uint8_t> TestCaseBuffer;
 
 extern "C" {
 
@@ -53,7 +110,7 @@ extern "C" {
 
 void afl_custom_init(unsigned int seed) {
   Rng.seed(seed);
-  Corpus = caf::InitCorpus();
+  InitCorpus();
   assert(Corpus && "Load corpus failed.");
 }
 
@@ -65,7 +122,7 @@ size_t afl_custom_fuzz(
   auto index = *reinterpret_cast<size_t *>(buf);
   auto testCase = Corpus->GetTestCase(index);
 
-  caf::TestCaseMutator mutator { Corpus.get(), Rng };
+  caf::TestCaseMutator mutator { *Corpus.get(), Rng };
 
   auto mutatedTestCase = mutator.Mutate(testCase);
   *reinterpret_cast<size_t *>(mutated_out) = mutatedTestCase.index();
@@ -77,11 +134,11 @@ size_t afl_custom_pre_save(uint8_t *buf, size_t buf_size, uint8_t **out_buf) {
   auto index = *reinterpret_cast<size_t *>(buf);
   auto testCase = Corpus->GetTestCase(index);
 
-  caf::TestCaseSerializer serializer { };
   TestCaseBuffer.clear();
-  MemoryStream s { TestCaseBuffer };
+  caf::MemoryOutputStream s { TestCaseBuffer };
+  caf::TestCaseSerializer serializer { *Corpus.get(), s };
 
-  serializer.Write(s, *testCase);
+  serializer.Serialize(*testCase);
 
   *out_buf = TestCaseBuffer.data();
   return static_cast<size_t>(TestCaseBuffer.size());

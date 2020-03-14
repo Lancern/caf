@@ -1,26 +1,24 @@
 set(CAF_EXTRACTOR_SOURCES
     ExtractorContext.cpp
     ExtractorPass.cpp
-    ExtractorUtils.cpp
-    ExtractorUtils.h
-    LLVMFunctionSignature.cpp
+    Utils.cpp
+    Utils.h
     ${CAF_INCLUDE_DIR}/Extractor/ExtractorPass.h
-    ${CAF_INCLUDE_DIR}/Extractor/ExtractorContext.h
-    ${CAF_INCLUDE_DIR}/Extractor/LLVMFunctionSignature.h)
+    ${CAF_INCLUDE_DIR}/Extractor/ExtractorContext.h)
 
 add_library(CAFExtractor MODULE
     ${CAF_EXTRACTOR_SOURCES})
 
-add_library(CAFExtractorStatic STATIC
+add_library(CAFExtractorLib STATIC
     ${CAF_EXTRACTOR_SOURCES})
 
 target_compile_definitions(CAFExtractor PUBLIC CAF_LLVM)
 target_link_libraries(CAFExtractor PUBLIC CAFInfrastructure)
-target_link_libraries(CAFExtractor PUBLIC CAFBasicLLVM)
+target_link_libraries(CAFExtractor PUBLIC CAFBasic)
 target_link_libraries(CAFExtractor PUBLIC LLVM)
 
-target_compile_definitions(CAFExtractorStatic PUBLIC CAF_LLVM)
-target_compile_options(CAFExtractorStatic PUBLIC "-fPIC")
-target_link_libraries(CAFExtractorStatic PUBLIC CAFInfrastructure)
-target_link_libraries(CAFExtractorStatic PUBLIC CAFBasicLLVM)
-target_link_libraries(CAFExtractorStatic PUBLIC LLVM)
+target_compile_definitions(CAFExtractorLib PUBLIC CAF_LLVM)
+target_compile_options(CAFExtractorLib PUBLIC "-fPIC")
+target_link_libraries(CAFExtractorLib PUBLIC CAFInfrastructure)
+target_link_libraries(CAFExtractorLib PUBLIC CAFBasic)
+target_link_libraries(CAFExtractorLib PUBLIC LLVM)

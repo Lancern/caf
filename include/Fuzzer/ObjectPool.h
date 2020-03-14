@@ -5,108 +5,168 @@
 #include "Infrastructure/Random.h"
 #include "Fuzzer/Value.h"
 
-#include <vector>
+#include <cstdint>
+#include <utility>
 #include <memory>
+#include <vector>
+#include <unordered_map>
+#include <type_traits>
 
 namespace caf {
 
-class Type;
-class Value;
-class PointerValue;
-
 /**
- * @brief Pool of objects that can be passed as function arguments of some specific type.
- *
- * Instances of this class cannot be copied.
+ * @brief Object pool is the owner of Value objects.
  *
  */
-class CAFObjectPool {
+class ObjectPool {
 public:
   /**
-   * @brief Construct a new CAFObjectPool object.
+   * @brief Construct a new ObjectPool object.
    *
    */
-  explicit CAFObjectPool()
-    : _values { },
-      _nullPtr(nullptr)
-  { }
+  explicit ObjectPool();
 
-  CAFObjectPool(const CAFObjectPool &) = delete;
-  CAFObjectPool(CAFObjectPool &&) = default;
+  ObjectPool(const ObjectPool &) = delete;
+  ObjectPool(ObjectPool &&) noexcept = default;
 
-  CAFObjectPool& operator=(const CAFObjectPool &) = delete;
-  CAFObjectPool& operator=(CAFObjectPool &&) = default;
+  ObjectPool& operator=(const ObjectPool &) = delete;
+  ObjectPool& operator=(ObjectPool &&);
 
   /**
-   * @brief Get all values contained in this object pool.
+   * @brief Create a new Value object.
    *
-   * @return mapped_vector_range<const Value *, std::unique_ptr<Value>> a range of all values
-   * contained in this object pool.
-   */
-  const std::vector<std::unique_ptr<Value>>& values() const {
-    return _values;
-  }
-
-  /**
-   * @brief Get the number of values contained in this object pool.
-   *
-   * @return size_t the number of values contained in this object pool.
-   */
-  size_t size() const { return static_cast<size_t>(_values.size()); }
-
-  /**
-   * @brief Determine whether the object pool is empty.
-   *
-   * @return true if the object pool is empty.
-   * @return false if the object pool is not empty.
-   */
-  bool empty() const { return size() == 0; }
-
-  /**
-   * @brief Create a new value in the object pool.
-   *
-   * @tparam T the type of the value to be created. T should derive from `Value`.
-   * @tparam Args the types of the arguments for constructing a new value.
-   * @param args arguments for constructing a new value.
-   * @return T* pointer to the created value.
+   * @tparam T type of the Value object.
+   * @tparam Args types of arguments to construct an object of type T.
+   * @param args arguments to construct an object of type T.
+   * @return T* the created Value object.
    */
   template <typename T, typename ...Args>
   T* CreateValue(Args&&... args) {
     static_assert(std::is_base_of<Value, T>::value, "T does not derive from Value.");
-    _values.push_back(caf::make_unique<T>(std::forward<Args>(args)...));
-    return dynamic_cast<T *>(_values.back().get());
+    auto value = caf::make_unique<T>(std::forward<Args>(args)...);
+    auto ret = value.get();
+    _values.push_back(std::move(value));
+    return ret;
   }
 
   /**
-   * @brief Randomly select a value from this @see ObjectPool, using the given random number
-   * generator.
+   * @brief Get the undefined value.
    *
-   * The behavior is undefined if this @see ObjectPool is empty.
+   * @return Value* the undefined value.
+   */
+  Value* GetUndefinedValue();
+
+  /**
+   * @brief Get the null value.
    *
-   * @tparam RNG type of the random number generator. `RNG` should meets the requirements of C++
-   * named requirement `RandomNumberGenerator`.
-   * @param rng the random number generator.
+   * @return Value* the null value.
+   */
+  Value* GetNullValue();
+
+  /**
+   * @brief Get the function value.
+   *
+   * @return Value* the function value.
+   */
+  Value* GetFunctionValue();
+
+  /**
+   * @brief Get the boolean value corresponding to the given bool value.
+   *
+   * @param value the bool value.
+   * @return BooleanValue* the boolean value.
+   */
+  BooleanValue* GetBooleanValue(bool value);
+
+  /**
+   * @brief Get or create a StringValue representing the given string.
+   *
+   * @param s the C++ string.
+   * @return StringValue* the StringValue representing the given string.
+   */
+  StringValue* GetOrCreateStringValue(std::string s);
+
+  /**
+   * @brief Get or create an IntegerValue representing the given integer.
+   *
+   * @param value the integer value.
+   * @return IntegerValue* the created IntegerValue object representing the given integer.
+   */
+  IntegerValue* GetOrCreateIntegerValue(int32_t value);
+
+  /**
+   * @brief Get or create a FloatValue representing the given floating point value.
+   *
+   * @param value the C++ floating point value.
+   * @return FloatValue* the floating point value.
+   */
+  FloatValue* GetOrCreateFloatValue(double value);
+
+  /**
+   * @brief Create an ArrayValue object representing an empty array.
+   *
+   * @return ArrayValue* the created array value object.
+   */
+  ArrayValue* CreateArrayValue() {
+    return CreateValue<ArrayValue>();
+  }
+
+  /**
+   * @brief Get a PlaceholderValue representing the given index reference.
+   *
+   * @param index the reference.
+   * @return PlaceholderValue* the placeholder value.
+   */
+  PlaceholderValue* GetPlaceholderValue(size_t index);
+
+  /**
+   * @brief Determine whether this object pool is empty.
+   *
+   * @return true if this object pool is empty.
+   * @return false if this object pool is not empty.
+   */
+  bool empty() const { return _values.empty(); }
+
+  /**
+   * @brief Get the number of values managed by this ObjectPool object.
+   *
+   * @return size_t the number of values managed by this ObjectPool object.
+   */
+  size_t GetValuesCount() const { return _values.size(); }
+
+  /**
+   * @brief Get the Value object at the given index.
+   *
+   * @param index the index.
+   * @return Value* the value at the given index.
+   */
+  Value* GetValue(size_t index) const { return _values.at(index).get(); }
+
+  /**
+   * @brief Randomly select a value from this object pool, using the given random number generator.
+   *
+   * @tparam T type of the random bits generator used by the random number generator.
+   * @param rnd the random number generator.
    * @return Value* the selected value.
    */
-  template <typename RNG>
-  Value* Select(caf::Random<RNG>& random) const {
-    return random.Select(_values)->get();
+  template <typename T>
+  Value* SelectValue(Random<T>& rnd) {
+    return rnd.Select(_values).get();
   }
-
-  /**
-   * @brief Get or create a null pointer value in this object pool with the given type.
-   *
-   * This function will trigger an assertion failure if the given type is not a pointer type.
-   *
-   * @param pointerType type of the pointer value.
-   * @return Value* the null pointer value.
-   */
-  PointerValue* GetOrCreateNullPointerValue(const Type* pointerType);
 
 private:
   std::vector<std::unique_ptr<Value>> _values;
-  PointerValue* _nullPtr;
-};
+  std::unique_ptr<Value> _undef; // Undefined value
+  std::unique_ptr<Value> _null; // Null value
+  std::unique_ptr<Value> _func; // Function value
+  std::unique_ptr<BooleanValue> _bool[2]; // Boolean values
+  std::unordered_map<std::string, StringValue *> _strToValue;
+  std::unique_ptr<IntegerValue *[]> _intTable;
+  std::unique_ptr<FloatValue> _nan; // NaN value.
+  std::unique_ptr<FloatValue> _inf; // +infinity value.
+  std::unique_ptr<FloatValue> _negInf; // -infinity value.
+  std::vector<std::unique_ptr<PlaceholderValue>> _placeholderValues;
+}; // class ObjectPool
 
 } // namespace caf
 

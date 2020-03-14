@@ -2,43 +2,129 @@
 #define CAF_STREAM_H
 
 #include <cstddef>
+#include <cstdint>
+#include <vector>
+#include <istream>
 
 namespace caf {
 
 /**
- * @brief An adapter type that provides a CAF-coherent `read` and `write` method for all streams in
- * STL.
+ * @brief Abstract base class for all input streams.
  *
- * @tparam T an STL stream type.
  */
-template <typename T>
-class StdStreamAdapter {
+class InputStream {
+public:
+  explicit InputStream() = default;
+
+  InputStream(const InputStream &) = delete;
+  InputStream(InputStream &&) noexcept = default;
+
+  InputStream& operator=(const InputStream &) = delete;
+  InputStream& operator=(InputStream &&) = default;
+
+  virtual ~InputStream();
+
+  /**
+   * @brief Read raw bytes from the input stream.
+   *
+   * @param buffer pointer to the buffer to hold the data read.
+   * @param size the number of bytes to read.
+   */
+  virtual void Read(void* buffer, size_t size) = 0;
+
+  /**
+   * @brief Read a single byte from the input stream.
+   *
+   * @return uint8_t the byte read.
+   */
+  uint8_t ReadByte() {
+    uint8_t b;
+    Read(&b, 1);
+    return b;
+  }
+};
+
+/**
+ * @brief Abstract base class for all output streams.
+ *
+ */
+class OutputStream {
+public:
+  explicit OutputStream() = default;
+
+  OutputStream(const OutputStream &) = delete;
+  OutputStream(OutputStream &&) noexcept = default;
+
+  OutputStream& operator=(const OutputStream &) = delete;
+  OutputStream& operator=(OutputStream &&) = default;
+
+  virtual ~OutputStream();
+
+  /**
+   * @brief Write raw bytes to the ouput stream.
+   *
+   * @param buffer pointer to the buffer containing data.
+   * @param size number of bytes to write.
+   */
+  virtual void Write(const void* buffer, size_t size) = 0;
+};
+
+/**
+ * @brief An input stream adapter for STL input streams.
+ *
+ */
+class StlInputStream : public InputStream {
 public:
   /**
-   * @brief Construct a new StdStreamAdapter object.
+   * @brief Construct a new StlInputStream object.
    *
-   * @param inner the STL stream.
+   * @param inner the inner stream.
    */
-  explicit StdStreamAdapter(T& inner)
+  explicit StlInputStream(std::istream& inner)
     : _inner(inner)
   { }
 
-  StdStreamAdapter(const StdStreamAdapter<T> &) = delete;
-  StdStreamAdapter(StdStreamAdapter<T> &&) noexcept = default;
+  StlInputStream(const StlInputStream &) = delete;
+  StlInputStream(StlInputStream &&) noexcept = default;
 
-  using CharType = typename T::char_type;
-
-  void read(void* buffer, size_t size) {
-    _inner.read(reinterpret_cast<CharType *>(buffer), size);
-  }
-
-  void write(const void* buffer, size_t size) {
-    _inner.write(reinterpret_cast<const CharType *>(buffer), size);
+  void Read(void *buffer, size_t size) override {
+    _inner.read(reinterpret_cast<char *>(buffer), size);
   }
 
 private:
-  T& _inner;
-}; // class StdStreamAdapter
+  std::istream& _inner;
+}; // class StlInputStream
+
+/**
+ * @brief An output stream interface around a byte buffer. All data written to the stream will be
+ * written to the underlying buffer.
+ *
+ */
+class MemoryOutputStream : public OutputStream {
+public:
+  /**
+   * @brief Construct a new MemoryOutputStream object.
+   *
+   * @param mem the underlying memory buffer.
+   */
+  explicit MemoryOutputStream(std::vector<uint8_t>& mem)
+    : _mem(mem)
+  { }
+
+  /**
+   * @brief Write the content of the given buffer into the underlying memory buffer.
+   *
+   * @param data pointer to the buffer containing data.
+   * @param size size of the buffer pointed to by `data`.
+   */
+  void Write(const void* data, size_t size) override {
+    auto ptr = reinterpret_cast<const uint8_t *>(data);
+    _mem.insert(_mem.end(), ptr, ptr + size);
+  }
+
+private:
+  std::vector<uint8_t>& _mem;
+};
 
 } // namespace caf
 

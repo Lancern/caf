@@ -1,149 +1,131 @@
-#ifndef CAF_VALUE_GENERATOR_H
-#define CAF_VALUE_GENERATOR_H
+#ifndef CAF_TEST_CASE_GENERATOR_H
+#define CAF_TEST_CASE_GENERATOR_H
 
 #include "Infrastructure/Random.h"
-#include "Fuzzer/Corpus.h"
-#include "Fuzzer/FunctionCall.h"
+#include "Fuzzer/Value.h"
+
+#include <cassert>
+#include <memory>
 
 namespace caf {
 
-class Type;
-class Value;
-class BitsType;
-class PointerType;
-class ArrayType;
-class StructType;
-class FunctionType;
-class AggregateType;
-class BitsValue;
-class PointerValue;
-class FunctionValue;
-class ArrayValue;
-class StructValue;
-class AggregateValue;
-class PlaceholderValue;
+class Corpus;
 class TestCase;
+class TestCaseRef;
+class FunctionCall;
 
 /**
- * @brief Generate test cases.
+ * @brief Generate new test cases and values.
  *
  */
 class TestCaseGenerator {
 public:
   /**
-   * @brief Construct a new Value Generator object
+   * @brief Options for the generator.
    *
-   * @param corpus the test case corpus. New values will be generated into this corpus.
-   * @param rnd the random number generator to use.
    */
-  explicit TestCaseGenerator(CAFCorpus* corpus, Random<>& rnd)
+  struct Options {
+    explicit Options()
+      : MaxCalls(5),
+        MaxStringLength(10),
+        MaxArrayLength(5),
+        MaxArguments(5),
+        MaxDepth(3)
+    { }
+
+    size_t MaxCalls; // Maximum number of calls in generated test case.
+    size_t MaxStringLength; // Maximum length of generated string values.
+    size_t MaxArrayLength; // Maximum length of generated array values.
+    size_t MaxArguments; // Maximum number of arguments to generate for a function call.
+    size_t MaxDepth; // Maximum numbers of levels in the generated value.
+  };
+
+  /**
+   * @brief Construct a new TestCaseGenerator object.
+   *
+   * @param corpus the corpus.
+   * @param rnd the random number generator.
+   */
+  explicit TestCaseGenerator(Corpus& corpus, Random<>& rnd)
     : _corpus(corpus),
-      _rnd(rnd)
+      _rnd(rnd),
+      _opt()
   { }
 
-  /**
-   * @brief Generate a new bits type value.
-   *
-   * @param type type of the bits type value to be generated.
-   * @return BitsValue* the generated value.
-   */
-  BitsValue* GenerateNewBitsType(const BitsType* type);
+  TestCaseGenerator(const TestCaseGenerator &) = delete;
+  TestCaseGenerator(TestCaseGenerator &&) noexcept = default;
 
   /**
-   * @brief Generate a new pointer type value.
+   * @brief Get the options.
    *
-   * @param type type of the pointer type value to be generated.
-   * @return PointerValue* the generated value.
+   * @return Options& the options.
    */
-  PointerValue* GenerateNewPointerType(const PointerType* type);
+  Options& options() { return _opt; }
 
   /**
-   * @brief Generate a new function type value.
+   * @brief Get the options.
    *
-   * @param type type of the function.
-   * @return FunctionValue* the generated value.
+   * @return const Options& the options.
    */
-  FunctionValue* GenerateNewFunctionType(const FunctionType* type);
-
-  /**
-   * @brief Generate a new array type value.
-   *
-   * @param type type of the array type value to be generated.
-   * @return ArrayValue* the generated value.
-   */
-  ArrayValue* GenerateNewArrayType(const ArrayType* type);
-
-  /**
-   * @brief Generate a new struct type value.
-   *
-   * @param type type of the struct type value to be generated.
-   * @return StructValue* the generated value.
-   */
-  StructValue* GenerateNewStructType(const StructType* type);
-
-  /**
-   * @brief Generate a new aggregate type value.
-   *
-   * @param type the type of the aggregate value to be generated.
-   * @return AggregateValue* the generated value.
-   */
-  AggregateValue* GenerateNewAggregateType(const AggregateType* type);
-
-  /**
-   * @brief Generate a new value of the given type.
-   *
-   * @param type type of the value to be generated.
-   * @return Value* pointer to the generated new value.
-   */
-  Value* GenerateNewValue(const Type* type);
-
-  /**
-   * @brief Generate an argument of the given type.
-   *
-   * This function randomly applies the following strategies:
-   * * Select an exiting value from the corresponding object pool in the corpus, if any;
-   * * Create a new value and insert it into the corresponding object pool; any related values used
-   * to construct the new value will be generated recursively until `BitsValue` is required. The
-   * required `BitsValue` will be populated from the corresponding object pool directly.
-   *
-   * @param type the type of the argument.
-   * @return Value* pointer to the generated `Value` instance wrapping around the argument.
-   */
-  Value* GenerateValue(const Type* type);
-
-  /**
-   * @brief Generate the argument at the given test case location.
-   *
-   * This function may also generate a placeholder referencing a previous function call return
-   * value, with a specific probability.
-   *
-   * @param testCase the test case.
-   * @param callIndex the index of the call.
-   * @param argIndex the index of the argument of the specified call.
-   * @return Value* the generated value.
-   */
-  Value* GenerateValueOrPlaceholder(const TestCase* testCase, size_t callIndex, size_t argIndex);
-
-  /**
-   * @brief Generate a function call. The callee is selected randomly within the `CAFStore` instance
-   * in the corpus and the arguments are generated recursively.
-   *
-   * @return FunctionCall the generated function call.
-   */
-  FunctionCall GenerateCall();
+  const Options& options() const { return _opt; }
 
   /**
    * @brief Generate a new test case.
    *
-   * @param maxCalls the maximum number of calls to generate.
-   * @return TestCase the generated test case.
+   * @return TestCaseRef the test case generated.
    */
-  CAFCorpusTestCaseRef GenerateTestCase(int maxCalls);
+  TestCaseRef GenerateTestCase();
+
+  /**
+   * @brief Generate a new function call.
+   *
+   * @return FunctionCall the function call generated.
+   */
+  FunctionCall GenerateFunctionCall();
+
+  /**
+   * @brief Generate a new value.
+   *
+   * @return Value* the value generated.
+   */
+  Value* GenerateValue() { return GenerateValue(1); }
+
+  /**
+   * @brief Generate a char that can be added to a string value.
+   *
+   * @return char the generated character.
+   */
+  char GenerateStringCharacter();
 
 private:
-  CAFCorpus* _corpus;
+  Corpus& _corpus;
   Random<>& _rnd;
-};
+  Options _opt;
+
+  /**
+   * @brief Randomly generate a number indicating how many arguments should be generated for a
+   * function call.
+   *
+   * @return size_t the number of arguments to generate.
+   */
+  size_t GenerateArgumentsCount();
+
+  /**
+   * @brief Generate a ValueKind value.
+   *
+   * @param generateArrayKind should we generate ArrayKind?
+   * @return ValueKind the generated value.
+   */
+  ValueKind GenerateValueKind(bool generateArrayKind);
+
+  /**
+   * @brief Generate a new value.
+   *
+   * @param depth depth of the current genreation process.
+   * @return Value* the generated value.
+   */
+  Value* GenerateValue(size_t depth);
+}; // class TestCaseGenerator
 
 } // namespace caf
 

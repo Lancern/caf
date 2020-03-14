@@ -4,19 +4,14 @@ CAF Test Case Binary Format
 TestCase ->
     <callsCount: u32> <calls: [callsCount x Call]>
 Call ->
-    <funcId: u32> Args
-Args ->
-    Value Args |
-    eps
+    <funcId: u32> <this: Value> <argsCount: u32> <args: [argsCount x Value]>
 Value ->
-    <isPlaceholder: u8 = 0> NonPlaceholderValue |
-    <isPlaceholder: u8 = 1> <index: u32>
-
-NonPlaceholderValue ->
-    <data: [size x u8]>         /* BitsValue */         |
-    <isNull: u8 = 0> Value      /* PointerValue */      |
-    <isNull: u8 = 1>            /* Null PointerValue */ |
-    <funcId: u32>               /* FunctionValue */     |
-    <elements: [size x Value]>  /* ArrayValue */        |
-    <ctorId: u32> Args          /* StructValue */       |
-    Args                        /* AggregateValue */
+    <kind: u8 = 0>                                          /* Undefined value */ |
+    <kind: u8 = 1>                                          /* Null value */ |
+    <kind: u8 = 2> <value: u8 = 0 | 1>                      /* Boolean value */ |
+    <kind: u8 = 3> <length: u32> <data: [length x u8]>      /* String value */ |
+    <kind: u8 = 4>                                          /* Function value */ |
+    <kind: u8 = 5> <value: i32>                             /* Integer value */
+    <kind: u8 = 6> <value: f64>                             /* Floating point value */
+    <kind: u8 = 7> <size: u32> <elements: [size x Value]>   /* ArrayValue */ |
+    <kind: u8 = 8> <index: u32>                             /* Placeholder value */

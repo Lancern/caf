@@ -16,6 +16,12 @@ CAFStore::CAFStore(const nlohmann::json& json) {
   }
 }
 
+CAFStore::Statistics CAFStore::GetStatistics() const {
+  Statistics stat;
+  stat.ApiFunctionsCount = _funcs.size();
+  return stat;
+}
+
 nlohmann::json CAFStore::ToJson() const {
   auto funcsJson = nlohmann::json::array();
   for (const auto& func : _funcs) {

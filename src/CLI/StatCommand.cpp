@@ -1,13 +1,25 @@
 #include "Command.h"
 #include "Diagnostics.h"
 #include "RegisterCommand.h"
-#include "Basic/JsonDeserializer.h"
+#include "Basic/CAFStore.h"
+
+#include "json/json.hpp"
 
 #include <fstream>
 #include <iostream>
 #include <string>
 
 namespace caf {
+
+namespace {
+
+void DumpStatistics(const CAFStore::Statistics& stat) {
+  std::cout << "========== CAF Store Statistics ==========" << std::endl;
+  std::cout << "Number of API functions: " << stat.ApiFunctionsCount << std::endl;
+  std::cout << "========== CAF Store Statistics ==========" << std::endl;
+}
+
+} // namespace <anonymous>
 
 class StatCommand : public Command {
 public:
@@ -23,14 +35,13 @@ public:
       PRINT_LAST_OS_ERR_AND_EXIT_FMT("failed to open file \"%s\"", _opts.storeFile.c_str());
     }
 
-    JsonDeserializer reader;
-    auto store = reader.DeserializeCAFStoreFrom(file);
-    if (!store) {
-      PRINT_ERR_AND_EXIT_FMT("failed to load file \"%s\"", _opts.storeFile.c_str());
-    }
+    nlohmann::json json;
+    file >> json;
+    auto store = caf::make_unique<CAFStore>(json);
+    file.close();
 
-    auto stat = store->CreateStatistics();
-    stat.dump(std::cout);
+    auto stat = store->GetStatistics();
+    DumpStatistics(stat);
 
     return 0;
   }

@@ -5,9 +5,11 @@
 #include "TestCaseDumper.h"
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Stream.h"
-#include "Basic/JsonDeserializer.h"
+#include "Basic/CAFStore.h"
 #include "Fuzzer/Corpus.h"
 #include "Fuzzer/TestCaseDeserializer.h"
+
+#include "json/json.hpp"
 
 #include <fstream>
 #include <memory>
@@ -33,27 +35,24 @@ public:
       PRINT_LAST_OS_ERR_AND_EXIT("failed to load CAF store file");
     }
 
-    JsonDeserializer storeReader;
-    auto store = storeReader.DeserializeCAFStoreFrom(storeFile);
-    if (!store) {
-      PRINT_ERR_AND_EXIT("failed to load CAF store data");
-    }
+    nlohmann::json json;
+    storeFile >> json;
+    auto store = caf::make_unique<CAFStore>(json);
+    auto corpus = caf::make_unique<Corpus>(std::move(store));
+    storeFile.close();
 
     std::ifstream tcFile { _opts.TestCaseFileName };
     if (tcFile.fail()) {
       PRINT_LAST_OS_ERR_AND_EXIT("failed to load test case file");
     }
-    StdStreamAdapter<std::ifstream> tcFileWrapper { tcFile };
-
-    auto corpus = caf::make_unique<CAFCorpus>(std::move(store));
-
-    TestCaseDeserializer tcReader { corpus.get() };
-    auto tc = tcReader.Read(tcFileWrapper);
+    StlInputStream fileStream { tcFile };
+    TestCaseDeserializer de { *corpus.get(), fileStream };
+    auto tc = de.Deserialize();
 
     Printer printer { std::cout };
     printer.SetColorOn(!_opts.NoColor);
 
-    TestCaseDumper dumper { printer };
+    TestCaseDumper dumper { *corpus->store(), printer };
     dumper.SetDemangle(_opts.Demangle);
 
     dumper.Dump(*tc);

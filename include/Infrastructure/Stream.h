@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include <istream>
+#include <iostream>
 
 namespace caf {
 
@@ -22,7 +22,7 @@ public:
   InputStream& operator=(const InputStream &) = delete;
   InputStream& operator=(InputStream &&) = default;
 
-  virtual ~InputStream();
+  virtual ~InputStream() = default;
 
   /**
    * @brief Read raw bytes from the input stream.
@@ -58,7 +58,7 @@ public:
   OutputStream& operator=(const OutputStream &) = delete;
   OutputStream& operator=(OutputStream &&) = default;
 
-  virtual ~OutputStream();
+  virtual ~OutputStream() = default;
 
   /**
    * @brief Write raw bytes to the ouput stream.
@@ -94,6 +94,32 @@ public:
 private:
   std::istream& _inner;
 }; // class StlInputStream
+
+/**
+ * @brief An output stream adapter for STL output streams.
+ *
+ */
+class StlOutputStream : public OutputStream {
+public:
+  /**
+   * @brief Construct a new StlOutputStream object.
+   *
+   * @param inner the inner stream.
+   */
+  explicit StlOutputStream(std::ostream& inner)
+    : _inner(inner)
+  { }
+
+  StlOutputStream(const StlOutputStream &) = delete;
+  StlOutputStream(StlOutputStream &&) noexcept = default;
+
+  void Write(const void *buffer, size_t size) override {
+    _inner.write(reinterpret_cast<const char *>(buffer), size);
+  }
+
+private:
+  std::ostream& _inner;
+}; // class StlOutputStream
 
 /**
  * @brief An output stream interface around a byte buffer. All data written to the stream will be

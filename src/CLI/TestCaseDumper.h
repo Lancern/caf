@@ -3,18 +3,14 @@
 
 #include "Printer.h"
 
+#include <cstdint>
+
 namespace caf {
 
+class CAFStore;
 class TestCase;
 class FunctionCall;
 class Value;
-class BitsValue;
-class PointerValue;
-class FunctionValue;
-class ArrayValue;
-class StructValue;
-class AggregateValue;
-class PlaceholderValue;
 
 /**
  * @brief Provide methods to dump test cases.
@@ -25,10 +21,12 @@ public:
   /**
    * @brief Construct a new TestCaseDumper object.
    *
+   * @param store the metadata store.
    * @param printer the printer.
    */
-  explicit TestCaseDumper(Printer& printer)
-    : _printer { printer }
+  explicit TestCaseDumper(CAFStore& store, Printer& printer)
+    : _store(store),
+      _printer { printer }
   { }
 
   /**
@@ -48,16 +46,9 @@ public:
 private:
   class DumpContext;
 
+  CAFStore& _store;
   Printer& _printer;
   bool _demangle;
-
-  /**
-   * @brief Dump the given value.
-   *
-   * @param value the argument to dump.
-   * @param context the dump context.
-   */
-  void DumpValue(const Value& value, DumpContext& context);
 
   /**
    * @brief Dump the given symbol name. This function will demangle the given symbol name if
@@ -75,21 +66,35 @@ private:
    */
   void DumpHex(const void* buffer, size_t size);
 
+  /**
+   * @brief Dump the given function call.
+   *
+   * @param value the function call to dump.
+   * @param context the dump context.
+   */
   void DumpFunctionCall(const FunctionCall& value, DumpContext& context);
 
-  void DumpBitsValue(const BitsValue& value, DumpContext& context);
+  /**
+   * @brief Dump the given value.
+   *
+   * @param value the argument to dump.
+   * @param context the dump context.
+   */
+  void DumpValue(const Value& value, DumpContext& context);
 
-  void DumpPointerValue(const PointerValue& value, DumpContext& context);
+  /**
+   * @brief Dump the given string value.
+   *
+   * @param s the string to dump.
+   */
+  void DumpStringValue(const char* s);
 
-  void DumpFunctionValue(const FunctionValue& value, DumpContext& context);
-
-  void DumpArrayValue(const ArrayValue& value, DumpContext& context);
-
-  void DumpStructValue(const StructValue& value, DumpContext& context);
-
-  void DumpAggregateValue(const AggregateValue& value, DumpContext& context);
-
-  void DumpPlaceholderValue(const PlaceholderValue& value, DumpContext& context);
+  /**
+   * @brief Dump the given integer value.
+   *
+   * @param value the integer value to dump.
+   */
+  void DumpIntegerValue(int32_t value);
 }; // class TestCaseDumper
 
 } // namespace caf

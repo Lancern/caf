@@ -5,10 +5,11 @@
 #include "Infrastructure/Random.h"
 #include "Infrastructure/Stream.h"
 #include "Basic/CAFStore.h"
-#include "Basic/JsonDeserializer.h"
 #include "Fuzzer/Corpus.h"
 #include "Fuzzer/TestCaseGenerator.h"
 #include "Fuzzer/TestCaseSerializer.h"
+
+#include "json/json.hpp"
 
 #include <unistd.h>
 
@@ -74,32 +75,34 @@ public:
       std::cout << "Loading CAF store from file \"" << _opts.storeFile << "\"..." << std::endl;
     }
 
+    // Load cafstore.json file.
     std::ifstream storeFile { _opts.storeFile };
     if (storeFile.fail()) {
       PRINT_LAST_OS_ERR_AND_EXIT_FMT("failed to open file \"%s\"", _opts.storeFile.c_str());
     }
 
-    JsonDeserializer storeFileReader;
-    auto store = storeFileReader.DeserializeCAFStoreFrom(storeFile);
-    if (!store) {
-      PRINT_ERR_AND_EXIT("bad store file content");
-    }
+    nlohmann::json json;
+    storeFile >> json;
+    auto store = caf::make_unique<CAFStore>(json);
 
     storeFile.close();
     ChangeWorkingDirectory(_opts.outputDir.c_str());
 
-    auto corpus = caf::make_unique<CAFCorpus>(std::move(store));
+    // Initialize corpus and random number generator.
+    auto corpus = caf::make_unique<Corpus>(std::move(store));
     Random<> rnd;
     rnd.seed(_opts.seed);
 
-    TestCaseGenerator gen { corpus.get(), rnd };
-    TestCaseSerializer writer;
+    // Start generating test cases.
+    TestCaseGenerator gen { *corpus.get(), rnd };
+    gen.options().MaxCalls = _opts.maxCalls;
+
     for (auto tci = 0; tci < _opts.n; ++tci) {
       if (!_opts.silence) {
         std::cout << "Generating test case #" << tci << std::endl;
       }
 
-      auto tc = gen.GenerateTestCase(_opts.maxCalls);
+      auto tc = gen.GenerateTestCase();
 
       std::string outputFileName = "seed";
       outputFileName.append(std::to_string(tci));
@@ -111,8 +114,9 @@ public:
             "failed to create output file \"%s\"", outputFileName.c_str());
       }
 
-      StdStreamAdapter<std::ofstream> outputFileAdapter { outputFile };
-      writer.Write(outputFileAdapter, *tc);
+      StlOutputStream outputStream { outputFile };
+      TestCaseSerializer ser { *corpus.get(), outputStream };
+      ser.Serialize(*tc);
     }
 
     if (!_opts.silence) {
@@ -124,12 +128,12 @@ public:
 
 private:
   struct Opts {
-    std::string storeFile; // Path to the cafstore.json file
-    std::string outputDir; // Path to the output directory
-    int n; // Number of test cases to generate
-    int maxCalls; // Maximum number of API calls generated in each test case
-    int seed; // Initial seed for the random number generator
-    bool silence; // Silent all informative output.
+    std::string storeFile;  // Path to the cafstore.json file
+    std::string outputDir;  // Path to the output directory
+    int n;                  // Number of test cases to generate
+    int maxCalls;           // Maximum number of API calls generated in each test case
+    int seed;               // Initial seed for the random number generator
+    bool silence;           // Silent all informative output.
   }; // struct Opts
 
   Opts _opts;

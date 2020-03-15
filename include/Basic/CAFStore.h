@@ -18,6 +18,14 @@ namespace caf {
 class CAFStore {
 public:
   /**
+   * @brief Provide statistics about the store.
+   *
+   */
+  struct Statistics {
+    size_t ApiFunctionsCount;
+  }; // struct Statistics
+
+  /**
    * @brief Construct a new CAFStore object.
    *
    */
@@ -91,6 +99,13 @@ public:
    * @return const Function& the function selected.
    */
   const Function& SelectFunction(Random<>& rnd) const { return rnd.Select(_funcs); }
+
+  /**
+   * @brief Get the statistics about the current store.
+   *
+   * @return Statistics the statistics about the current store.
+   */
+  Statistics GetStatistics() const;
 
   /**
    * @brief Serialize this object to JSON form.

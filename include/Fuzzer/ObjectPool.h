@@ -30,7 +30,7 @@ public:
   ObjectPool(ObjectPool &&) noexcept = default;
 
   ObjectPool& operator=(const ObjectPool &) = delete;
-  ObjectPool& operator=(ObjectPool &&);
+  ObjectPool& operator=(ObjectPool &&) = default;
 
   /**
    * @brief Create a new Value object.

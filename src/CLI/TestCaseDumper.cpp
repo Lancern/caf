@@ -2,23 +2,15 @@
 #include "Infrastructure/Casting.h"
 #include "Infrastructure/Identity.h"
 #include "Infrastructure/Intrinsic.h"
+#include "Basic/CAFStore.h"
 #include "Basic/Function.h"
-#include "Basic/BitsType.h"
-#include "Basic/StructType.h"
-#include "Basic/AggregateType.h"
 #include "Fuzzer/FunctionCall.h"
 #include "Fuzzer/TestCase.h"
 #include "Fuzzer/Value.h"
-#include "Fuzzer/BitsValue.h"
-#include "Fuzzer/PointerValue.h"
-#include "Fuzzer/FunctionValue.h"
-#include "Fuzzer/ArrayValue.h"
-#include "Fuzzer/StructValue.h"
-#include "Fuzzer/AggregateValue.h"
-#include "Fuzzer/PlaceholderValue.h"
 
 #include <cxxabi.h>
 
+#include <cctype>
 #include <cstdlib>
 #include <cstdint>
 #include <memory>
@@ -81,92 +73,122 @@ private:
 void TestCaseDumper::Dump(const TestCase& tc) {
   DumpContext context;
 
-  for (auto callId = 0; callId < tc.GetFunctionCallCount(); ++callId) {
+  for (size_t callId = 0; callId < tc.GetFunctionCallsCount(); ++callId) {
     const auto& call = tc.GetFunctionCall(callId);
 
     _printer.PrintWithColor(KeywordColor, "CALL ");
     _printer << "#" << callId << ": ";
     DumpFunctionCall(call, context);
-    if (callId != tc.GetFunctionCallCount() - 1) {
+    if (callId != tc.GetFunctionCallsCount() - 1) {
       _printer << Printer::endl;
     }
   }
 }
 
 void TestCaseDumper::DumpFunctionCall(const FunctionCall& value, DumpContext& context) {
-  _printer << "A" << value.func()->id() << " ";
-  DumpSymbolName(value.func()->name().c_str());
+  const auto& func = _store.GetFunction(value.funcId());
+  _printer << "A" << value.funcId() << " ";
+  DumpSymbolName(func.name().c_str());
+
+  // Print `this` value.
+  if (value.HasThis()) {
+    _printer << Printer::endl;
+    auto indentGuard = _printer.PushIndent();
+
+    // Print: THIS:
+    _printer.PrintWithColor(KeywordColor, "THIS");
+    _printer << ": ";
+    DumpValue(*value.GetThis(), context);
+  }
 
   // Print arguments
   auto indentGuard = _printer.PushIndent();
-  for (size_t i = 0; i < value.GetArgCount(); ++i) {
+  for (size_t i = 0; i < value.GetArgsCount(); ++i) {
     _printer << Printer::endl;
     auto arg = value.GetArg(i);
 
-    // Print: ARG #<index>: $<slot>
-    _printer.PrintWithColor(KeywordColor, "ARG ");
-    _printer << "#" << i << ": ";
+    // Print: ARG #<index>:
+    _printer.PrintWithColor(KeywordColor, "ARG");
+    _printer << " #" << i << ": ";
     DumpValue(*arg, context);
   }
 
   _printer << Printer::endl;
-  _printer.PrintWithColor(KeywordColor, "RET ");
-  _printer << "$" << context.PeekNextValueIndex();
+  _printer.PrintWithColor(KeywordColor, "RET");
+  _printer << " @ $" << context.PeekNextValueIndex();
 
   // The next value index is reserved for the return value of the current function.
   context.SkipNextValue();
 }
 
 void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
-  _printer << "T" << value.type()->id() << " $";
-  if (value.kind() == ValueKind::PlaceholderValue || context.HasValue(&value)) {
-    _printer << '?';
-  } else {
-    _printer << context.PeekNextValueIndex();
-  }
-  _printer << ": ";
-
   if (context.HasValue(&value)) {
-    _printer.PrintWithColor(KeywordColor, "XREF ");
-    _printer << "$" << context.GetValueIndex(&value);
-  } else {
-    // Placeholder value does not reserve a test case object pool slot.
-    if (value.kind() != ValueKind::PlaceholderValue) {
-      context.SetNextValue(&value);
-    }
+    PlaceholderValue ref { context.GetValueIndex(&value) };
+    DumpValue(ref, context);
+    return;
+  }
 
-    switch (value.kind()) {
-      case ValueKind::BitsValue: {
-        DumpBitsValue(caf::dyn_cast<BitsValue>(value), context);
-        break;
+  switch (value.kind()) {
+    case ValueKind::Undefined:
+      _printer.PrintWithColor(ValueTypeColor, "Undefined");
+      break;
+    case ValueKind::Null:
+      _printer.PrintWithColor(ValueTypeColor, "Null");
+      break;
+    case ValueKind::Function:
+      _printer.PrintWithColor(ValueTypeColor, "Function");
+      break;
+    case ValueKind::Boolean:
+      _printer.PrintWithColor(ValueTypeColor, "Boolean");
+      _printer << " ";
+      if (value.GetBooleanValue()) {
+        _printer.PrintWithColor(SpecialValueColor, "true");
+      } else {
+        _printer.PrintWithColor(SpecialValueColor, "false");
       }
-      case ValueKind::PointerValue: {
-        DumpPointerValue(caf::dyn_cast<PointerValue>(value), context);
-        break;
+      break;
+    case ValueKind::String:
+      _printer.PrintWithColor(ValueTypeColor, "String");
+      _printer << " ";
+      DumpStringValue(value.GetStringValue().c_str());
+      break;
+    case ValueKind::Integer:
+      _printer.PrintWithColor(ValueTypeColor, "Integer");
+      _printer << " ";
+      DumpIntegerValue(value.GetIntegerValue());
+      break;
+    case ValueKind::Float:
+      _printer.PrintWithColor(ValueTypeColor, "Float");
+      _printer << " " << value.GetFloatValue();
+      break;
+    case ValueKind::Array: {
+      auto slot = context.PeekNextValueIndex();
+      context.SetNextValue(&value);
+      const auto& arrayValue = caf::dyn_cast<ArrayValue>(value);
+      _printer.PrintWithColor(ValueTypeColor, "Array");
+      _printer << " $" << slot;
+      _printer << " [" << arrayValue.size() << "]";
+
+      auto indentGuard = _printer.PushIndent();
+      for (size_t i = 0; i < arrayValue.size(); ++i) {
+        _printer << Printer::endl;
+        _printer.PrintWithColor(KeywordColor, "[");
+        _printer << i;
+        _printer.PrintWithColor(KeywordColor, "]");
+        _printer << " ";
+        DumpValue(*arrayValue.GetElement(i), context);
       }
-      case ValueKind::FunctionValue: {
-        DumpFunctionValue(caf::dyn_cast<FunctionValue>(value), context);
-        break;
-      }
-      case ValueKind::ArrayValue: {
-        DumpArrayValue(caf::dyn_cast<ArrayValue>(value), context);
-        break;
-      }
-      case ValueKind::StructValue: {
-        DumpStructValue(caf::dyn_cast<StructValue>(value), context);
-        break;
-      }
-      case ValueKind::AggregateValue: {
-        DumpAggregateValue(caf::dyn_cast<AggregateValue>(value), context);
-        break;
-      }
-      case ValueKind::PlaceholderValue: {
-        DumpPlaceholderValue(caf::dyn_cast<PlaceholderValue>(value), context);
-        break;
-      }
-      default:
-        CAF_UNREACHABLE;
+
+      break;
     }
+    case ValueKind::Placeholder:
+      _printer.PrintWithColor(KeywordColor, "Placeholder");
+      _printer << " ";
+      _printer.PrintWithColor(KeywordColor, "REF");
+      _printer << " $" << value.GetPlaceholderIndex();
+      break;
+    default:
+      CAF_UNREACHABLE;
   }
 }
 
@@ -196,100 +218,49 @@ void TestCaseDumper::DumpHex(const void* data, size_t size) {
   _printer << " }";
 }
 
-void TestCaseDumper::DumpBitsValue(const BitsValue& value, DumpContext& context) {
-  auto type = caf::dyn_cast<BitsType>(value.type());
-  _printer.PrintWithColor(ValueTypeColor, "Bits ");
-  if (type->name().empty()) {
-    _printer << "(no name)";
-  } else {
-    _printer << type->name();
+void TestCaseDumper::DumpStringValue(const char* s) {
+  _printer << "\"";
+  while (*s) {
+    auto ch = *s++;
+    if (std::isprint(ch)) {
+      if (ch == '"') {
+        _printer << "\\\"";
+      } else {
+        _printer << ch;
+      }
+    } else {
+      if (ch == '\n') {
+        _printer << "\\n";
+      } else if (ch == '\t') {
+        _printer << "\\t";
+      } else if (ch == '\r') {
+        _printer << "\\r";
+      } else {
+        _printer << "\\x"
+                 << GetHexDigit(static_cast<uint8_t>(ch) / 16)
+                 << GetHexDigit(static_cast<uint8_t>(ch) % 16);
+      }
+    }
   }
-  _printer << " size = " << value.size() << " ";
-  DumpHex(value.data(), value.size());
+  _printer << "\"";
 }
 
-void TestCaseDumper::DumpPointerValue(const PointerValue& value, DumpContext& context) {
-  _printer.PrintWithColor(ValueTypeColor, "Pointer");
-  if (value.IsNull()) {
-    _printer.PrintWithColor(SpecialValueColor, " nullptr");
-  } else {
-    _printer << Printer::endl;
-    auto indentGuard = _printer.PushIndent();
-    _printer.PrintWithColor(KeywordColor, "POINTEE ");
-    DumpValue(*value.pointee(), context);
-  }
-}
+void TestCaseDumper::DumpIntegerValue(int32_t value) {
+  _printer << value << ' ';
 
-void TestCaseDumper::DumpFunctionValue(const FunctionValue& value, DumpContext& context) {
-  _printer.PrintWithColor(ValueTypeColor, "Function");
-  _printer << " function ID = " << value.functionId();
-}
+  uint8_t xdgt[8];
+  uint8_t* head = xdgt;
 
-void TestCaseDumper::DumpArrayValue(const ArrayValue& value, DumpContext& context) {
-  _printer.PrintWithColor(ValueTypeColor, "Array");
-  _printer << " size = " << value.size();
-  auto indentGuard = _printer.PushIndent();
-  for (size_t i = 0; i < value.size(); ++i) {
-    auto element = value.GetElement(i);
-    _printer << Printer::endl;
-    _printer.PrintWithColor(KeywordColor, "ELEM ");
-    _printer << "#" << i << ": ";
-    DumpValue(*element, context);
-  }
-}
-
-void TestCaseDumper::DumpStructValue(const StructValue& value, DumpContext& context) {
-  auto type = caf::dyn_cast<StructType>(value.type());
-
-  _printer.PrintWithColor(ValueTypeColor, "Struct ");
-  if (type->name().empty()) {
-    _printer << "(no name)";
-  } else {
-    DumpSymbolName(type->name().c_str());
-  }
-  _printer << Printer::endl;
-
-  auto indentGuard1 = _printer.PushIndent();
-  _printer.PrintWithColor(KeywordColor, "CTOR ");
-  _printer << "#" << value.ctor()->id() << ": ";
-  if (value.ctor()->name().empty()) {
-    _printer << "(no name)";
-  } else {
-    DumpSymbolName(value.ctor()->name().c_str());
+  auto uvalue = static_cast<uint32_t>(value);
+  for (auto i = 0; i < 8; ++i) {
+    *head++ = static_cast<uint8_t>(uvalue % 16);
+    uvalue /= 16;
   }
 
-  auto indentGuard2 = _printer.PushIndent();
-  for (size_t i = 0; i < value.GetArgsCount(); ++i) {
-    _printer << Printer::endl;
-    _printer.PrintWithColor(KeywordColor, "ARG ");
-    _printer << "#" << i << ": ";
-    DumpValue(*value.GetArg(i), context);
+  _printer << "0x";
+  while (head != xdgt) {
+    _printer << GetHexDigit(*--head);
   }
-}
-
-void TestCaseDumper::DumpAggregateValue(const AggregateValue& value, DumpContext& context) {
-  auto type = caf::dyn_cast<AggregateType>(value.type());
-
-  _printer.PrintWithColor(ValueTypeColor, "Aggregate ");
-  if (type->name().empty()) {
-    _printer << "(no name)";
-  } else {
-    DumpSymbolName(type->name().c_str());
-  }
-
-  auto indentGuard = _printer.PushIndent();
-  for (size_t i = 0; i < value.GetFieldsCount(); ++i) {
-    _printer << Printer::endl;
-    _printer.PrintWithColor(KeywordColor, "FIELD ");
-    _printer << "#" << i << ": ";
-    DumpValue(*value.GetField(i), context);
-  }
-}
-
-void TestCaseDumper::DumpPlaceholderValue(const PlaceholderValue& value, DumpContext& context) {
-  _printer.PrintWithColor(ValueTypeColor, "Placeholder ");
-  _printer.PrintWithColor(KeywordColor, "REF CALL ");
-  _printer << "#" << value.valueIndex();
 }
 
 } // namespace caf

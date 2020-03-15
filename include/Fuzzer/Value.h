@@ -351,6 +351,10 @@ public:
    */
   size_t index() const { return _index; }
 
+  size_t GetPlaceholderIndex() const override {
+    return _index;
+  }
+
 private:
   size_t _index;
 }; // class PlaceholderValue

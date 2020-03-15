@@ -102,7 +102,7 @@ FunctionCall TestCaseDeserializer::DeserializeFunctionCall(DeserializationContex
 }
 
 Value* TestCaseDeserializer::DeserializeValue(DeserializationContext& context) {
-  auto kind = static_cast<ValueKind>(ReadInt<8, uint8_t>(_in));
+  auto kind = static_cast<ValueKind>(ReadInt<1, uint8_t>(_in));
   switch (kind) {
     case ValueKind::Undefined:
       return _corpus.pool().GetUndefinedValue();

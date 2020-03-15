@@ -134,6 +134,7 @@ void TestCaseSerializer::Serialize(const Value* value, SerializationContext& con
       for (auto element : *arrayValue) {
         Serialize(element, context);
       }
+      break;
     }
     case ValueKind::Placeholder:
       WriteInt<4>(_out, value->GetPlaceholderIndex());

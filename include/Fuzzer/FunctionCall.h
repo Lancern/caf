@@ -26,7 +26,9 @@ public:
    * @param funcId the function call ID.
    */
   explicit FunctionCall(FunctionIdType funcId)
-    : _funcId(funcId)
+    : _funcId(funcId),
+      _this(nullptr),
+      _args()
   { }
 
   /**

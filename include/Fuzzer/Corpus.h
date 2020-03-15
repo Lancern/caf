@@ -46,7 +46,7 @@ public:
    * @return true if the reference is empty.
    * @return false if the reference is not empty.
    */
-  bool empty() const { return _corpus != nullptr; }
+  bool empty() const { return _corpus == nullptr; }
 
   operator bool() const { return empty(); }
 

@@ -17,8 +17,7 @@ Corpus& Corpus::operator=(Corpus &&) = default;
 Corpus::~Corpus() = default;
 
 TestCaseRef Corpus::CreateTestCase() {
-  AddTestCase(TestCase { });
-  return TestCaseRef { this, _testCases.size() - 1 };
+  return AddTestCase(TestCase { });
 }
 
 TestCaseRef Corpus::DuplicateTestCase(TestCaseRef existing) {

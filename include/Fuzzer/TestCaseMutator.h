@@ -164,6 +164,14 @@ private:
   StringValue* ChangeCharacter(StringValue* value);
 
   /**
+   * @brief Mutate the given string value by exchanging two characters.
+   *
+   * @param value the string value to mutate.
+   * @return StringValue* the mutated string value.
+   */
+  StringValue* ExchangeCharacters(StringValue* value);
+
+  /**
    * @brief Mutate the given integer value.
    *
    * @param value the integer value to mutate.
@@ -252,6 +260,14 @@ private:
    * @return ArrayValue* the mutated array value.
    */
   ArrayValue* MutateElement(ArrayValue* value, int depth);
+
+  /**
+   * @brief Mutate the given array value by exchanging two elements.
+   *
+   * @param value the array value to mutate.
+   * @return ArrayValue* the mutated array value.
+   */
+  ArrayValue* ExchangeElements(ArrayValue* value, int);
 }; // class TestCaseMutator
 
 } // namespace caf

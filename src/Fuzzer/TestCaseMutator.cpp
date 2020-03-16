@@ -230,7 +230,7 @@ Value* TestCaseMutator::Mutate(Value* value, int depth) {
 
 StringValue* TestCaseMutator::MutateString(StringValue* value) {
   using StringMutator = StringValue* (TestCaseMutator::*)(StringValue *);
-  StringMutator mutators[3];
+  StringMutator mutators[4];
   StringMutator* head = mutators;
 
   // Can we mutate the string by `InsertCharacter`?
@@ -246,6 +246,11 @@ StringValue* TestCaseMutator::MutateString(StringValue* value) {
   // Can we mutate the string by `ChangeCharacter`?
   if (value->length() > 0) {
     *head++ = &TestCaseMutator::ChangeCharacter;
+  }
+
+  // Can we mutate the string by `ExchangeCharacters`?
+  if (value->length() >= 2) {
+    *head++ = &TestCaseMutator::ExchangeCharacters;
   }
 
   assert(head != mutators && "No viable string value mutators.");
@@ -273,6 +278,14 @@ StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
   auto pos = _rnd.Index(s);
   auto ch = _gen.GenerateStringCharacter();
   s[pos] = ch;
+  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+}
+
+StringValue* TestCaseMutator::ExchangeCharacters(StringValue* value) {
+  auto s = value->value();
+  auto pos1 = _rnd.Next<size_t>(0, s.length() - 2);
+  auto pos2 = _rnd.Next<size_t>(pos1 + 1, s.length() - 1);
+  std::swap(s[pos1], s[pos2]);
   return _corpus.pool().GetOrCreateStringValue(std::move(s));
 }
 
@@ -334,7 +347,7 @@ FloatValue* TestCaseMutator::Negate(FloatValue* value) {
 
 ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, int depth) {
   using ArrayMutator = ArrayValue* (TestCaseMutator::*)(ArrayValue *, int);
-  ArrayMutator mutators[3];
+  ArrayMutator mutators[4];
   ArrayMutator *head = mutators;
 
   // Can we mutate the value using `PushElement`?
@@ -350,6 +363,11 @@ ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, int depth) {
   // Can we mutate the value using `MutateElement`?
   if (value->size() > 0) {
     *head++ = &TestCaseMutator::MutateElement;
+  }
+
+  // Can we mutate the value using `ExchangeElements`?
+  if (value->size() >= 2) {
+    *head++ = &TestCaseMutator::ExchangeElements;
   }
 
   assert(head != mutators && "No viable array mutators.");
@@ -392,6 +410,23 @@ ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, int depth) {
   newValue->Push(mutatedElement);
   for (size_t i = pos + 1; i < value->size(); ++i) {
     newValue->Push(value->GetElement(i));
+  }
+  return newValue;
+}
+
+ArrayValue* TestCaseMutator::ExchangeElements(ArrayValue* value, int) {
+  auto pos1 = _rnd.Next<size_t>(0, value->size() - 2);
+  auto pos2 = _rnd.Next<size_t>(pos1 + 1, value->size() - 1);
+  auto newValue = _corpus.pool().CreateArrayValue();
+  newValue->reserve(value->size());
+  for (size_t i = 0; i < value->size(); ++i) {
+    if (i == pos1) {
+      newValue->Push(value->GetElement(pos2));
+    } else if (i == pos2) {
+      newValue->Push(value->GetElement(pos1));
+    } else {
+      newValue->Push(value->GetElement(i));
+    }
   }
   return newValue;
 }

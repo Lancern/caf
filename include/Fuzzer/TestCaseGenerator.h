@@ -91,6 +91,13 @@ public:
   Value* GenerateValue() { return GenerateValue(1); }
 
   /**
+   * @brief Generate a function value.
+   *
+   * @return FunctionValue* the generated function value.
+   */
+  FunctionValue* GenerateFunctionValue();
+
+  /**
    * @brief Generate a char that can be added to a string value.
    *
    * @return char the generated character.

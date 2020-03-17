@@ -111,7 +111,9 @@ void TestCaseSerializer::Serialize(const Value* value, SerializationContext& con
   switch (value->kind()) {
     case ValueKind::Undefined:
     case ValueKind::Null:
+      break;
     case ValueKind::Function:
+      WriteInt<4>(_out, value->GetFunctionId());
       break;
     case ValueKind::Boolean:
       WriteInt<1>(_out, static_cast<uint8_t>(value->GetBooleanValue()));

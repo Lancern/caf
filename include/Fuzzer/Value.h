@@ -2,6 +2,7 @@
 #define CAF_VALUE_H
 
 #include "Infrastructure/Casting.h"
+#include "Basic/Function.h"
 
 #include <cstdint>
 #include <utility>
@@ -106,6 +107,17 @@ public:
   }
 
   /**
+   * @brief Get the function ID that this function value reference to.
+   *
+   * This function will trigger an assertion failure if this value is not a function value.
+   *
+   * @return FunctionIdType the function ID.
+   */
+  virtual FunctionIdType GetFunctionId() const {
+    assert(false && "The current value is not a function value.");
+  }
+
+  /**
    * @brief Get the reference index of this placeholder value.
    *
    * This function will trigger an assertion failure if this value is not a placeholder value.
@@ -188,6 +200,37 @@ public:
 private:
   std::string _value;
 }; // class StringValue
+
+/**
+ * @brief Represent a function value.
+ *
+ */
+class FunctionValue : public Value {
+public:
+  /**
+   * @brief Construct a new FunctionValue object.
+   *
+   * @param funcId the function ID.
+   */
+  explicit FunctionValue(FunctionIdType funcId)
+    : Value { ValueKind::Function },
+      _funcId(funcId)
+  { }
+
+  /**
+   * @brief Get the function ID.
+   *
+   * @return FunctionIdType the function ID.
+   */
+  FunctionIdType funcId() const { return _funcId; }
+
+  FunctionIdType GetFunctionId() const override {
+    return _funcId;
+  }
+
+private:
+  FunctionIdType _funcId;
+}; // class FunctionValue
 
 /**
  * @brief A language specific integer value.

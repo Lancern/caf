@@ -74,6 +74,11 @@ FunctionCall TestCaseGenerator::GenerateFunctionCall() {
   return call;
 }
 
+FunctionValue* TestCaseGenerator::GenerateFunctionValue() {
+  auto funcId = _corpus.store()->SelectFunction(_rnd).id();
+  return _corpus.pool().GetFunctionValue(funcId);
+}
+
 char TestCaseGenerator::GenerateStringCharacter() {
   return _rnd.Select(CharacterSet);
 }
@@ -103,8 +108,10 @@ Value* TestCaseGenerator::GenerateValue(size_t depth) {
       return pool.GetUndefinedValue();
     case ValueKind::Null:
       return pool.GetNullValue();
-    case ValueKind::Function:
-      return pool.GetFunctionValue();
+    case ValueKind::Function: {
+      auto funcId = _corpus.store()->SelectFunction(_rnd).id();
+      return pool.GetFunctionValue(funcId);
+    }
     case ValueKind::Boolean: {
       auto value = static_cast<bool>(_rnd.Next<int>(0, 1));
       return pool.GetBooleanValue(value);

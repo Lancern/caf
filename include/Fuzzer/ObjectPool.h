@@ -3,6 +3,7 @@
 
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Random.h"
+#include "Basic/Function.h"
 #include "Fuzzer/Value.h"
 
 #include <cstdint>
@@ -64,11 +65,12 @@ public:
   Value* GetNullValue();
 
   /**
-   * @brief Get the function value.
+   * @brief Get the function value that references to the given function.
    *
-   * @return Value* the function value.
+   * @param funcId the ID of the target function.
+   * @return FunctionValue* the function value.
    */
-  Value* GetFunctionValue();
+  FunctionValue* GetFunctionValue(FunctionIdType funcId);
 
   /**
    * @brief Get the boolean value corresponding to the given bool value.
@@ -158,7 +160,7 @@ private:
   std::vector<std::unique_ptr<Value>> _values;
   std::unique_ptr<Value> _undef; // Undefined value
   std::unique_ptr<Value> _null; // Null value
-  std::unique_ptr<Value> _func; // Function value
+  std::unordered_map<FunctionIdType, std::unique_ptr<FunctionValue>> _funcValues; // Function values
   std::unique_ptr<BooleanValue> _bool[2]; // Boolean values
   std::unordered_map<std::string, StringValue *> _strToValue;
   std::unique_ptr<IntegerValue *[]> _intTable;

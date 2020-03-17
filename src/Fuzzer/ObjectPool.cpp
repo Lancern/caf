@@ -27,7 +27,7 @@ ObjectPool::ObjectPool()
   : _values(),
     _undef(nullptr),
     _null(nullptr),
-    _func(nullptr),
+    _funcValues(),
     _bool { nullptr, nullptr },
     _strToValue(),
     _intTable(caf::make_unique<IntegerValue* []>(INTEGER_TABLE_SIZE)),
@@ -45,8 +45,13 @@ Value* ObjectPool::GetNullValue() {
   return get_or_create(_null, ValueKind::Null);
 }
 
-Value* ObjectPool::GetFunctionValue() {
-  return get_or_create(_func, ValueKind::Function);
+FunctionValue* ObjectPool::GetFunctionValue(FunctionIdType funcId) {
+  auto i = _funcValues.find(funcId);
+  if (i == _funcValues.end()) {
+    return _funcValues.emplace(funcId, caf::make_unique<FunctionValue>(funcId)).first->second.get();
+  } else {
+    return i->second.get();
+  }
 }
 
 BooleanValue* ObjectPool::GetBooleanValue(bool value) {

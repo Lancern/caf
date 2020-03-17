@@ -33,6 +33,7 @@ char GetHexDigit(uint8_t decimal) {
 constexpr static const PrinterColor KeywordColor = PrinterColor::BrightGreen;
 constexpr static const PrinterColor ValueTypeColor = PrinterColor::BrightCyan;
 constexpr static const PrinterColor SpecialValueColor = PrinterColor::Yellow;
+constexpr static const PrinterColor SymbolNameColor = PrinterColor::BrightMagenta;
 
 class TestCaseDumper::DumpContext {
 public:
@@ -135,9 +136,13 @@ void TestCaseDumper::DumpValue(const Value& value, DumpContext& context) {
     case ValueKind::Null:
       _printer.PrintWithColor(ValueTypeColor, "Null");
       break;
-    case ValueKind::Function:
+    case ValueKind::Function: {
       _printer.PrintWithColor(ValueTypeColor, "Function");
+      auto funcId = value.GetFunctionId();
+      _printer << " A" << funcId << " ";
+      DumpSymbolName(_store.GetFunction(funcId).name().c_str());
       break;
+    }
     case ValueKind::Boolean:
       _printer.PrintWithColor(ValueTypeColor, "Boolean");
       _printer << " ";
@@ -201,7 +206,7 @@ void TestCaseDumper::DumpSymbolName(const char* name) {
     }
   }
 
-  _printer << name;
+  _printer.PrintWithColor(SymbolNameColor, name);
   if (_demangle && demangleStatus == 0) {
     // Demangle had been successful. We need to free the memory region allocated by the demangler.
     std::free(const_cast<char *>(name));

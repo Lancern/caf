@@ -193,7 +193,6 @@ Value* TestCaseMutator::Mutate(Value* value, int depth) {
   switch (value->kind()) {
     case ValueKind::Undefined:
     case ValueKind::Null:
-    case ValueKind::Function:
       return _gen.GenerateValue();
     default:
       CAF_NO_OP;
@@ -207,8 +206,9 @@ Value* TestCaseMutator::Mutate(Value* value, int depth) {
   switch (value->kind()) {
     case ValueKind::Undefined:
     case ValueKind::Null:
-    case ValueKind::Function:
       CAF_UNREACHABLE;
+    case ValueKind::Function:
+      return _gen.GenerateFunctionValue();
     case ValueKind::Boolean:
       return pool.GetBooleanValue(!value->GetBooleanValue());
     case ValueKind::String:

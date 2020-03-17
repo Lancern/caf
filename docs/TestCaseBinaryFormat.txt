@@ -10,7 +10,7 @@ Value ->
     <kind: u8 = 1>                                          /* Null value */ |
     <kind: u8 = 2> <value: u8 = 0 | 1>                      /* Boolean value */ |
     <kind: u8 = 3> <length: u32> <data: [length x u8]>      /* String value */ |
-    <kind: u8 = 4>                                          /* Function value */ |
+    <kind: u8 = 4> <funcId: u32>                            /* Function value */ |
     <kind: u8 = 5> <value: i32>                             /* Integer value */
     <kind: u8 = 6> <value: f64>                             /* Floating point value */
     <kind: u8 = 7> <size: u32> <elements: [size x Value]>   /* ArrayValue */ |

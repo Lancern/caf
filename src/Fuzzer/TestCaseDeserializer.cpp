@@ -108,8 +108,10 @@ Value* TestCaseDeserializer::DeserializeValue(DeserializationContext& context) {
       return _corpus.pool().GetUndefinedValue();
     case ValueKind::Null:
       return _corpus.pool().GetNullValue();
-    case ValueKind::Function:
-      return _corpus.pool().GetFunctionValue();
+    case ValueKind::Function: {
+      auto funcId = ReadInt<4, FunctionIdType>(_in);
+      return _corpus.pool().GetFunctionValue(funcId);
+    }
     case ValueKind::Boolean: {
       auto value = static_cast<bool>(ReadInt<1, uint8_t>(_in));
       return _corpus.pool().GetBooleanValue(value);

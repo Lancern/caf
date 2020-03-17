@@ -26,6 +26,6 @@ target_sources(CAFInfrastructure INTERFACE
 add_subdirectory(Basic)
 add_subdirectory(Fuzzer)
 add_subdirectory(Extractor)
-# add_subdirectory(Instrumentor)
+add_subdirectory(Instrumentor)
 add_subdirectory(CLI)
 add_subdirectory(ClangWrapper)

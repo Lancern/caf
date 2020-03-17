@@ -13,12 +13,10 @@ add_library(CAFExtractorLib STATIC
     ${CAF_EXTRACTOR_SOURCES})
 
 target_compile_definitions(CAFExtractor PUBLIC CAF_LLVM)
-target_link_libraries(CAFExtractor PUBLIC CAFInfrastructure)
-target_link_libraries(CAFExtractor PUBLIC CAFBasic)
-target_link_libraries(CAFExtractor PUBLIC LLVM)
+target_link_libraries(CAFExtractor
+    PUBLIC CAFInfrastructure CAFBasic LLVM)
 
 target_compile_definitions(CAFExtractorLib PUBLIC CAF_LLVM)
 target_compile_options(CAFExtractorLib PUBLIC "-fPIC")
-target_link_libraries(CAFExtractorLib PUBLIC CAFInfrastructure)
-target_link_libraries(CAFExtractorLib PUBLIC CAFBasic)
-target_link_libraries(CAFExtractorLib PUBLIC LLVM)
+target_link_libraries(CAFExtractorLib
+    PUBLIC CAFInfrastructure CAFBasic LLVM)

@@ -1,4 +1,4 @@
-#include "Instrumentor/nodejs/CAFCodeGenerator.h"
+#include "Instrumentor/nodejs/CAFCodeGeneratorForNodejs.h"
 #include "Extractor/ExtractorContext.h"
 
 #include "llvm/Support/raw_ostream.h"

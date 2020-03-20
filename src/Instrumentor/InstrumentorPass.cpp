@@ -1,6 +1,6 @@
 #include "Extractor/ExtractorPass.h"
 #include "Instrumentor/InstrumentorPass.h"
-#include "Instrumentor/nodejs/CAFCodeGenerator.h"
+#include "Instrumentor/nodejs/CAFCodeGeneratorForNodejs.h"
 #include "Extractor/ExtractorPass.h"
 
 #include "llvm/Pass.h"

@@ -1,5 +1,4 @@
 #include "Extractor/ExtractorPass.h"
-// #include "common/CAFCodeGenerator.h"
 #include "Instrumentor/InstrumentorPass.h"
 #include "Instrumentor/nodejs/CAFCodeGenerator.h"
 #include "Extractor/ExtractorPass.h"
@@ -17,7 +16,7 @@ namespace {
     "cafinstrumentor", "CAF Instrumentor Pass", false, true };
   
   llvm::cl::opt<std::string> CAFInstrumentorTarget {
-    "", 
+    "cafinstrumentortarget", 
     llvm::cl::desc("Caf target of instrmentation"), 
     llvm::cl::init("common")
   };
@@ -31,15 +30,18 @@ InstrumentorPass::InstrumentorPass()
 { }
 
 void InstrumentorPass::getAnalysisUsage(llvm::AnalysisUsage& usage) const {
-  usage.getPreservesAll();
+  usage.addRequired<ExtractorPass>();
+  usage.addPreserved<ExtractorPass>();
 }
 
 bool InstrumentorPass::runOnModule(llvm::Module& module) {
   const auto& extractions = getAnalysis<ExtractorPass>().GetContext();
 
-   auto cafInstrumentorTarget = CAFInstrumentorTarget.getValue();
+  auto cafInstrumentorTarget = CAFInstrumentorTarget.getValue();
+  llvm::errs() << "cafinstrumentortarget: " << cafInstrumentorTarget << "\n";
   if(cafInstrumentorTarget == "nodejs") {
-    CAFCodeGenerator generator { };
+    llvm::errs() << "!!!\n";
+    CAFCodeGeneratorForNodejs generator { };
     generator.SetContext(module, extractions);
     generator.GenerateStub();
   } else { // common target

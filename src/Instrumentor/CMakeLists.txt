@@ -11,7 +11,7 @@ add_library(CAFInstrumentor MODULE
 
 add_subdirectory(InstrumentorLib)
 # add_subdirectory(common)
-# add_subdirectory(nodejs)
+add_subdirectory(nodejs)
 
 target_compile_definitions(CAFInstrumentor PUBLIC CAF_LLVM)
 target_link_libraries(CAFInstrumentor

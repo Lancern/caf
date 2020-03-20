@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../../lib/libCAFInstrumentorForNodejs.a  CMakeFiles/CAFInstrumentorForNodejs.dir/CAFCodeGenerator.cpp.o
+/usr/bin/ranlib ../../../lib/libCAFInstrumentorForNodejs.a

@@ -182,33 +182,6 @@ CAFInstrumentor/fast:
 	cd /home/zys/caf_refactory && $(MAKE) -f src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build
 .PHONY : CAFInstrumentor/fast
 
-CAFCodeGenerator.o: CAFCodeGenerator.cpp.o
-
-.PHONY : CAFCodeGenerator.o
-
-# target to build an object file
-CAFCodeGenerator.cpp.o:
-	cd /home/zys/caf_refactory && $(MAKE) -f src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o
-.PHONY : CAFCodeGenerator.cpp.o
-
-CAFCodeGenerator.i: CAFCodeGenerator.cpp.i
-
-.PHONY : CAFCodeGenerator.i
-
-# target to preprocess a source file
-CAFCodeGenerator.cpp.i:
-	cd /home/zys/caf_refactory && $(MAKE) -f src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.i
-.PHONY : CAFCodeGenerator.cpp.i
-
-CAFCodeGenerator.s: CAFCodeGenerator.cpp.s
-
-.PHONY : CAFCodeGenerator.s
-
-# target to generate assembly for a file
-CAFCodeGenerator.cpp.s:
-	cd /home/zys/caf_refactory && $(MAKE) -f src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.s
-.PHONY : CAFCodeGenerator.cpp.s
-
 InstrumentorPass.o: InstrumentorPass.cpp.o
 
 .PHONY : InstrumentorPass.o
@@ -250,9 +223,6 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... install"
-	@echo "... CAFCodeGenerator.o"
-	@echo "... CAFCodeGenerator.i"
-	@echo "... CAFCodeGenerator.s"
 	@echo "... InstrumentorPass.o"
 	@echo "... InstrumentorPass.i"
 	@echo "... InstrumentorPass.s"

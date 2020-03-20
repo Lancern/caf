@@ -7,11 +7,11 @@
 #     opt)
 
 add_library(CAFInstrumentor MODULE
-    CAFCodeGenerator.cpp
-    CAFCodeGenerator.h
     InstrumentorPass.cpp)
 
 add_subdirectory(InstrumentorLib)
+# add_subdirectory(common)
+# add_subdirectory(nodejs)
 
 target_compile_definitions(CAFInstrumentor PUBLIC CAF_LLVM)
 target_link_libraries(CAFInstrumentor

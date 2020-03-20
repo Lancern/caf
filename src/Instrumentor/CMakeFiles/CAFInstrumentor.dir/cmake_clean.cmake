@@ -1,5 +1,4 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o"
   "CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o"
   "../../lib/libCAFInstrumentor.pdb"
   "../../lib/libCAFInstrumentor.so"

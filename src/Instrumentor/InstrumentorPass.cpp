@@ -1,38 +1,52 @@
 #include "Extractor/ExtractorPass.h"
-#include "CAFCodeGenerator.h"
+// #include "common/CAFCodeGenerator.h"
+#include "Instrumentor/InstrumentorPass.h"
+#include "Instrumentor/nodejs/CAFCodeGenerator.h"
+#include "Extractor/ExtractorPass.h"
 
 #include "llvm/Pass.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/Module.h"
 
 namespace caf {
 
-class InstrumentorPass : public llvm::ModulePass {
-public:
-  explicit InstrumentorPass()
-    : llvm::ModulePass { ID }
-  { }
+namespace {
 
-  bool runOnModule(llvm::Module& module) override {
-    const auto& extractions = getAnalysis<ExtractorPass>().context();
+  static llvm::RegisterPass<InstrumentorPass> RegInstrumentor {
+    "cafinstrumentor", "CAF Instrumentor Pass", false, true };
+  
+  llvm::cl::opt<std::string> CAFInstrumentorTarget {
+    "", 
+    llvm::cl::desc("Caf target of instrmentation"), 
+    llvm::cl::init("common")
+  };
 
-    CAFCodeGenerator generator { };
-    generator.SetContext(module, extractions);
-    generator.GenerateCallbackFunctionCandidateArray(extractions.GetCallbackFunctionCandidates());
-    generator.GenerateStub();
-
-    return true;
-  }
-
-  void getAnalysisUsage(llvm::AnalysisUsage& usage) const override {
-    usage.addRequired<ExtractorPass>();
-    usage.addPreserved<ExtractorPass>();
-  }
-
-  static char ID;
-}; // class InstrumentorPass
+} // namespace <anonymous>
 
 char InstrumentorPass::ID = 0;
 
-static llvm::RegisterPass<InstrumentorPass> RegInstrumentor {
-    "cafinstrumentor", "CAF Instrumentor Pass", false, false };
+InstrumentorPass::InstrumentorPass()
+  : llvm::ModulePass { ID }
+{ }
+
+void InstrumentorPass::getAnalysisUsage(llvm::AnalysisUsage& usage) const {
+  usage.getPreservesAll();
+}
+
+bool InstrumentorPass::runOnModule(llvm::Module& module) {
+  const auto& extractions = getAnalysis<ExtractorPass>().GetContext();
+
+   auto cafInstrumentorTarget = CAFInstrumentorTarget.getValue();
+  if(cafInstrumentorTarget == "nodejs") {
+    CAFCodeGenerator generator { };
+    generator.SetContext(module, extractions);
+    generator.GenerateStub();
+  } else { // common target
+    llvm::errs() << "common target.\n";
+  }
+
+  return true;
+}
 
 } // namespace caf

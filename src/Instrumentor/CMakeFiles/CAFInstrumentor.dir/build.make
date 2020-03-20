@@ -57,33 +57,9 @@ include src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/progress.make
 # Include the compile flags for this target's objects.
 include src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/flags.make
 
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/flags.make
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o: src/Instrumentor/CAFCodeGenerator.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zys/caf_refactory/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o"
-	cd /home/zys/caf_refactory/src/Instrumentor && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o -c /home/zys/caf_refactory/src/Instrumentor/CAFCodeGenerator.cpp
-
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.i"
-	cd /home/zys/caf_refactory/src/Instrumentor && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/zys/caf_refactory/src/Instrumentor/CAFCodeGenerator.cpp > CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.i
-
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.s"
-	cd /home/zys/caf_refactory/src/Instrumentor && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/zys/caf_refactory/src/Instrumentor/CAFCodeGenerator.cpp -o CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.s
-
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.requires:
-
-.PHONY : src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.requires
-
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.provides: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.requires
-	$(MAKE) -f src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.provides.build
-.PHONY : src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.provides
-
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.provides.build: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o
-
-
 src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/flags.make
 src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o: src/Instrumentor/InstrumentorPass.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zys/caf_refactory/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/zys/caf_refactory/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o"
 	cd /home/zys/caf_refactory/src/Instrumentor && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o -c /home/zys/caf_refactory/src/Instrumentor/InstrumentorPass.cpp
 
 src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.i: cmake_force
@@ -107,20 +83,18 @@ src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o.provides.
 
 # Object files for target CAFInstrumentor
 CAFInstrumentor_OBJECTS = \
-"CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o" \
 "CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o"
 
 # External object files for target CAFInstrumentor
 CAFInstrumentor_EXTERNAL_OBJECTS =
 
-lib/libCAFInstrumentor.so: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o
 lib/libCAFInstrumentor.so: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o
 lib/libCAFInstrumentor.so: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build.make
-lib/libCAFInstrumentor.so: lib/libCAFBasicLLVM.a
-lib/libCAFInstrumentor.so: lib/libCAFExtractorStatic.a
-lib/libCAFInstrumentor.so: lib/libCAFBasicLLVM.a
+lib/libCAFInstrumentor.so: lib/libCAFBasic.a
+lib/libCAFInstrumentor.so: lib/libCAFExtractorLib.a
+lib/libCAFInstrumentor.so: lib/libCAFBasic.a
 lib/libCAFInstrumentor.so: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/zys/caf_refactory/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX shared module ../../lib/libCAFInstrumentor.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/zys/caf_refactory/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared module ../../lib/libCAFInstrumentor.so"
 	cd /home/zys/caf_refactory/src/Instrumentor && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/CAFInstrumentor.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -128,7 +102,6 @@ src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build: lib/libCAFInstrumentor.so
 
 .PHONY : src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/build
 
-src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/requires: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/CAFCodeGenerator.cpp.o.requires
 src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/requires: src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/InstrumentorPass.cpp.o.requires
 
 .PHONY : src/Instrumentor/CMakeFiles/CAFInstrumentor.dir/requires

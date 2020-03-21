@@ -40,7 +40,7 @@ bool InstrumentorPass::runOnModule(llvm::Module& module) {
   auto cafInstrumentorTarget = CAFInstrumentorTarget.getValue();
   llvm::errs() << "cafinstrumentortarget: " << cafInstrumentorTarget << "\n";
   if(cafInstrumentorTarget == "nodejs") {
-    llvm::errs() << "!!!\n";
+    llvm::errs() << "nodejs target.\n";
     CAFCodeGeneratorForNodejs generator { };
     generator.SetContext(module, extractions);
     generator.GenerateStub();

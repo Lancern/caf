@@ -15,4 +15,5 @@ add_subdirectory(nodejs)
 
 target_compile_definitions(CAFInstrumentor PUBLIC CAF_LLVM)
 target_link_libraries(CAFInstrumentor
-    PUBLIC CAFInfrastructure CAFBasic CAFExtractorLib)
+    PUBLIC CAFInfrastructure CAFBasic CAFExtractorLib
+    PRIVATE CAFInstrumentorForNodejs)

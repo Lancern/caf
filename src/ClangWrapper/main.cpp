@@ -105,6 +105,8 @@ void PrintUsage(int argc, char* argv[]) {
     "The following environment variables can be set to customize the toolchain:\n"
     "  GCLANG_PATH - Path to the directory containing gclang or gclang++\n"
     "  AFL_PATH - Path to the directory containing AFL++ binaries\n"
+    "  LLVM_CONFIG - Path to the llvm-config utility corresponding to the desired\n"
+    "                LLVM version\n"
     "\n"
     "If some of the environment variables above are not set, then the corresponding \n"
     "tool will be located from the PATH variable.\n";

@@ -156,6 +156,22 @@ public:
     return rnd.Select(_values).get();
   }
 
+  /**
+   * @brief Clear this object pool.
+   *
+   * This function will not delete the following values if they exist:
+   * * The undefined value;
+   * * The null value;
+   * * The function values;
+   * * The string values whose value is bookkept in the internal string table;
+   * * The integer values whose value is bookkept in the internal integer table;
+   * * The NaN value;
+   * * The +inf and the -inf value;
+   * * The placeholder values.
+   *
+   */
+  void clear();
+
 private:
   std::vector<std::unique_ptr<Value>> _values;
   std::unique_ptr<Value> _undef; // Undefined value

@@ -5,7 +5,8 @@
 #include "Infrastructure/Random.h"
 #include "Infrastructure/Stream.h"
 #include "Basic/CAFStore.h"
-#include "Fuzzer/Corpus.h"
+#include "Fuzzer/ObjectPool.h"
+#include "Fuzzer/TestCase.h"
 #include "Fuzzer/TestCaseGenerator.h"
 #include "Fuzzer/TestCaseSerializer.h"
 
@@ -88,13 +89,13 @@ public:
     storeFile.close();
     ChangeWorkingDirectory(_opts.outputDir.c_str());
 
-    // Initialize corpus and random number generator.
-    auto corpus = caf::make_unique<Corpus>(std::move(store));
+    // Initialize object pool and random number generator.
+    auto pool = caf::make_unique<ObjectPool>();
     Random<> rnd;
     rnd.seed(_opts.seed);
 
     // Start generating test cases.
-    TestCaseGenerator gen { *corpus.get(), rnd };
+    TestCaseGenerator gen { *store, *pool, rnd };
     gen.options().MaxCalls = _opts.maxCalls;
 
     for (auto tci = 0; tci < _opts.n; ++tci) {
@@ -115,8 +116,8 @@ public:
       }
 
       StlOutputStream outputStream { outputFile };
-      TestCaseSerializer ser { *corpus.get(), outputStream };
-      ser.Serialize(*tc);
+      TestCaseSerializer ser { outputStream };
+      ser.Serialize(tc);
     }
 
     if (!_opts.silence) {

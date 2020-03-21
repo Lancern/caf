@@ -1,6 +1,6 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Fuzzer/TestCaseMutator.h"
-#include "Fuzzer/Corpus.h"
+#include "Fuzzer/ObjectPool.h"
 #include "Fuzzer/TestCase.h"
 #include "Fuzzer/FunctionCall.h"
 #include "Fuzzer/Value.h"
@@ -20,27 +20,31 @@ constexpr static const int32_t INTEGER_MIN_INCREMENT = -10;
 constexpr static const double FLOAT_MAX_INCREMENT = 100;
 constexpr static const double FLOAT_MIN_INCREMENT = -100;
 
-TestCaseRef TestCaseMutator::Mutate(TestCaseRef testCase) {
-  using Mutator = TestCaseRef (TestCaseMutator::*)(TestCaseRef);
+void TestCaseMutator::Mutate(TestCase& testCase) {
+  using Mutator = void (TestCaseMutator::*)(TestCase &);
   Mutator mutators[7];
   Mutator* head = mutators;
 
   // Can we mutate the test case by `AddFunctionCall`?
-  if (testCase->GetFunctionCallsCount() < options().MaxCalls) {
+  if (testCase.GetFunctionCallsCount() < options().MaxCalls) {
     *head++ = &TestCaseMutator::AddFunctionCall;
   }
 
   // Can we mutate the test case by `RemoveFunctionCall`?
-  if (testCase->GetFunctionCallsCount() > 1) {
+  if (testCase.GetFunctionCallsCount() > 1) {
     *head++ = &TestCaseMutator::RemoveFunctionCall;
   }
 
-  // We can always mutate the test case by `Splice` and `MutateThis`.
-  *head++ = &TestCaseMutator::Splice;
+  // Can we mutate the test case by `Splice`?
+  if (HasSpliceCandidate()) {
+    *head++ = &TestCaseMutator::Splice;
+  }
+
+  // We can always mutate the test case by `MutateThis`.
   *head++ = &TestCaseMutator::MutateThis;
 
   // Can we mutate the test case by `AddArgument`?
-  for (const auto& call : *testCase) {
+  for (const auto& call : testCase) {
     if (call.GetArgsCount() < options().MaxArguments) {
       *head++ = &TestCaseMutator::AddArgument;
       break;
@@ -48,7 +52,7 @@ TestCaseRef TestCaseMutator::Mutate(TestCaseRef testCase) {
   }
 
   // Can we mutate the test case by `RemoveArgument`?
-  for (const auto& call : *testCase) {
+  for (const auto& call : testCase) {
     if (call.GetArgsCount() >= 1) {
       *head++ = &TestCaseMutator::RemoveArgument;
       break;
@@ -56,7 +60,7 @@ TestCaseRef TestCaseMutator::Mutate(TestCaseRef testCase) {
   }
 
   // Can we mutate the test case by `MutateArgument`?
-  for (const auto& call : *testCase) {
+  for (const auto& call : testCase) {
     if (call.GetArgsCount() >= 1) {
       *head++ = &TestCaseMutator::MutateArgument;
       break;
@@ -65,69 +69,56 @@ TestCaseRef TestCaseMutator::Mutate(TestCaseRef testCase) {
 
   assert(head > mutators && "No viable mutator.");
   auto mutator = _rnd.Select(mutators, head);
-  return (this->*mutator)(testCase);
+  (this->*mutator)(testCase);
 }
 
-TestCaseRef TestCaseMutator::AddFunctionCall(TestCaseRef testCase) {
+void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
   auto call = _gen.GenerateFunctionCall();
-  auto tc = _corpus.DuplicateTestCase(testCase);
-  tc->PushFunctionCall(std::move(call));
-  return tc;
+  auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
+  testCase.InsertFunctionCall(index, std::move(call));
 }
 
-TestCaseRef TestCaseMutator::RemoveFunctionCall(TestCaseRef testCase) {
-  auto callIndex = _rnd.Next<size_t>(0, testCase->GetFunctionCallsCount());
-  auto tc = _corpus.CreateTestCase();
-  tc->ReserveFunctionCalls(testCase->GetFunctionCallsCount() - 1);
-  for (size_t i = 0; i < callIndex; ++i) {
-    tc->PushFunctionCall(testCase->GetFunctionCall(i));
-  }
-  for (size_t i = callIndex + 1; i < testCase->GetFunctionCallsCount(); ++i) {
-    tc->PushFunctionCall(testCase->GetFunctionCall(i));
-  }
-  return tc;
+void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
+  auto callIndex = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
+  testCase.RemoveFunctionCall(callIndex);
 }
 
-TestCaseRef TestCaseMutator::Splice(TestCaseRef testCase) {
+void TestCaseMutator::Splice(TestCase& testCase) {
+  assert(_spliceCandidate && "No splice candidate set.");
+
   // Randomly choose another test case from the corpus.
-  auto another = _corpus.SelectTestCase(_rnd);
   auto prefixLen = _rnd.Next<size_t>(
-      0, std::min(options().MaxCalls, testCase->GetFunctionCallsCount()));
+      0, std::min(options().MaxCalls, testCase.GetFunctionCallsCount()));
   auto suffixLen = _rnd.Next<size_t>(
-      0, std::min(options().MaxCalls - prefixLen, another->GetFunctionCallsCount()));
+      0, std::min(options().MaxCalls - prefixLen, _spliceCandidate->GetFunctionCallsCount()));
 
-  auto tc = _corpus.CreateTestCase();
-  for (size_t i = 0; i < prefixLen; ++i) {
-    tc->PushFunctionCall(testCase->GetFunctionCall(i));
-  }
-  for (size_t i = another->GetFunctionCallsCount() - suffixLen;
-       i < another->GetFunctionCallsCount(); ++i) {
-    tc->PushFunctionCall(another->GetFunctionCall(i));
+  std::vector<FunctionCall> calls;
+  calls.reserve(suffixLen);
+  for (size_t i = _spliceCandidate->GetFunctionCallsCount() - suffixLen;
+       i < _spliceCandidate->GetFunctionCallsCount(); ++i) {
+    calls.push_back(_spliceCandidate->GetFunctionCall(i));
   }
 
-  return tc;
+  testCase.RemoveTailCalls(prefixLen);
+  testCase.AppendFunctionCalls(std::move(calls));
 }
 
-TestCaseRef TestCaseMutator::MutateThis(TestCaseRef testCase) {
-  auto tc = _corpus.DuplicateTestCase(testCase);
+void TestCaseMutator::MutateThis(TestCase& testCase) {
   // Choose a function call.
-  auto& call = tc->SelectFunctionCall(_rnd);
+  auto& call = testCase.SelectFunctionCall(_rnd);
   if (call.HasThis()) {
     auto thisValue = call.GetThis();
     call.SetThis(Mutate(thisValue));
   } else {
     call.SetThis(_gen.GenerateValue());
   }
-  return tc;
 }
 
-TestCaseRef TestCaseMutator::AddArgument(TestCaseRef testCase) {
-  auto tc = _corpus.DuplicateTestCase(testCase);
-
+void TestCaseMutator::AddArgument(TestCase& testCase) {
   // Collect all function calls that can accept an additional argument.
   std::vector<size_t> candidates;
-  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
-    const auto& call = tc->GetFunctionCall(i);
+  for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
+    const auto& call = testCase.GetFunctionCall(i);
     if (call.GetArgsCount() < options().MaxArguments) {
       candidates.push_back(i);
     }
@@ -135,19 +126,15 @@ TestCaseRef TestCaseMutator::AddArgument(TestCaseRef testCase) {
 
   assert(!candidates.empty() && "No candidate function call viable to add additional argument.");
   auto callIndex = _rnd.Select(candidates);
-  auto& call = testCase->GetFunctionCall(callIndex);
+  auto& call = testCase.GetFunctionCall(callIndex);
   call.PushArg(_gen.GenerateValue());
-
-  return tc;
 }
 
-TestCaseRef TestCaseMutator::RemoveArgument(TestCaseRef testCase) {
-  auto tc = _corpus.DuplicateTestCase(testCase);
-
+void TestCaseMutator::RemoveArgument(TestCase& testCase) {
   // Collect all function calls that can remove an argument.
   std::vector<size_t> candidates;
-  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
-    const auto& call = tc->GetFunctionCall(i);
+  for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
+    const auto& call = testCase.GetFunctionCall(i);
     if (call.GetArgsCount() > 0) {
       candidates.push_back(i);
     }
@@ -155,21 +142,17 @@ TestCaseRef TestCaseMutator::RemoveArgument(TestCaseRef testCase) {
 
   assert(!candidates.empty() && "No candidate function call viable to remove argument.");
   auto callIndex = _rnd.Select(candidates);
-  auto& call = tc->GetFunctionCall(callIndex);
+  auto& call = testCase.GetFunctionCall(callIndex);
 
   auto removeIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
   call.RemoveArg(removeIndex);
-
-  return tc;
 }
 
-TestCaseRef TestCaseMutator::MutateArgument(TestCaseRef testCase) {
-  auto tc = _corpus.DuplicateTestCase(testCase);
-
+void TestCaseMutator::MutateArgument(TestCase& testCase) {
   // Collect all function calls that can mutate an argument.
   std::vector<size_t> candidates;
-  for (size_t i = 0; i < tc->GetFunctionCallsCount(); ++i) {
-    const auto& call = tc->GetFunctionCall(i);
+  for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
+    const auto& call = testCase.GetFunctionCall(i);
     if (call.GetArgsCount() > 0) {
       candidates.push_back(i);
     }
@@ -177,12 +160,10 @@ TestCaseRef TestCaseMutator::MutateArgument(TestCaseRef testCase) {
 
   assert(!candidates.empty() && "No candidate function call viable to mutate argument.");
   auto callIndex = _rnd.Select(candidates);
-  auto& call = tc->GetFunctionCall(callIndex);
+  auto& call = testCase.GetFunctionCall(callIndex);
 
   auto mutateIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
   call.SetArg(mutateIndex, Mutate(call.GetArg(mutateIndex)));
-
-  return tc;
 }
 
 Value* TestCaseMutator::Mutate(Value* value, int depth) {
@@ -202,7 +183,6 @@ Value* TestCaseMutator::Mutate(Value* value, int depth) {
     return _gen.GenerateValue();
   }
 
-  auto& pool = _corpus.pool();
   switch (value->kind()) {
     case ValueKind::Undefined:
     case ValueKind::Null:
@@ -210,7 +190,7 @@ Value* TestCaseMutator::Mutate(Value* value, int depth) {
     case ValueKind::Function:
       return _gen.GenerateFunctionValue();
     case ValueKind::Boolean:
-      return pool.GetBooleanValue(!value->GetBooleanValue());
+      return _pool.GetBooleanValue(!value->GetBooleanValue());
     case ValueKind::String:
       return MutateString(caf::dyn_cast<StringValue>(value));
     case ValueKind::Integer:
@@ -263,14 +243,14 @@ StringValue* TestCaseMutator::InsertCharacter(StringValue* value) {
   auto pos = _rnd.Next<size_t>(0, s.length());
   auto ch = _gen.GenerateStringCharacter();
   s.insert(pos, 1, ch);
-  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+  return _pool.GetOrCreateStringValue(std::move(s));
 }
 
 StringValue* TestCaseMutator::RemoveCharacter(StringValue* value) {
   auto s = value->value();
   auto pos = _rnd.Index(s);
   s.erase(pos, 1);
-  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+  return _pool.GetOrCreateStringValue(std::move(s));
 }
 
 StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
@@ -278,7 +258,7 @@ StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
   auto pos = _rnd.Index(s);
   auto ch = _gen.GenerateStringCharacter();
   s[pos] = ch;
-  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+  return _pool.GetOrCreateStringValue(std::move(s));
 }
 
 StringValue* TestCaseMutator::ExchangeCharacters(StringValue* value) {
@@ -286,7 +266,7 @@ StringValue* TestCaseMutator::ExchangeCharacters(StringValue* value) {
   auto pos1 = _rnd.Next<size_t>(0, s.length() - 2);
   auto pos2 = _rnd.Next<size_t>(pos1 + 1, s.length() - 1);
   std::swap(s[pos1], s[pos2]);
-  return _corpus.pool().GetOrCreateStringValue(std::move(s));
+  return _pool.GetOrCreateStringValue(std::move(s));
 }
 
 IntegerValue* TestCaseMutator::MutateInteger(IntegerValue* value) {
@@ -304,12 +284,12 @@ IntegerValue* TestCaseMutator::Increment(IntegerValue* value) {
   auto inc = _rnd.Next<int32_t>(INTEGER_MIN_INCREMENT, INTEGER_MAX_INCREMENT);
   auto newValue = static_cast<int32_t>(
       static_cast<uint32_t>(value->value()) + static_cast<uint32_t>(inc));
-  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+  return _pool.GetOrCreateIntegerValue(newValue);
 }
 
 IntegerValue* TestCaseMutator::Negate(IntegerValue* value) {
   auto newValue = -value->value();
-  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+  return _pool.GetOrCreateIntegerValue(newValue);
 }
 
 IntegerValue* TestCaseMutator::Bitflip(IntegerValue* value) {
@@ -317,7 +297,7 @@ IntegerValue* TestCaseMutator::Bitflip(IntegerValue* value) {
   auto maskLen = _rnd.Select(MaskLengths);
   auto startOffset = _rnd.Next<size_t>(0, IntegerValue::BitLength - maskLen);
   auto newValue = value->value() ^ (((1 << maskLen) - 1) << startOffset);
-  return _corpus.pool().GetOrCreateIntegerValue(newValue);
+  return _pool.GetOrCreateIntegerValue(newValue);
 }
 
 FloatValue* TestCaseMutator::MutateFloat(FloatValue* value) {
@@ -337,12 +317,12 @@ FloatValue* TestCaseMutator::MutateFloat(FloatValue* value) {
 FloatValue* TestCaseMutator::Increment(FloatValue* value) {
   auto inc = _rnd.Next(FLOAT_MIN_INCREMENT, FLOAT_MAX_INCREMENT);
   auto newValue = value->value() + inc;
-  return _corpus.pool().GetOrCreateFloatValue(newValue);
+  return _pool.GetOrCreateFloatValue(newValue);
 }
 
 FloatValue* TestCaseMutator::Negate(FloatValue* value) {
   auto newValue = -value->value();
-  return _corpus.pool().GetOrCreateFloatValue(newValue);
+  return _pool.GetOrCreateFloatValue(newValue);
 }
 
 ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, int depth) {
@@ -377,7 +357,7 @@ ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, int depth) {
 
 ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, int) {
   auto element = _gen.GenerateValue();
-  auto newValue = _corpus.pool().CreateArrayValue();
+  auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() + 1);
   for (size_t i = 0; i < value->size(); ++i) {
     newValue->Push(value->GetElement(i));
@@ -388,7 +368,7 @@ ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, int) {
 
 ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, int) {
   auto pos = _rnd.Next<size_t>(0, value->size() - 1);
-  auto newValue = _corpus.pool().CreateArrayValue();
+  auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() - 1);
   for (size_t i = 0; i < pos; ++i) {
     newValue->Push(value->GetElement(i));
@@ -402,7 +382,7 @@ ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, int) {
 ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, int depth) {
   auto pos = _rnd.Next<size_t>(0, value->size());
   auto mutatedElement = Mutate(value->GetElement(pos), depth + 1);
-  auto newValue = _corpus.pool().CreateArrayValue();
+  auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size());
   for (size_t i = 0; i < pos; ++i) {
     newValue->Push(value->GetElement(i));
@@ -417,7 +397,7 @@ ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, int depth) {
 ArrayValue* TestCaseMutator::ExchangeElements(ArrayValue* value, int) {
   auto pos1 = _rnd.Next<size_t>(0, value->size() - 2);
   auto pos2 = _rnd.Next<size_t>(pos1 + 1, value->size() - 1);
-  auto newValue = _corpus.pool().CreateArrayValue();
+  auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size());
   for (size_t i = 0; i < value->size(); ++i) {
     if (i == pos1) {

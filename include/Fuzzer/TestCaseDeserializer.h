@@ -1,11 +1,12 @@
 #ifndef CAF_TEST_CASE_DESERIALIZER_H
 #define CAF_TEST_CASE_DESERIALIZER_H
 
-#include "Fuzzer/Corpus.h"
+#include "Fuzzer/TestCase.h"
 
 namespace caf {
 
 class InputStream;
+class ObjectPool;
 class FunctionCall;
 class Value;
 
@@ -18,11 +19,11 @@ public:
   /**
    * @brief Construct a new TestCaseDeserializer object.
    *
-   * @param corpus
-   * @param in
+   * @param pool the object pool.
+   * @param in the input stream.
    */
-  explicit TestCaseDeserializer(Corpus& corpus, InputStream& in)
-    : _corpus(corpus), _in(in)
+  explicit TestCaseDeserializer(ObjectPool& pool, InputStream& in)
+    : _pool(pool), _in(in)
   { }
 
   TestCaseDeserializer(const TestCaseDeserializer &) = delete;
@@ -31,14 +32,14 @@ public:
   /**
    * @brief Deserialize a test case from the underlying stream.
    *
-   * @return TestCaseRef the test case deserialized.
+   * @return TestCase the test case deserialized.
    */
-  TestCaseRef Deserialize();
+  TestCase Deserialize();
 
 private:
   class DeserializationContext;
 
-  Corpus& _corpus;
+  ObjectPool& _pool;
   InputStream& _in;
 
   /**

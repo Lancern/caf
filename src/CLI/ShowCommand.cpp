@@ -6,7 +6,7 @@
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Stream.h"
 #include "Basic/CAFStore.h"
-#include "Fuzzer/Corpus.h"
+#include "Fuzzer/ObjectPool.h"
 #include "Fuzzer/TestCaseDeserializer.h"
 
 #include "json/json.hpp"
@@ -38,7 +38,7 @@ public:
     nlohmann::json json;
     storeFile >> json;
     auto store = caf::make_unique<CAFStore>(json);
-    auto corpus = caf::make_unique<Corpus>(std::move(store));
+    auto pool = caf::make_unique<ObjectPool>();
     storeFile.close();
 
     std::ifstream tcFile { _opts.TestCaseFileName };
@@ -46,16 +46,16 @@ public:
       PRINT_LAST_OS_ERR_AND_EXIT("failed to load test case file");
     }
     StlInputStream fileStream { tcFile };
-    TestCaseDeserializer de { *corpus.get(), fileStream };
+    TestCaseDeserializer de { *pool, fileStream };
     auto tc = de.Deserialize();
 
     Printer printer { std::cout };
     printer.SetColorOn(!_opts.NoColor);
 
-    TestCaseDumper dumper { *corpus->store(), printer };
+    TestCaseDumper dumper { *store, printer };
     dumper.SetDemangle(_opts.Demangle);
 
-    dumper.Dump(*tc);
+    dumper.Dump(tc);
 
     printer << Printer::endl;
     return 0;

@@ -2,7 +2,8 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Basic/CAFStore.h"
 #include "Fuzzer/TestCaseGenerator.h"
-#include "Fuzzer/Corpus.h"
+#include "Fuzzer/ObjectPool.h"
+#include "Fuzzer/TestCase.h"
 #include "Fuzzer/FunctionCall.h"
 #include "Fuzzer/Value.h"
 
@@ -41,21 +42,21 @@ static const std::string CharacterSet =
 
 namespace caf {
 
-TestCaseRef TestCaseGenerator::GenerateTestCase() {
-  auto tc = _corpus.CreateTestCase();
+TestCase TestCaseGenerator::GenerateTestCase() {
+  TestCase tc { };
 
   // Decide how many function calls should be included.
   auto callsCount = _rnd.Next<size_t>(1, _opt.MaxCalls);
-  tc->ReserveFunctionCalls(callsCount);
+  tc.ReserveFunctionCalls(callsCount);
   for (size_t i = 0; i < callsCount; ++i) {
-    tc->PushFunctionCall(GenerateFunctionCall());
+    tc.PushFunctionCall(GenerateFunctionCall());
   }
 
   return tc;
 }
 
 FunctionCall TestCaseGenerator::GenerateFunctionCall() {
-  auto calleeId = _corpus.store()->SelectFunction(_rnd).id();
+  auto calleeId = _store.SelectFunction(_rnd).id();
   FunctionCall call { calleeId };
 
   // Decide whether to generate the `this` object.
@@ -75,8 +76,8 @@ FunctionCall TestCaseGenerator::GenerateFunctionCall() {
 }
 
 FunctionValue* TestCaseGenerator::GenerateFunctionValue() {
-  auto funcId = _corpus.store()->SelectFunction(_rnd).id();
-  return _corpus.pool().GetFunctionValue(funcId);
+  auto funcId = _store.SelectFunction(_rnd).id();
+  return _pool.GetFunctionValue(funcId);
 }
 
 char TestCaseGenerator::GenerateStringCharacter() {
@@ -96,7 +97,7 @@ ValueKind TestCaseGenerator::GenerateValueKind(bool generateArrayKind) {
 
 Value* TestCaseGenerator::GenerateValue(size_t depth) {
   // Decide whether to select an already-existing object.
-  auto& pool = _corpus.pool();
+  auto& pool = _pool;
   if (!pool.empty() && _rnd.WithProbability(CHOOSE_EXISTING_PROB)) {
     return pool.SelectValue(_rnd);
   }
@@ -109,7 +110,7 @@ Value* TestCaseGenerator::GenerateValue(size_t depth) {
     case ValueKind::Null:
       return pool.GetNullValue();
     case ValueKind::Function: {
-      auto funcId = _corpus.store()->SelectFunction(_rnd).id();
+      auto funcId = _store.SelectFunction(_rnd).id();
       return pool.GetFunctionValue(funcId);
     }
     case ValueKind::Boolean: {

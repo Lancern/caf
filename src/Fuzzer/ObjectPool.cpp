@@ -128,4 +128,8 @@ PlaceholderValue* ObjectPool::GetPlaceholderValue(size_t index) {
   return ptr.get();
 }
 
+void ObjectPool::clear() {
+  _values.clear();
+}
+
 } // namespace caf

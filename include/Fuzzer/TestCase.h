@@ -4,7 +4,9 @@
 #include "Infrastructure/Random.h"
 #include "Fuzzer/FunctionCall.h"
 
+#include <cassert>
 #include <utility>
+#include <iterator>
 #include <vector>
 
 namespace caf {
@@ -81,6 +83,48 @@ public:
    * @param call the function call to add.
    */
   void PushFunctionCall(FunctionCall call) { _calls.push_back(std::move(call)); }
+
+  /**
+   * @brief Insert the given function call at the given index.
+   *
+   * @param index the index of the function call.
+   * @param call the function call to be inserted.
+   */
+  void InsertFunctionCall(size_t index, FunctionCall call) {
+    assert(index >= 0 && index <= _calls.size() && "Index is out of range.");
+    _calls.insert(std::next(_calls.begin(), index), std::move(call));
+  }
+
+  /**
+   * @brief Remove the function call at the given index.
+   *
+   * @param index the index of the function call.
+   */
+  void RemoveFunctionCall(size_t index) {
+    assert(index >= 0 && index < _calls.size() && "Index is out of range.");
+    _calls.erase(std::next(_calls.begin(), index));
+  }
+
+  /**
+   * @brief Remove all function calls starting at the given index.
+   *
+   * @param startIndex the start index.
+   */
+  void RemoveTailCalls(size_t startIndex) {
+    assert(startIndex >= 0 && startIndex <= _calls.size() && "Index is out of range.");
+    _calls.erase(std::next(_calls.begin(), startIndex), _calls.end());
+  }
+
+  /**
+   * @brief Add all function calls given in the list to the tail of this test case.
+   *
+   * @param calls the function calls to add.
+   */
+  void AppendFunctionCalls(std::vector<FunctionCall> calls) {
+    for (auto& call : calls) {
+      _calls.push_back(std::move(call));
+    }
+  }
 
   /**
    * @brief Randomly select a function call from this test case, using the given random number

@@ -2,6 +2,7 @@
 #include "Infrastructure/Stream.h"
 #include "Basic/Function.h"
 #include "Fuzzer/TestCaseDeserializer.h"
+#include "Fuzzer/ObjectPool.h"
 #include "Fuzzer/FunctionCall.h"
 
 #include <utility>
@@ -68,15 +69,15 @@ private:
   std::unordered_map<size_t, size_t> _retValueIndex;
 }; // class TestCaseDeserializer::DeserializationContext
 
-TestCaseRef TestCaseDeserializer::Deserialize() {
+TestCase TestCaseDeserializer::Deserialize() {
   DeserializationContext context { };
 
-  auto tc = _corpus.CreateTestCase();
+  TestCase tc { };
   auto callsCount = ReadInt<4, size_t>(_in);
-  tc->ReserveFunctionCalls(callsCount);
+  tc.ReserveFunctionCalls(callsCount);
   for (size_t i = 0; i < callsCount; ++i) {
     auto call = DeserializeFunctionCall(context);
-    tc->PushFunctionCall(std::move(call));
+    tc.PushFunctionCall(std::move(call));
     context.SetNextValueAsReturnValue(i);
   }
 
@@ -105,16 +106,16 @@ Value* TestCaseDeserializer::DeserializeValue(DeserializationContext& context) {
   auto kind = static_cast<ValueKind>(ReadInt<1, uint8_t>(_in));
   switch (kind) {
     case ValueKind::Undefined:
-      return _corpus.pool().GetUndefinedValue();
+      return _pool.GetUndefinedValue();
     case ValueKind::Null:
-      return _corpus.pool().GetNullValue();
+      return _pool.GetNullValue();
     case ValueKind::Function: {
       auto funcId = ReadInt<4, FunctionIdType>(_in);
-      return _corpus.pool().GetFunctionValue(funcId);
+      return _pool.GetFunctionValue(funcId);
     }
     case ValueKind::Boolean: {
       auto value = static_cast<bool>(ReadInt<1, uint8_t>(_in));
-      return _corpus.pool().GetBooleanValue(value);
+      return _pool.GetBooleanValue(value);
     }
     case ValueKind::String: {
       auto len = ReadInt<4, size_t>(_in);
@@ -123,18 +124,18 @@ Value* TestCaseDeserializer::DeserializeValue(DeserializationContext& context) {
       for (size_t i = 0; i < len; ++i) {
         s.push_back(static_cast<char>(_in.ReadByte()));
       }
-      return _corpus.pool().GetOrCreateStringValue(std::move(s));
+      return _pool.GetOrCreateStringValue(std::move(s));
     }
     case ValueKind::Integer: {
       auto value = ReadInt<4, int32_t>(_in);
-      return _corpus.pool().GetOrCreateIntegerValue(value);
+      return _pool.GetOrCreateIntegerValue(value);
     }
     case ValueKind::Float: {
       auto value = ReadFloat(_in);
-      return _corpus.pool().GetOrCreateFloatValue(value);
+      return _pool.GetOrCreateFloatValue(value);
     }
     case ValueKind::Array: {
-      auto arrayValue = _corpus.pool().CreateArrayValue();
+      auto arrayValue = _pool.CreateArrayValue();
       context.SetNextValue(arrayValue);
       auto size = ReadInt<4, size_t>(_in);
       arrayValue->reserve(size);
@@ -148,7 +149,7 @@ Value* TestCaseDeserializer::DeserializeValue(DeserializationContext& context) {
       auto index = ReadInt<4, size_t>(_in);
       if (context.IsReturnValueIndex(index)) {
         index = context.GetReturnValueIndex(index);
-        return _corpus.pool().GetPlaceholderValue(index);
+        return _pool.GetPlaceholderValue(index);
       } else {
         return context.GetValue(index);
       }

@@ -9,9 +9,9 @@
 
 namespace caf {
 
-class Corpus;
+class CAFStore;
+class ObjectPool;
 class TestCase;
-class TestCaseRef;
 class FunctionCall;
 
 /**
@@ -43,11 +43,13 @@ public:
   /**
    * @brief Construct a new TestCaseGenerator object.
    *
-   * @param corpus the corpus.
+   * @param store the CAF metadata store.
+   * @param pool the object pool.
    * @param rnd the random number generator.
    */
-  explicit TestCaseGenerator(Corpus& corpus, Random<>& rnd)
-    : _corpus(corpus),
+  explicit TestCaseGenerator(CAFStore& store, ObjectPool& pool, Random<>& rnd)
+    : _store(store),
+      _pool(pool),
       _rnd(rnd),
       _opt()
   { }
@@ -72,9 +74,9 @@ public:
   /**
    * @brief Generate a new test case.
    *
-   * @return TestCaseRef the test case generated.
+   * @return TestCase the test case generated.
    */
-  TestCaseRef GenerateTestCase();
+  TestCase GenerateTestCase();
 
   /**
    * @brief Generate a new function call.
@@ -105,7 +107,8 @@ public:
   char GenerateStringCharacter();
 
 private:
-  Corpus& _corpus;
+  CAFStore& _store;
+  ObjectPool& _pool;
   Random<>& _rnd;
   Options _opt;
 

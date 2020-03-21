@@ -3,7 +3,6 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Stream.h"
 #include "Fuzzer/TestCaseSerializer.h"
-#include "Fuzzer/Corpus.h"
 #include "Fuzzer/TestCase.h"
 #include "Fuzzer/Value.h"
 
@@ -85,7 +84,8 @@ void TestCaseSerializer::Serialize(const FunctionCall& call, SerializationContex
   if (call.HasThis()) {
     Serialize(call.GetThis(), context);
   } else {
-    Serialize(_corpus.pool().GetUndefinedValue(), context);
+    auto undefined = Value::CreateUndefinedValue();
+    Serialize(&undefined, context);
   }
 
   WriteInt<4>(_out, call.GetArgsCount());

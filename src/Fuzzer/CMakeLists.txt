@@ -1,11 +1,9 @@
 add_library(CAFFuzzer STATIC
-    Corpus.cpp
     ObjectPool.cpp
     TestCaseDeserializer.cpp
     TestCaseGenerator.cpp
     TestCaseMutator.cpp
     TestCaseSerializer.cpp
-    ${CAF_INCLUDE_DIR}/Fuzzer/Corpus.h
     ${CAF_INCLUDE_DIR}/Fuzzer/FunctionCall.h
     ${CAF_INCLUDE_DIR}/Fuzzer/ObjectPool.h
     ${CAF_INCLUDE_DIR}/Fuzzer/TestCase.h

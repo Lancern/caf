@@ -81,44 +81,6 @@ char* DuplicateString(const char* s) {
   return buffer;
 }
 
-int SeedsCount;
-
-int CountFiles(const char* fpath, const struct stat* sb, int typeflag, FTW* ftwbuf) {
-  if (typeflag == FTW_F) {
-    ++SeedsCount;
-  }
-  return 0;
-}
-
-void PopulateAFLSeeds(const char* inputDir, const char* seedsDir, bool verbose) {
-  SeedsCount = 0;
-  auto ret = nftw(seedsDir, CountFiles, 4, 0);
-  if (ret != 0) {
-    PRINT_LAST_OS_ERR_AND_EXIT("failed to access seeds directory");
-  }
-
-  for (auto i = 0; i < SeedsCount; ++i) {
-    std::string inputFile(inputDir);
-    if (!inputFile.empty() && inputFile[inputFile.size() - 1] != '/') {
-      inputFile.push_back('/');
-    }
-    inputFile.append(std::to_string(i));
-    inputFile.append(".in");
-
-    if (verbose) {
-      std::cout << "Writing AFL seed file \"" << inputFile << "\"" << std::endl;
-    }
-
-    std::ofstream file { inputFile };
-    if (file.fail()) {
-      PRINT_LAST_OS_ERR_AND_EXIT_FMT("failed to create file \"%s\"", inputFile.c_str());
-    }
-
-    file.write(reinterpret_cast<const char *>(&i), sizeof(size_t));
-    file.flush();
-  }
-}
-
 } // namespace <anonymous>
 
 class FuzzCommand : public Command {
@@ -130,8 +92,6 @@ public:
     app.add_option("-d", _opts.SeedDir, "Path to the seed directory")
         ->required()
         ->check(CLI::ExistingDirectory);
-    app.add_option("-i", _opts.InputDir, "Path to the AFL input directory")
-        ->required();
     app.add_option("-o", _opts.FindingsDir, "Path to the AFL findings directory")
         ->required();
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
@@ -152,8 +112,6 @@ public:
     if (_opts.Verbose) {
       std::cout << "AFLplusplus located at " << _opts.AflExecutable << std::endl;
     }
-
-    PopulateAFLSeeds(_opts.InputDir.c_str(), _opts.SeedDir.c_str(), _opts.Verbose);
 
     std::string storeVar = "CAF_STORE=";
     storeVar.append(_opts.StoreFileName);
@@ -211,7 +169,6 @@ private:
   struct Opts {
     std::string StoreFileName;
     std::string SeedDir;
-    std::string InputDir;
     std::string FindingsDir;
     std::string AflExecutable;
     std::vector<std::string> Target;

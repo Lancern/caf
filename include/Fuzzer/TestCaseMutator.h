@@ -6,8 +6,8 @@
 
 namespace caf {
 
-class Corpus;
-class TestCaseRef;
+class CAFStore;
+class ObjectPool;
 class TestCase;
 class Value;
 
@@ -25,10 +25,12 @@ public:
    * @param corpus the test case corpus.
    * @param rnd the random number generator.
    */
-  explicit TestCaseMutator(Corpus& corpus, Random<>& rnd)
-    : _corpus(corpus),
+  explicit TestCaseMutator(CAFStore& store, ObjectPool& pool, Random<>& rnd)
+    : _store(store),
+      _pool(pool),
       _rnd(rnd),
-      _gen(corpus, rnd)
+      _gen { store, pool, rnd },
+      _spliceCandidate(nullptr)
   { }
 
   TestCaseMutator(const TestCaseMutator &) = delete;
@@ -49,78 +51,87 @@ public:
   const Options& options() const { return _gen.options(); }
 
   /**
+   * @brief Determine whether this mutator has a splice candidate.
+   *
+   * @return true if this mutator has a splice candidate.
+   * @return false if this mutator does not have a splice candidate.
+   */
+  bool HasSpliceCandidate() const { return _spliceCandidate != nullptr; }
+
+  /**
+   * @brief Set the splice candidate of this mutator.
+   *
+   * @param candidate the splice candidate of this mutator.
+   */
+  void SetSpliceCandidate(const TestCase* candidate) { _spliceCandidate = candidate; }
+
+  /**
    * @brief Mutate the given test case.
    *
    * @param testCase the test case to mutate.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef Mutate(TestCaseRef testCase);
+  void Mutate(TestCase& testCase);
 
 private:
-  Corpus& _corpus;
+  CAFStore& _store;
+  ObjectPool& _pool;
   Random<>& _rnd;
   TestCaseGenerator _gen;
+  const TestCase* _spliceCandidate;
 
   /**
    * @brief Mutate the given test case by adding a function call to the tail of the function call
    * sequence.
    *
    * @param testCase the test case to mutate.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef AddFunctionCall(TestCaseRef testCase);
+  void AddFunctionCall(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by removing a function call from the function call sequence.
    *
    * @param testCase the test case to mutate.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef RemoveFunctionCall(TestCaseRef testCase);
+  void RemoveFunctionCall(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by splicing it with a randomly chosen test case from the
    * corpus.
    *
    * @param testCase the test case to mutate.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef Splice(TestCaseRef testCase);
+  void Splice(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by choosing a function call and mutating `this` object of
    * the function call.
    *
    * @param testCase the test case to mutate.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef MutateThis(TestCaseRef testCase);
+  void MutateThis(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by choosing a function call and add an argument to the
    * function call.
    *
    * @param testCase the test case.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef AddArgument(TestCaseRef testCase);
+  void AddArgument(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by choosing a function call and remove an argument to the
    * function call.
    *
    * @param testCase test case.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef RemoveArgument(TestCaseRef testCase);
+  void RemoveArgument(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by choosing a function call and mutate an argument of it.
    *
    * @param testCase the test case.
-   * @return TestCaseRef the mutated test case.
    */
-  TestCaseRef MutateArgument(TestCaseRef testCase);
+  void MutateArgument(TestCase& testCase);
 
   /**
    * @brief Mutate the given value.

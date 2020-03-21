@@ -128,6 +128,13 @@ public:
     assert(false && "The current value is not a placeholder value.");
   }
 
+  /**
+   * @brief Create a new Value object representing an undefined value.
+   *
+   * @return Value the value created.
+   */
+  static Value CreateUndefinedValue() { return Value { ValueKind::Undefined }; }
+
 private:
   ValueKind _kind;
 }; // class Value

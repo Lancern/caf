@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 #include <iostream>
 
@@ -120,6 +121,38 @@ public:
 private:
   std::ostream& _inner;
 }; // class StlOutputStream
+
+/**
+ * @brief An input stream interface around a byte buffer. All data read from this stream will be
+ * read from the underlying buffer.
+ *
+ */
+class MemoryInputStream : public InputStream {
+public:
+  /**
+   * @brief Construct a new MemoryInputStream object.
+   *
+   * @param ptr pointer to the underlying buffer.
+   * @param size size of the underlying buffer, in bytes.
+   */
+  explicit MemoryInputStream(const uint8_t* ptr, size_t size)
+    : _ptr(ptr), _end(ptr + size)
+  { }
+
+  void Read(void *buffer, size_t size) override {
+    auto availableSize = _end - _ptr;
+    if (size > availableSize) {
+      size = availableSize;
+    }
+
+    std::memcpy(buffer, _ptr, size);
+    _ptr += size;
+  }
+
+private:
+  const uint8_t* _ptr;
+  const uint8_t* _end;
+}; // class MemoryInputStream
 
 /**
  * @brief An output stream interface around a byte buffer. All data written to the stream will be

@@ -4,7 +4,6 @@
 namespace caf {
 
 class OutputStream;
-class Corpus;
 class TestCase;
 class FunctionCall;
 class Value;
@@ -21,9 +20,8 @@ public:
    * @param corpus the corpus containing test cases.
    * @param out the output stream.
    */
-  explicit TestCaseSerializer(Corpus& corpus, OutputStream& out)
-    : _corpus(corpus),
-      _out(out)
+  explicit TestCaseSerializer(OutputStream& out)
+    : _out(out)
   { }
 
   TestCaseSerializer(const TestCaseSerializer &) = delete;
@@ -39,7 +37,6 @@ public:
 private:
   class SerializationContext;
 
-  Corpus& _corpus;
   OutputStream& _out;
 
   /**

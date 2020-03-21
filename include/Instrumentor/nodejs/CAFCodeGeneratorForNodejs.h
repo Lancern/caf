@@ -227,23 +227,23 @@ private:
       llvm::IRBuilder<>& builder, llvm::FunctionType* type, int depth = 0, bool init = true);
   
 
-  llvm::Value* MallocUndefinedType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocUndefinedType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocNullType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocNullType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocStringType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocStringType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocIntegerType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocIntegerType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocBooleanType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocBooleanType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocFloatingPointerType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocFloatingPointerType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocFunctionType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocFunctionType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocArrayType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocArrayType(llvm::IRBuilder<>& builder);
 
-  llvm::Value* MallocPlaceholderType(llvm::IRBuilder<> builder);
+  llvm::Value* MallocPlaceholderType(llvm::IRBuilder<>& builder);
 
   /**
    * @brief Create a Dispatch to Malloc Value Of Type 

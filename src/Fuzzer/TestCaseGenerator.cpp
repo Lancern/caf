@@ -49,27 +49,32 @@ TestCase TestCaseGenerator::GenerateTestCase() {
   auto callsCount = _rnd.Next<size_t>(1, _opt.MaxCalls);
   tc.ReserveFunctionCalls(callsCount);
   for (size_t i = 0; i < callsCount; ++i) {
-    tc.PushFunctionCall(GenerateFunctionCall());
+    tc.PushFunctionCall(GenerateFunctionCall(i));
   }
 
   return tc;
 }
 
-FunctionCall TestCaseGenerator::GenerateFunctionCall() {
+FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index) {
   auto calleeId = _store.SelectFunction(_rnd).id();
   FunctionCall call { calleeId };
+
+  GeneratePlaceholderValueParams params;
+  if (index != 0) {
+    params.SetCurrentCallIndex(index);
+  }
 
   // Decide whether to generate the `this` object.
   if (_rnd.WithProbability(GENERATE_THIS_PROB)) {
     // Generate `this` object.
-    call.SetThis(GenerateValue());
+    call.SetThis(GenerateValue(params));
   }
 
   // Decide how many arguments should be generated.
   auto argsCount = GenerateArgumentsCount();
   call.ReserveArgs(argsCount);
   for (size_t i = 0; i < argsCount; ++i) {
-    call.PushArg(GenerateValue());
+    call.PushArg(GenerateValue(params));
   }
 
   return call;
@@ -88,14 +93,28 @@ size_t TestCaseGenerator::GenerateArgumentsCount() {
   return _rnd.Next(0, 5);
 }
 
-ValueKind TestCaseGenerator::GenerateValueKind(bool generateArrayKind) {
-  auto maxCode = generateArrayKind
-    ? static_cast<int>(ValueKind::Array)
-    : static_cast<int>(ValueKind::Float);
-  return static_cast<ValueKind>(_rnd.Next(0, maxCode));
+ValueKind TestCaseGenerator::GenerateValueKind(
+    bool generateArrayKind, bool generatePlaceholderKind) {
+  ValueKind candidates[9] = {
+    ValueKind::Undefined,
+    ValueKind::Null,
+    ValueKind::Boolean,
+    ValueKind::String,
+    ValueKind::Function,
+    ValueKind::Integer,
+    ValueKind::Float
+  };
+  ValueKind* last = candidates + 7;
+  if (generateArrayKind) {
+    *last++ = ValueKind::Array;
+  }
+  if (generatePlaceholderKind) {
+    *last++ = ValueKind::Placeholder;
+  }
+  return _rnd.Select(candidates, last);
 }
 
-Value* TestCaseGenerator::GenerateValue(size_t depth) {
+Value* TestCaseGenerator::GenerateValue(GeneratePlaceholderValueParams params, size_t depth) {
   // Decide whether to select an already-existing object.
   auto& pool = _pool;
   if (!pool.empty() && _rnd.WithProbability(CHOOSE_EXISTING_PROB)) {
@@ -103,7 +122,7 @@ Value* TestCaseGenerator::GenerateValue(size_t depth) {
   }
 
   // Decide what kind of value to generate.
-  auto kind = GenerateValueKind(depth < _opt.MaxDepth);
+  auto kind = GenerateValueKind(depth < _opt.MaxDepth, params.ShouldGenerate());
   switch (kind) {
     case ValueKind::Undefined:
       return pool.GetUndefinedValue();
@@ -144,9 +163,13 @@ Value* TestCaseGenerator::GenerateValue(size_t depth) {
       auto value = pool.CreateArrayValue();
       value->reserve(size);
       for (size_t i = 0; i < size; ++i) {
-        value->Push(GenerateValue(depth + 1));
+        value->Push(GenerateValue(params, depth + 1));
       }
       return value;
+    }
+    case ValueKind::Placeholder: {
+      auto index = _rnd.Next<size_t>(0, params.GetCurrentCallIndex() - 1);
+      return pool.GetPlaceholderValue(index);
     }
     default: CAF_UNREACHABLE;
   }

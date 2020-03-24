@@ -38,7 +38,7 @@ static const std::string CharacterSet =
     "0123456789"
     "~!@#$%^&*()-=_+"
     "`[]\\{}|;':\",./<>?"
-    "\n\t\r";
+    " \n\t\r";
 
 namespace caf {
 

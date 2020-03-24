@@ -240,6 +240,8 @@ void TestCaseDumper::DumpStringValue(const char* s) {
         _printer << "\\t";
       } else if (ch == '\r') {
         _printer << "\\r";
+      } else if (ch == ' ') {
+        _printer << ' ';
       } else {
         _printer << "\\x"
                  << GetHexDigit(static_cast<uint8_t>(ch) / 16)

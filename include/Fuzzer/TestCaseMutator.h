@@ -137,10 +137,11 @@ private:
    * @brief Mutate the given value.
    *
    * @param value the value to mutate.
+   * @param callIndex the index of the current function call.
    * @param depth the current depth.
    * @return Value* the mutated value.
    */
-  Value* Mutate(Value* value, int depth = 1);
+  Value* Mutate(Value* value, size_t callIndex, int depth = 1);
 
   /**
    * @brief Mutate the given string value.
@@ -242,10 +243,11 @@ private:
    * @brief Mutate the given array value.
    *
    * @param value the array value to mutate.
+   * @param callIndex the index of the current function call.
    * @param depth the current depth.
    * @return ArrayValue* the mutated array value.
    */
-  ArrayValue* MutateArray(ArrayValue* value, int depth);
+  ArrayValue* MutateArray(ArrayValue* value, size_t callIndex, int depth);
 
   /**
    * @brief Mutate the given array value by adding a new element to the back.
@@ -253,7 +255,7 @@ private:
    * @param value the array value to mutate.
    * @return ArrayValue* the mutated array value.
    */
-  ArrayValue* PushElement(ArrayValue* value, int);
+  ArrayValue* PushElement(ArrayValue* value, size_t, int);
 
   /**
    * @brief Mutate the given array value by removing an element.
@@ -261,16 +263,17 @@ private:
    * @param value the array value to mutate.
    * @return ArrayValue* the mutated array value.
    */
-  ArrayValue* RemoveElement(ArrayValue* value, int);
+  ArrayValue* RemoveElement(ArrayValue* value, size_t, int);
 
   /**
    * @brief Mutate the given array value by mutating an element.
    *
    * @param value the array value to mutate.
+   * @param callIndex the index of the current function call.
    * @param depth the current depth.
    * @return ArrayValue* the mutated array value.
    */
-  ArrayValue* MutateElement(ArrayValue* value, int depth);
+  ArrayValue* MutateElement(ArrayValue* value, size_t callIndex, int depth);
 
   /**
    * @brief Mutate the given array value by exchanging two elements.
@@ -278,7 +281,7 @@ private:
    * @param value the array value to mutate.
    * @return ArrayValue* the mutated array value.
    */
-  ArrayValue* ExchangeElements(ArrayValue* value, int);
+  ArrayValue* ExchangeElements(ArrayValue* value, size_t, int);
 }; // class TestCaseMutator
 
 } // namespace caf

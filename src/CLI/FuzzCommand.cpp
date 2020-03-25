@@ -96,6 +96,7 @@ public:
         ->required();
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
         ->check(CLI::ExistingFile);
+    app.add_option("-X", _opts.AFLArgs, "Arguments passed to AFL executable");
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
     app.add_option("target", _opts.Target, "The target executable and its params")
         ->required();
@@ -142,6 +143,9 @@ public:
       DuplicateString("-o"),
       DuplicateString(_opts.FindingsDir.c_str())
     };
+    for (const auto& arg : _opts.AFLArgs) {
+      aflArgs.push_back(DuplicateString(arg.c_str()));
+    }
     for (const auto& arg : _opts.Target) {
       aflArgs.push_back(DuplicateString(arg.c_str()));
     }
@@ -172,6 +176,7 @@ private:
     std::string FindingsDir;
     std::string AflExecutable;
     std::vector<std::string> Target;
+    std::vector<std::string> AFLArgs;
     bool Verbose;
   }; // struct Opts
 

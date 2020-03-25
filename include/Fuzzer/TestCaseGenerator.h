@@ -41,6 +41,56 @@ public:
   };
 
   /**
+   * @brief Provide parameters for generating placeholder values.
+   *
+   */
+  class GeneratePlaceholderValueParams {
+  public:
+    /**
+     * @brief Construct a new GeneratePlaceholderValueParams object.
+     *
+     */
+    explicit GeneratePlaceholderValueParams()
+      : _currCallIndex(0)
+    { }
+
+    /**
+     * @brief Construct a new GeneratePlaceholderValueParams object.
+     *
+     * @param currCallIndex the current function call's index.
+     */
+    explicit GeneratePlaceholderValueParams(size_t currCallIndex)
+      : _currCallIndex(currCallIndex)
+    { }
+
+    /**
+     * @brief Determine whether the generator should generate a placeholder value.
+     *
+     * @return true if the generator should generate a placeholder value.
+     * @return false if the generator shouldd not generate a placeholder value.
+     */
+    bool ShouldGenerate() const { return _currCallIndex != 0; }
+
+    /**
+     * @brief Get the current function call's index.
+     *
+     * @return int the current function call's index. This function returns -1 if the current object
+     * instructs the generator not to generate a placeholder value.
+     */
+    size_t GetCurrentCallIndex() const { return _currCallIndex; }
+
+    /**
+     * @brief Set the current function call's index.
+     *
+     * @param index the current function call's index.
+     */
+    void SetCurrentCallIndex(size_t index) { _currCallIndex = index; }
+
+  private:
+    size_t _currCallIndex;
+  };
+
+  /**
    * @brief Construct a new TestCaseGenerator object.
    *
    * @param store the CAF metadata store.
@@ -81,16 +131,20 @@ public:
   /**
    * @brief Generate a new function call.
    *
+   * @param index the index of the function call to be generated.
    * @return FunctionCall the function call generated.
    */
-  FunctionCall GenerateFunctionCall();
+  FunctionCall GenerateFunctionCall(size_t index);
 
   /**
    * @brief Generate a new value.
    *
+   * @param params the parameters for generating placeholder values.
    * @return Value* the value generated.
    */
-  Value* GenerateValue() { return GenerateValue(1); }
+  Value* GenerateValue(GeneratePlaceholderValueParams params = GeneratePlaceholderValueParams()) {
+    return GenerateValue(params, 1);
+  }
 
   /**
    * @brief Generate a function value.
@@ -124,17 +178,19 @@ private:
    * @brief Generate a ValueKind value.
    *
    * @param generateArrayKind should we generate ArrayKind?
+   * @param generatePlaceholderKind should we generate PlaceholderKind?
    * @return ValueKind the generated value.
    */
-  ValueKind GenerateValueKind(bool generateArrayKind);
+  ValueKind GenerateValueKind(bool generateArrayKind, bool generatePlaceholderKind);
 
   /**
    * @brief Generate a new value.
    *
+   * @param params the parameters for generating placeholder values.
    * @param depth depth of the current genreation process.
    * @return Value* the generated value.
    */
-  Value* GenerateValue(size_t depth);
+  Value* GenerateValue(GeneratePlaceholderValueParams params, size_t depth);
 }; // class TestCaseGenerator
 
 } // namespace caf

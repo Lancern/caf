@@ -64,11 +64,15 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
       )
   );
 
+  llvm::Value* mainArgc;
+  llvm::Value* mainArgv;
   {
     newMain->setCallingConv(llvm::CallingConv::C);
     auto args = newMain->arg_begin();
-    (args++)->setName("argc");
-    (args++)->setName("argv");
+    mainArgc = (args++);
+    mainArgc->setName("argc");
+    mainArgv = (args++);
+    mainArgv->setName("argv");
   }
 
   auto mainEntry = llvm::BasicBlock::Create(
@@ -82,6 +86,19 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
 
   llvm::IRBuilder<> builder { newMain->getContext() };
   builder.SetInsertPoint(mainEntry);
+
+  auto cafInitFunc = llvm::cast<llvm::Function>(
+      _module->getOrInsertFunction(
+          "_ZN9caf_v8lib8caf_initEPPc",
+          llvm::Type::getVoidTy(_module->getContext()),
+          llvm::PointerType::getUnqual(
+              llvm::PointerType::getUnqual(
+                  llvm::IntegerType::getInt8Ty(_module->getContext())
+              )
+          )
+      )
+  );
+  builder.CreateCall(cafInitFunc, { mainArgv } );
 
   auto callbackFuncArrDispatch = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
@@ -503,8 +520,17 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocStringType(llvm::IRBuilder<>& buil
 
   CreateInputBtyesToCall(builder, valueAddr, inputStringLengthValue);
   CreatePrintfCall(builder, "input value = %d\n", builder.CreateLoad(valueAddr));
-  
   auto stringPtr = builder.CreateCall(cafCreateStringFunc, { valueAddr } );
+
+  auto cafShowStringFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+      "_ZN9caf_v8lib14caf_ShowStringEN2v85LocalINS0_6StringEEE", // caf_ShowString
+      builder.getVoidTy(),
+      cafCreateStringFunc->getReturnType()
+    )
+  );
+  builder.CreateCall(cafShowStringFunc, {stringPtr} );
+
   return stringPtr;
 }
 
@@ -523,13 +549,22 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocIntegerType(llvm::IRBuilder<>& bui
   CreateInputIntToCall(builder, inputInteger);
   auto inputIntegerValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputInteger));
   CreatePrintfCall(builder, "input integer = %d\n", inputIntegerValue);
-  // llvm::Value* params[] = {  };
   auto integerPtr = builder.CreateCall(cafCreateIntegerFunc, { inputIntegerValue } );
+  
+  auto cafShowIntegerFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+      "_ZN9caf_v8lib15caf_ShowIntegerEN2v85LocalINS0_7IntegerEEE", // caf_ShowInteger
+      builder.getVoidTy(),
+      cafCreateIntegerFunc->getReturnType()
+    )
+  );
+  builder.CreateCall(cafShowIntegerFunc, {integerPtr} );
+  
   return integerPtr;
 }
 
 llvm::Value* CAFCodeGeneratorForNodejs::MallocBooleanType(llvm::IRBuilder<>& builder) {
-  auto cafCreateIntegerFunc = llvm::cast<llvm::Function>(
+  auto cafCreateBooleanFunc = llvm::cast<llvm::Function>(
     _module->getOrInsertFunction(
       "_ZN9caf_v8lib17caf_CreateBooleanEb", // caf_CreateBoolean
       builder.getInt8PtrTy(),
@@ -543,8 +578,17 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocBooleanType(llvm::IRBuilder<>& bui
   CreateInputBtyesToCall(builder, inputBoolean, builder.getInt32(1));
   auto inputBooleanValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputBoolean));
   CreatePrintfCall(builder, "input boolean = %hhx\n", inputBooleanValue);
-  // llvm::Value* params[] = {};
-  auto booleanPtr = builder.CreateCall(cafCreateIntegerFunc, { inputBooleanValue } );
+  auto booleanPtr = builder.CreateCall(cafCreateBooleanFunc, { inputBooleanValue } );
+  
+  auto cafShowBooleanFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+      "_ZN9caf_v8lib15caf_ShowBooleanEN2v85LocalINS0_7BooleanEEE", // caf_ShowBoolean
+      builder.getVoidTy(),
+      cafCreateBooleanFunc->getReturnType()
+    )
+  );
+  builder.CreateCall(cafShowBooleanFunc, {booleanPtr} );
+
   return booleanPtr;
 }
 
@@ -563,8 +607,17 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocFloatingPointerType(llvm::IRBuilde
   CreateInputDoubleToCall(builder, inputDouble);
   auto inputDoubleValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputDouble));
   CreatePrintfCall(builder, "input double = %lf\n", inputDoubleValue);
-  // llvm::Value* params[] = {};
   auto doublePtr = builder.CreateCall(cafCreateDoubleFunc, { inputDoubleValue } );
+
+  auto cafShowDoubleFunc = llvm::cast<llvm::Function>(
+    _module->getOrInsertFunction(
+      "_ZN9caf_v8lib14caf_ShowNumberEN2v85LocalINS0_6NumberEEE", // caf_ShowNumber
+      builder.getVoidTy(),
+      cafCreateDoubleFunc->getReturnType()
+    )
+  );
+  builder.CreateCall(cafShowDoubleFunc, {doublePtr} );
+
   return doublePtr;
 }
 
@@ -687,7 +740,7 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocArrayType(llvm::IRBuilder<>& build
     )
   );
   auto arrayValue = builder.CreateCall(cafCreateArrayFunc, { arrayElements, inputArraySizeValue });
-  // builder.CreateRet(arrayValue);
+  CreateSaveToObjectListCall(builder, builder.CreatePtrToInt(arrayValue, builder.getInt64Ty()));
   return arrayValue;
 }
 
@@ -713,7 +766,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocUndefined);
   auto undefinedValue = MallocUndefinedType(builder);
-  builder.CreateRet(undefinedValue);
+  auto undefinedValueToInt8Ptr = 
+    builder.CreateBitCast(undefinedValue, builder.getInt8PtrTy());
+  builder.CreateRet(undefinedValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(0), mallocUndefined)
@@ -725,7 +780,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocNull);
   auto nullValue = MallocNullType(builder);
-  builder.CreateRet(nullValue);
+  auto nullValueToInt8Ptr = 
+    builder.CreateBitCast(nullValue, builder.getInt8PtrTy());
+  builder.CreateRet(nullValueToInt8Ptr);
 
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
@@ -737,7 +794,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocBoolean);
   auto booleanValue = MallocBooleanType(builder);
-  builder.CreateRet(booleanValue);
+  auto booleanValueToInt8Ptr = 
+    builder.CreateBitCast(booleanValue, builder.getInt8PtrTy());
+  builder.CreateRet(booleanValueToInt8Ptr);
 
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
@@ -749,7 +808,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocString);
   auto stringValue = MallocStringType(builder);
-  builder.CreateRet(stringValue);
+  auto stringValueToInt8Ptr = 
+    builder.CreateBitCast(stringValue, builder.getInt8PtrTy());
+  builder.CreateRet(stringValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(3), mallocString)
@@ -761,7 +822,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocFunction);
   auto functionValue = MallocFunctionType(builder);
-  builder.CreateRet(functionValue);
+  auto functionValueToInt8Ptr = 
+    builder.CreateBitCast(functionValue, builder.getInt8PtrTy());
+  builder.CreateRet(functionValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(4), mallocFunction)
@@ -773,7 +836,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocInteger);
   auto integerValue = MallocIntegerType(builder);
-  builder.CreateRet(integerValue);
+  auto integerValueToInt8Ptr = 
+    builder.CreateBitCast(integerValue, builder.getInt8PtrTy());
+  builder.CreateRet(integerValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(5), mallocInteger)
@@ -784,8 +849,10 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       "caf.malloc.float",
       dispatchFunc);
   builder.SetInsertPoint(mallocFloatingPointer);
-  auto floatingPointerValue = MallocFloatingPointerType(builder);
-  builder.CreateRet(floatingPointerValue);
+  auto doubleValue = MallocFloatingPointerType(builder);
+  auto doubleValueToInt8Ptr = 
+    builder.CreateBitCast(doubleValue, builder.getInt8PtrTy());
+  builder.CreateRet(doubleValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(6), mallocFloatingPointer)
@@ -797,7 +864,9 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocArray);
   auto arrayValue = MallocArrayType(builder);
-  builder.CreateRet(arrayValue);
+  auto arrayValueToInt8Ptr = 
+    builder.CreateBitCast(arrayValue, builder.getInt8PtrTy());
+  builder.CreateRet(arrayValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(7), mallocArray)
@@ -809,17 +878,13 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       dispatchFunc);
   builder.SetInsertPoint(mallocPlaceholder);
   auto placeholderValue = MallocPlaceholderType(builder);
-  builder.CreateRet(placeholderValue);
-
+  auto placeholderValueToInt8Ptr = 
+    builder.CreateBitCast(placeholderValue, builder.getInt8PtrTy());
+  builder.CreateRet(placeholderValueToInt8Ptr);
   cases.push_back(
     std::pair<llvm::ConstantInt *, llvm::BasicBlock *>
     (builder.getInt32(8), mallocPlaceholder)
   );
-
-  // auto dispatchEnd = llvm::BasicBlock::Create(
-  //     dispatchFunc->getContext(),
-  //     "caf.malloc.end",
-  //     dispatchFunc);
 
   builder.SetInsertPoint(dispatchFuncEntry);
   llvm::Value* inputKindValue;
@@ -827,9 +892,12 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       llvm::IntegerType::getInt32Ty(_module->getContext()),
       nullptr,
       "input_kind");
-  CreateInputIntToCall(builder, inputKind);
+  builder.CreateStore(builder.getInt32(0), inputKind);
+  CreateInputBtyesToCall(builder, 
+    builder.CreateBitCast(inputKind, builder.getInt8PtrTy()), 
+    builder.getInt32(1));
   inputKindValue = builder.CreateLoad(inputKind);
-  CreatePrintfCall(builder, "input_kind = %d\n", inputKindValue);
+  CreatePrintfCall(builder, "input_kind = %x\n", inputKindValue);
 
   auto mallocValueOfTypeSI = builder.CreateSwitch(
       inputKindValue, cases.front().second, cases.size());
@@ -913,6 +981,7 @@ std::pair<llvm::ConstantInt *, llvm::BasicBlock *> CAFCodeGeneratorForNodejs::Cr
 
   builder.SetInsertPoint(invokeApiCase);
   std::string calleeName = demangle(callee->getName().str());
+  calleeName += "\n";
   CreatePrintfCall(builder, calleeName);
 
   std::vector<llvm::Value *> calleeArgs { };

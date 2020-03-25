@@ -7,21 +7,24 @@
 
 void inputIntTo(int *dest)
 {
-    scanf("%d", dest);
-    // *dest = 0;s
-    // for(int i = 0; i < 4; i++)
-    // {
-    //     unsigned char cur = getchar();
-    //     // printf("%d\n", cur);
-    //     *dest += (cur * (1 << i*8));
-    // }
-    // // printf("%d\n", *dest);
+    // scanf("%d", dest);
+    unsigned char* destBuffer = reinterpret_cast<unsigned char*>(dest);
+    for(int i = 0; i < 4; i++) {
+        unsigned char cur = getchar();
+        destBuffer[i] = cur;
+    }
+    // printf("%d\n", *dest);
 }
 
 void inputDoubleTo(double *dest)
 {
-    // *dest = 0;
-    scanf("%lf", dest);
+    // scanf("%lf", dest);
+    unsigned char* destBuffer = reinterpret_cast<unsigned char*>(dest);
+    for(int i = 0; i < 8; i++) {
+        unsigned char cur = getchar();
+        destBuffer[i] = cur;
+    }
+    // printf("%lf\n", *dest);
 }
 
 void inputBytesTo(char *dest, int size)

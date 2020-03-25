@@ -26,22 +26,22 @@ void caf_init(char * argv[])
   // Create a new Isolate and make it the current one.
   create_params.array_buffer_allocator =
       v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-  isolate = v8::Isolate::New(create_params);
+  global_isolate = v8::Isolate::New(create_params);
 
-  ::new (reinterpret_cast<void*>(ScopeBuffer)) v8::HandleScope(isolate);
+  ::new (reinterpret_cast<void*>(ScopeBuffer)) v8::HandleScope(global_isolate);
   // v8::HandleScope handle_scope(isolate);
-  context = v8::Context::New(isolate);
+  context = v8::Context::New(global_isolate);
   // v8::Context::Scope context_scope(context);
   ::new (reinterpret_cast<void*>(ContextBuffer)) v8::Context::Scope(context);
   
-  auto integerValue = caf_CreateInteger(12);
-  caf_ShowInteger(integerValue);
+  // auto integerValue = caf_CreateInteger(12);
+  // caf_ShowInteger(integerValue);
 
-  auto numberValue = caf_CreateNumber(3.1415926535);
-  caf_ShowNumber(numberValue);
+  // auto numberValue = caf_CreateNumber(3.1415926535);
+  // caf_ShowNumber(numberValue);
 
-  auto booleanValue = caf_CreateBoolean(true);
-  caf_ShowBoolean(booleanValue);
+  // auto booleanValue = caf_CreateBoolean(true);
+  // caf_ShowBoolean(booleanValue);
 
   // auto stringValue = caf_CreateString("zys");
   // caf_ShowString(stringValue);
@@ -58,25 +58,10 @@ CafFunctionCallbackInfo::CafFunctionCallbackInfo(
     reinterpret_cast<v8::internal::Address*>(values), 
     length) {}
 
-
-// This function returns a new array
-Local<Array> NewArray(int size) {
-
-  // We will be creating temporary handles so we use a handle scope.
-  v8::EscapableHandleScope handle_scope(isolate);
-  // v8::Context::Scope context_scope(context);
-
-  // Create a new empty array.
-  v8::Local<v8::Array> array = v8::Array::New(isolate, size);
-
-  // Return the value through Escape.
-  return handle_scope.Escape(array);
-}
-
 v8::Local<v8::Integer> caf_CreateInteger(int32_t value) {
   printf("caf_CreateInteger\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  v8::Local<v8::Integer> ret = v8::Integer::New(isolate, value);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Integer> ret = v8::Integer::New(global_isolate, value);
   return handle_scope.Escape(ret); 
 }
 
@@ -87,8 +72,8 @@ void caf_ShowInteger(v8::Local<v8::Integer> value) {
 
 v8::Local<v8::Number> caf_CreateNumber(double value) {
   printf("caf_CreateNumber\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  v8::Local<v8::Number> ret = v8::Number::New(isolate, value);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Number> ret = v8::Number::New(global_isolate, value);
   return handle_scope.Escape(ret); 
 }
 
@@ -99,8 +84,8 @@ void caf_ShowNumber(v8::Local<v8::Number> value) {
 
 v8::Local<v8::String> caf_CreateString(char* value) { 
   printf("caf_CreateString\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  auto ret = v8::String::NewFromUtf8(isolate, value, 
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  auto ret = v8::String::NewFromUtf8(global_isolate, value, 
     v8::NewStringType::kNormal).ToLocalChecked();
   return handle_scope.Escape(ret); 
 }
@@ -111,63 +96,49 @@ const char* ToCString(const v8::String::Utf8Value& value) {
 }
 
 void caf_ShowString(v8::Local<v8::String> value) {
-  v8::String::Utf8Value utf8Value(isolate, value);
+  v8::String::Utf8Value utf8Value(global_isolate, value);
   auto strValue = ToCString(utf8Value);
   printf("%s\n", strValue);
 }
 
 v8::Local<v8::Boolean> caf_CreateBoolean(bool value) {
   printf("caf_CreateBoolean\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  v8::Local<v8::Boolean> ret = Boolean::New(isolate, value);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Boolean> ret = Boolean::New(global_isolate, value);
   return handle_scope.Escape(ret); 
 }
 
 void caf_ShowBoolean(v8::Local<v8::Boolean> value) {
-  auto boolValue = value->BooleanValue(isolate);
+  auto boolValue = value->BooleanValue(global_isolate);
   printf("%x\n", boolValue);
 }
 
 v8::Local<v8::Primitive> caf_CreateUndefined() {
   printf("caf_CreateUndefined\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  v8::Local<v8::Primitive> ret = v8::Undefined(isolate);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Primitive> ret = v8::Undefined(global_isolate);
   return handle_scope.Escape(ret); 
 }
 
 v8::Local<v8::Primitive> caf_CreateNull() {
   printf("caf_CreateNull\n");
-  v8::EscapableHandleScope handle_scope(isolate);
-  v8::Local<v8::Primitive> ret = v8::Null(isolate);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Primitive> ret = v8::Null(global_isolate);
   return handle_scope.Escape(ret); 
 }
 
 Local<Array> caf_CreateArray(int8_t** elements, int size) {
 
-  // // We will be creating temporary handles so we use a handle scope.
-  // v8::EscapableHandleScope handle_scope(isolate);
-  // v8::Context::Scope context_scope(context);
-
-
-  // // Create a new empty array.
-  // v8::Local<v8::Array> array = v8::Array::New(isolate, 3);
-
   printf("caf_CreateArray\n");
-  // Create a new empty array.
-  auto ret = NewArray(size);
-  // v8::Local<v8::Array> ret = v8::Array::New(isolate, size);
-  for(int i = 0; i < size; i++) {
-    Nan::Set(ret, i,
-      *reinterpret_cast<v8::Local<v8::Value>*>(elements + i) 
-    );
-  }
-  // return handle_scope.Escape(ret); 
-  return ret;
+  auto arrayElements = reinterpret_cast<Local<Value>*>(elements);
+  v8::EscapableHandleScope handle_scope(global_isolate);
+  v8::Local<v8::Array> ret = v8::Array::New(global_isolate, arrayElements, size);
+  return handle_scope.Escape(ret); 
 }
 
 v8::Local<v8::Function> caf_CreateFunction(int8_t* func) {
   printf("caf_CreateFunction\n");
-  v8::EscapableHandleScope handle_scope(isolate);
+  v8::EscapableHandleScope handle_scope(global_isolate);
   auto functionCallback = reinterpret_cast<FunctionCallback>(func);
   auto ret = v8::Function::New(context, functionCallback).ToLocalChecked();
   return handle_scope.Escape(ret); 
@@ -179,7 +150,7 @@ v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
   printf("caf_CreateFunctionCallbackInfo\n");
   // auto isolate = v8::Isolate::GetCurrent();
 
-  implicit_args[1] = reinterpret_cast<int8_t*>(isolate);
+  implicit_args[1] = reinterpret_cast<int8_t*>(global_isolate);
   auto cafFunctionCallbackInfo = CafFunctionCallbackInfo(implicit_args, values, length);
   auto functionCallbackInfo = (v8::FunctionCallbackInfo<v8::Value>)(cafFunctionCallbackInfo);
   return functionCallbackInfo;

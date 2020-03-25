@@ -30,7 +30,7 @@ using v8::Context;
 typedef void (*FunctionCallback)(const FunctionCallbackInfo<Value>& info);
 
 std::unique_ptr<v8::Platform> platform;
-v8::Isolate* isolate;
+v8::Isolate* global_isolate;
 v8::Local<v8::Context> context;
 
 alignas(alignof(v8::Context::Scope))

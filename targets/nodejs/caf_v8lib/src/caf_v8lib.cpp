@@ -18,7 +18,7 @@ void caf_init(char * argv[])
   printf("caf_init\n");
   v8::V8::InitializeICUDefaultLocation(argv[0]);
   v8::V8::InitializeExternalStartupData(argv[0]);
-  std::unique_ptr<v8::Platform> platform = v8::platform::NewDefaultPlatform();
+  platform = v8::platform::NewDefaultPlatform();
   v8::V8::InitializePlatform(platform.get());
   v8::V8::Initialize();
 
@@ -31,21 +31,22 @@ void caf_init(char * argv[])
   ::new (reinterpret_cast<void*>(ScopeBuffer)) v8::HandleScope(isolate);
   // v8::HandleScope handle_scope(isolate);
   context = v8::Context::New(isolate);
-  v8::Context::Scope context_scope(context);
+  // v8::Context::Scope context_scope(context);
+  ::new (reinterpret_cast<void*>(ContextBuffer)) v8::Context::Scope(context);
   
-  // auto integerValue = caf_CreateInteger(12);
-  // caf_ShowInteger(integerValue);
+  auto integerValue = caf_CreateInteger(12);
+  caf_ShowInteger(integerValue);
 
-  // auto numberValue = caf_CreateNumber(3.1415926535);
-  // caf_ShowNumber(numberValue);
+  auto numberValue = caf_CreateNumber(3.1415926535);
+  caf_ShowNumber(numberValue);
 
-  // auto booleanValue = caf_CreateBoolean(true);
-  // caf_ShowBoolean(booleanValue);
+  auto booleanValue = caf_CreateBoolean(true);
+  caf_ShowBoolean(booleanValue);
 
   // auto stringValue = caf_CreateString("zys");
   // caf_ShowString(stringValue);
-  int size = 4;
-  Local<v8::Array> ret = v8::Array::New(isolate, size);
+  // int size = 4;
+  // Local<v8::Array> ret = v8::Array::New(isolate, size);
 }
 
 CafFunctionCallbackInfo::CafFunctionCallbackInfo(
@@ -58,12 +59,12 @@ CafFunctionCallbackInfo::CafFunctionCallbackInfo(
     length) {}
 
 
-// This function returns a new array with three elements, x, y, and z.
+// This function returns a new array
 Local<Array> NewArray(int size) {
 
   // We will be creating temporary handles so we use a handle scope.
   v8::EscapableHandleScope handle_scope(isolate);
-  v8::Context::Scope context_scope(context);
+  // v8::Context::Scope context_scope(context);
 
   // Create a new empty array.
   v8::Local<v8::Array> array = v8::Array::New(isolate, size);
@@ -86,7 +87,6 @@ void caf_ShowInteger(v8::Local<v8::Integer> value) {
 
 v8::Local<v8::Number> caf_CreateNumber(double value) {
   printf("caf_CreateNumber\n");
-  auto array = NewArray(20);
   v8::EscapableHandleScope handle_scope(isolate);
   v8::Local<v8::Number> ret = v8::Number::New(isolate, value);
   return handle_scope.Escape(ret); 

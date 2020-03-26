@@ -40,66 +40,26 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
   GenerateCallbackFunctionCandidateArray();
   CreateDispatchMallocValueOfType();
   auto dispatchFunc = CreateDispatchFunctionForApi();
-  // dispatchFunc->dump();
-  //
-  // ============= insert my new main function. =======================
-  //
 
-  // delete the old main function.
-  auto oldMain = _module->getFunction("main");
-  if (oldMain) {
-    oldMain->eraseFromParent();
-  }
-
-  auto newMain = llvm::cast<llvm::Function>(
+  auto cafMain = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
-          "main",
-          llvm::IntegerType::getInt32Ty(_module->getContext()),
-          llvm::IntegerType::getInt32Ty(_module->getContext()),
-          llvm::PointerType::getUnqual(
-              llvm::PointerType::getUnqual(
-                  llvm::IntegerType::getInt8Ty(_module->getContext())
-              )
-          )
+          "__caf_main",
+          llvm::IntegerType::getVoidTy(_module->getContext())
       )
   );
-
-  llvm::Value* mainArgc;
-  llvm::Value* mainArgv;
-  {
-    newMain->setCallingConv(llvm::CallingConv::C);
-    auto args = newMain->arg_begin();
-    mainArgc = (args++);
-    mainArgc->setName("argc");
-    mainArgv = (args++);
-    mainArgv->setName("argv");
-  }
 
   auto mainEntry = llvm::BasicBlock::Create(
-      newMain->getContext(), "main.entry", newMain);
+      cafMain->getContext(), "main.entry", cafMain);
   auto mainWhileCond = llvm::BasicBlock::Create(
-      newMain->getContext(), "main.while.cond", newMain);
+      cafMain->getContext(), "main.while.cond", cafMain);
   auto mainWhileBody = llvm::BasicBlock::Create(
-      newMain->getContext(), "main.while.body", newMain);
+      cafMain->getContext(), "main.while.body", cafMain);
   auto mainEnd = llvm::BasicBlock::Create(
-      newMain->getContext(), "main.end", newMain);
+      cafMain->getContext(), "main.end", cafMain);
 
-  llvm::IRBuilder<> builder { newMain->getContext() };
+  llvm::IRBuilder<> builder { cafMain->getContext() };
   builder.SetInsertPoint(mainEntry);
-
-  auto cafInitFunc = llvm::cast<llvm::Function>(
-      _module->getOrInsertFunction(
-          "_ZN9caf_v8lib8caf_initEiPKPKc",
-          llvm::Type::getVoidTy(_module->getContext()),
-          llvm::Type::getInt32Ty(_module->getContext()),
-          llvm::PointerType::getUnqual(
-              llvm::PointerType::getUnqual(
-                  llvm::IntegerType::getInt8Ty(_module->getContext())
-              )
-          )
-      )
-  );
-  builder.CreateCall(cafInitFunc, { mainArgc, mainArgv } );
+  CreatePrintfCall(builder, "__caf_main runnning...\n\n");
 
   auto callbackFuncArrDispatch = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
@@ -148,7 +108,7 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
   builder.CreateBr(mainWhileCond);
 
   builder.SetInsertPoint(mainEnd);
-  builder.CreateRet(builder.getInt32(0));
+  builder.CreateRetVoid();
 
   // add attribute: optnone unwind
   {
@@ -157,7 +117,7 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
     B.addAttribute(llvm::Attribute::OptimizeNone);
     B.addAttribute(llvm::Attribute::UWTable);
     B.addAttribute(llvm::Attribute::NoRecurse);
-    newMain->addAttributes(llvm::AttributeList::FunctionIndex, B);
+    cafMain->addAttributes(llvm::AttributeList::FunctionIndex, B);
   }
 
   llvm::errs() << "main has been created successfully.\n";
@@ -719,14 +679,14 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocArrayType(llvm::IRBuilder<>& build
     );
     llvm::Value *GEPIndices[] = { curIndexValue };
     llvm::Value * curAddr = builder.CreateInBoundsGEP(arrayElements, GEPIndices);
-    curAddr->dump();
+    // curAddr->dump();
     builder.CreateStore(curElementToInt8Ptr, curAddr);
 
     // curIndex ++ 
-    curIndexValue->dump();
+    // curIndexValue->dump();
     auto curIndexValueAddOne = builder.CreateAdd(curIndexValue, builder.getInt32(1));
-    curIndexValueAddOne->dump();
-    curIndex->dump();
+    // curIndexValueAddOne->dump();
+    // curIndex->dump();
     builder.CreateStore(curIndexValueAddOne, curIndex);
   }
   builder.CreateBr(whileCond);

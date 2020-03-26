@@ -31,8 +31,9 @@ using node::Environment;
 typedef void (*FunctionCallback)(const FunctionCallbackInfo<Value>& info);
 
 std::unique_ptr<v8::Platform> platform;
-v8::Isolate* global_isolate;
-v8::Local<v8::Context> context;
+v8::Isolate* caf_isolate;
+v8::Local<v8::Context> caf_context;
+node::Environment* caf_environment;
 
 alignas(alignof(v8::Context::Scope))
 char ContextScopeBuffer[sizeof(v8::Context::Scope)];

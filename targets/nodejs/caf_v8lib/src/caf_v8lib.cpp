@@ -5,15 +5,62 @@
 #include <nan.h>
 #include <bits/stdc++.h>
 #include "caf_v8lib.h"
+#include <env.h>
 
+class node::Environment;
 using namespace node;
 using namespace v8;
 
 namespace caf_v8lib {
 
+
+struct Argv {
+ public:
+  Argv() : Argv({"node", "-p", "process.version"}) {}
+
+  Argv(const std::initializer_list<const char*> &args) {
+    nr_args_ = args.size();
+    int total_len = 0;
+    for (auto it = args.begin(); it != args.end(); ++it) {
+      total_len += strlen(*it) + 1;
+    }
+    argv_ = static_cast<char**>(malloc(nr_args_ * sizeof(char*)));
+    argv_[0] = static_cast<char*>(malloc(total_len));
+    int i = 0;
+    int offset = 0;
+    for (auto it = args.begin(); it != args.end(); ++it, ++i) {
+      int len = strlen(*it) + 1;
+      snprintf(argv_[0] + offset, len, "%s", *it);
+      // Skip argv_[0] as it points the correct location already
+      if (i > 0) {
+        argv_[i] = argv_[0] + offset;
+      }
+      offset += len;
+    }
+  }
+
+  ~Argv() {
+    free(argv_[0]);
+    free(argv_);
+  }
+
+  int nr_args() const {
+    return nr_args_;
+  }
+
+  char** operator*() const {
+    return argv_;
+  }
+
+ private:
+  char** argv_;
+  int nr_args_;
+};
+
+
 typedef void (*FunctionCallback)(const FunctionCallbackInfo<Value>& info);
 
-void caf_init(char * argv[])
+void caf_init(const int argc, const char* const* argv)
 {
   printf("caf_init\n");
   v8::V8::InitializeICUDefaultLocation(argv[0]);
@@ -33,6 +80,25 @@ void caf_init(char * argv[])
   context = v8::Context::New(global_isolate);
   // v8::Context::Scope context_scope(context);
   ::new (reinterpret_cast<void*>(ContextBuffer)) v8::Context::Scope(context);
+
+  // set node::Environment
+  node::IsolateData* isolateData = node::CreateIsolateData(global_isolate, uv_default_loop());
+  auto env = node::CreateEnvironment(isolateData, context, argc, argv, argc, argv);
+  auto environment = v8::External::New(global_isolate, env);
+  context->SetEmbedderData(0, environment);
+  // node::Environment = v8::External::New(isolate, ptr_to_environment);
+  // context->SetEmbedderData(isolate, )
+
+  // std::vector<std::string> args(argv, argv + argc);
+  // std::vector<std::string> exec_args(argv, argv + argc);
+  // std::unique_ptr<Environment> env = std::make_unique<Environment>(
+  //     isolateData,
+  //     context,
+  //     args,
+  //     exec_args,
+  //     static_cast<node::Environment::Flags>(0);
+  // env->InitializeLibuv(per_process::v8_is_profiling);
+  // env->InitializeDiagnostics();
   
   // auto integerValue = caf_CreateInteger(12);
   // caf_ShowInteger(integerValue);
@@ -149,8 +215,13 @@ v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
   ) { 
   printf("caf_CreateFunctionCallbackInfo\n");
   // auto isolate = v8::Isolate::GetCurrent();
-
+  implicit_args[0] = reinterpret_cast<int8_t*>((v8::Object*)malloc(sizeof(v8::Object)));
   implicit_args[1] = reinterpret_cast<int8_t*>(global_isolate);
+  implicit_args[3] = reinterpret_cast<int8_t*>((v8::ReturnValue<Value>*)malloc(sizeof(v8::ReturnValue<Value>)));
+  implicit_args[4] = reinterpret_cast<int8_t*>((v8::Value*)malloc(sizeof(v8::Value)));
+  implicit_args[5] = reinterpret_cast<int8_t*>((v8::Value*)malloc(sizeof(v8::Value)));
+  
+    
   auto cafFunctionCallbackInfo = CafFunctionCallbackInfo(implicit_args, values, length);
   auto functionCallbackInfo = (v8::FunctionCallbackInfo<v8::Value>)(cafFunctionCallbackInfo);
   return functionCallbackInfo;

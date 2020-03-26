@@ -89,8 +89,9 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
 
   auto cafInitFunc = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
-          "_ZN9caf_v8lib8caf_initEPPc",
+          "_ZN9caf_v8lib8caf_initEiPKPKc",
           llvm::Type::getVoidTy(_module->getContext()),
+          llvm::Type::getInt32Ty(_module->getContext()),
           llvm::PointerType::getUnqual(
               llvm::PointerType::getUnqual(
                   llvm::IntegerType::getInt8Ty(_module->getContext())
@@ -98,7 +99,7 @@ void CAFCodeGeneratorForNodejs::GenerateStub() {
           )
       )
   );
-  builder.CreateCall(cafInitFunc, { mainArgv } );
+  builder.CreateCall(cafInitFunc, { mainArgc, mainArgv } );
 
   auto callbackFuncArrDispatch = llvm::cast<llvm::Function>(
       _module->getOrInsertFunction(
@@ -675,7 +676,7 @@ llvm::Value* CAFCodeGeneratorForNodejs::MallocArrayType(llvm::IRBuilder<>& build
     "input_arraysize");
   CreateInputIntToCall(builder, inputArraySize);
   auto inputArraySizeValue = dynamic_cast<llvm::Value *>(builder.CreateLoad(inputArraySize));
-  CreatePrintfCall(builder, "input integer = %d\n", inputArraySizeValue); 
+  CreatePrintfCall(builder, "input_arraysize = %d\n", inputArraySizeValue); 
   auto arrayElements = builder.CreateAlloca(
     builder.getInt8PtrTy(), inputArraySizeValue, "array_elements");
 
@@ -894,10 +895,11 @@ llvm::Function* CAFCodeGeneratorForNodejs::CreateDispatchMallocValueOfType() {
       "input_kind");
   builder.CreateStore(builder.getInt32(0), inputKind);
   CreateInputBtyesToCall(builder, 
-    builder.CreateBitCast(inputKind, builder.getInt8PtrTy()), 
+    // builder.CreateBitCast(inputKind, builder.getInt8PtrTy()), 
+    inputKind,
     builder.getInt32(1));
   inputKindValue = builder.CreateLoad(inputKind);
-  CreatePrintfCall(builder, "input_kind = %x\n", inputKindValue);
+  CreatePrintfCall(builder, "\ninput_kind = %x\n", inputKindValue);
 
   auto mallocValueOfTypeSI = builder.CreateSwitch(
       inputKindValue, cases.front().second, cases.size());

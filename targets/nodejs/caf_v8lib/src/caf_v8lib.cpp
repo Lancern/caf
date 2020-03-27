@@ -6,11 +6,12 @@
 #include <bits/stdc++.h>
 #include "caf_v8lib.h"
 #include <env.h>
+#include <env-inl.h>
 
 using namespace node;
 using namespace v8;
 
-#define CAF_ENTRY
+// #define CAF_ENTRY
 #ifdef CAF_ENTRY
 extern "C" void __caf_main();
 
@@ -21,6 +22,8 @@ NAN_METHOD(caf_entry) {
   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
   caf_v8lib::caf_environment = 
     node::Environment::GetCurrent(info.GetIsolate());
+  // caf_v8lib::caf_env_as_callback_data = 
+  //   caf_v8lib::caf_environment->as_callback_data();
   __caf_main();
   info.GetReturnValue().Set(
     String::NewFromUtf8(info.GetIsolate(), "caf run seccessfully."));
@@ -36,6 +39,7 @@ NAN_MODULE_INIT(caf_init) {
 NODE_MODULE(caf_v8lib, caf_init);
 #endif
 
+#ifndef CAF_ENTRY
 namespace caf_v8lib {
 
 typedef void (*FunctionCallback)(const FunctionCallbackInfo<Value>& info);
@@ -139,14 +143,18 @@ v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
   int8_t** implicit_args, int8_t** values, int length
   ) {
   printf("caf_CreateFunctionCallbackInfo\n");
-  // implicit_args[0] = <this: Value>
+  // implicit_args[0] = <this: Value>, handled by IR imstrumentor.
   implicit_args[1] = reinterpret_cast<int8_t*>(caf_isolate);
   implicit_args[3] = reinterpret_cast<int8_t*>(
     (v8::ReturnValue<Value>*)malloc(sizeof(v8::ReturnValue<Value>)));
-  implicit_args[4] = reinterpret_cast<int8_t*>(
-    *v8::External::New(caf_isolate, caf_environment));
+  // implicit_args[4] = (int8_t*)malloc(sizeof(int8_t));
+  auto env = *reinterpret_cast<internal::Address*>(*caf_environment->as_callback_data());
+  implicit_args[4] = reinterpret_cast<int8_t*>(env);
+  //   *reinterpret_cast<internal::Address*>(*caf_environment->as_callback_data());
   implicit_args[5] = reinterpret_cast<int8_t*>(
     (v8::Value*)malloc(sizeof(v8::Value)));
+
+
   
   auto cafFunctionCallbackInfo = CafFunctionCallbackInfo(implicit_args, values, length);
   auto functionCallbackInfo = (v8::FunctionCallbackInfo<v8::Value>)(cafFunctionCallbackInfo);
@@ -161,3 +169,4 @@ int8_t* caf_GetRetValue(v8::FunctionCallbackInfo<v8::Value>& functionCallbackInf
 }
 
 } // end namespace caf_v8lib
+#endif

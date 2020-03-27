@@ -6,9 +6,9 @@
  "sources": [ "src/caf_v8lib.cpp" ],
 #  "cflags": ["-emit-llvm", "-S"],
 #  "cflags_cc": ["-emit-llvm", "-S"],
- "include_dirs": [
- "<!(node -e \"require('nan')\")"
- ],
+#  "include_dirs": [
+#  "<!(node -e \"require('nan')\")"
+#  ],
  'defines': [
         'NODE_WANT_INTERNALS=1',
         'ARCH="<(target_arch)"',

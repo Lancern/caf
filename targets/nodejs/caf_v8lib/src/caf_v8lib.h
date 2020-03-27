@@ -4,8 +4,6 @@
 #include "libplatform/libplatform.h"
 #include <node.h>
 #include <node_object_wrap.h>
-#include <nan.h>
-#include "caf_v8lib.h"
 #include <new>
 
 using namespace node;
@@ -51,7 +49,7 @@ void caf_init(char * argv[]);
 class CafFunctionCallbackInfo : public v8::FunctionCallbackInfo<v8::Value> {
 public:
   CafFunctionCallbackInfo(
-    int8_t** implicit_args, 
+    int8_t** implicit_args,
     int8_t** values,
     int length
   );

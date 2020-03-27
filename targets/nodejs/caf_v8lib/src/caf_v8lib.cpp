@@ -2,7 +2,6 @@
 #include "libplatform/libplatform.h"
 #include <node.h>
 #include <node_object_wrap.h>
-#include <nan.h>
 #include <bits/stdc++.h>
 #include "caf_v8lib.h"
 #include <env.h>
@@ -15,30 +14,6 @@ using namespace v8;
 #ifdef CAF_ENTRY
 extern "C" void __caf_main();
 
-
-class AddonData {
- public:
-  AddonData(Isolate* isolate, Local<Object> exports):
-      call_count(0) {
-    // Link the existence of this object instance to the existence of exports.
-    exports_.Reset(isolate, exports);
-    exports_.SetWeak(this, DeleteMe, WeakCallbackType::kParameter);
-  }
-
-  // Per-addon data.
-  int call_count;
-
- private:
-  // Method to call when "exports" is about to be garbage-collected.
-  static void DeleteMe(const WeakCallbackInfo<AddonData>& info) {
-    delete info.GetParameter();
-  }
-
-  // Weak handle to the "exports" object. An instance of this class will be
-  // destroyed along with the exports object to which it is weakly bound.
-  v8::Global<v8::Object> exports_;
-};
-
 static void Method(const v8::FunctionCallbackInfo<v8::Value>& info) {
   // Retrieve the per-addon-instance data.
   AddonData* data =
@@ -47,12 +22,12 @@ static void Method(const v8::FunctionCallbackInfo<v8::Value>& info) {
 
   caf_v8lib::caf_isolate = info.GetIsolate();
   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
-  caf_v8lib::caf_environment = 
+  caf_v8lib::caf_environment =
     node::Environment::GetCurrent(info);
-  
+
   caf_v8lib::CafFunctionCallbackInfo cafFunctionCallbackInfo(info);
   caf_v8lib::caf_implicit_args = cafFunctionCallbackInfo.caf_implicit_args();
-  
+
   __caf_main();
   info.GetReturnValue().Set(String::NewFromUtf8(
       info.GetIsolate(), "caf run seccessfully.", NewStringType::kNormal).ToLocalChecked());
@@ -61,21 +36,9 @@ static void Method(const v8::FunctionCallbackInfo<v8::Value>& info) {
 
 // Initialize this addon to be context-aware.
 NODE_MODULE_INIT(/* exports, module, context */) {
-  Isolate* isolate = context->GetIsolate();
-
-  // Create a new instance of AddonData for this instance of the addon.
-  AddonData* data = new AddonData(isolate, exports);
-  // Wrap the data in a v8::External so we can pass it to the method we expose.
-  Local<External> external = External::New(isolate, data);
-
-  // Expose the method "Method" to JavaScript, and make sure it receives the
-  // per-addon-instance data we created above by passing `external` as the
-  // third parameter to the FunctionTemplate constructor.
-  exports->Set(context,
-               String::NewFromUtf8(isolate, "caf_entry", NewStringType::kNormal)
-                  .ToLocalChecked(),
-               FunctionTemplate::New(isolate, Method, external)
-                  ->GetFunction(context).ToLocalChecked()).FromJust();
+  auto isolate = context->GetIsolate();
+  auto env = node::Environment::GetCurrent(isolate);
+  env->SetMethod(exports, "caf_entry", Method);
 }
 // void Initialize(Local<Object> exports) {
 //   NODE_SET_METHOD(exports, "caf_entry", Method);
@@ -100,10 +63,10 @@ NODE_MODULE_INIT(/* exports, module, context */) {
 // NAN_METHOD(caf_entry) {
 //   caf_v8lib::caf_isolate = info.GetIsolate();
 //   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
-//   caf_v8lib::caf_environment = 
+//   caf_v8lib::caf_environment =
 //     node::Environment::GetCurrent(caf_v8lib::caf_context);
 //   // info.Data();
-//   // caf_v8lib::caf_env_as_callback_data = 
+//   // caf_v8lib::caf_env_as_callback_data =
 //   //   caf_v8lib::caf_environment->as_callback_data();
 //   __caf_main();
 //   info.GetReturnValue().Set(
@@ -126,12 +89,12 @@ namespace caf_v8lib {
 typedef void (*FunctionCallback)(const FunctionCallbackInfo<Value>& info);
 
 CafFunctionCallbackInfo::CafFunctionCallbackInfo(
-    int8_t** implicit_args, 
+    int8_t** implicit_args,
     int8_t** values,
     int length
   ): v8::FunctionCallbackInfo<v8::Value>(
-    reinterpret_cast<v8::internal::Address*>(implicit_args), 
-    reinterpret_cast<v8::internal::Address*>(values), 
+    reinterpret_cast<v8::internal::Address*>(implicit_args),
+    reinterpret_cast<v8::internal::Address*>(values),
     length) {}
 
 CafFunctionCallbackInfo::CafFunctionCallbackInfo(
@@ -142,7 +105,7 @@ v8::Local<v8::Integer> caf_CreateInteger(int32_t value) {
   printf("caf_CreateInteger\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Integer> ret = v8::Integer::New(caf_isolate, value);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 void caf_ShowInteger(v8::Local<v8::Integer> value) {
@@ -154,7 +117,7 @@ v8::Local<v8::Number> caf_CreateNumber(double value) {
   printf("caf_CreateNumber\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Number> ret = v8::Number::New(caf_isolate, value);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 void caf_ShowNumber(v8::Local<v8::Number> value) {
@@ -162,12 +125,12 @@ void caf_ShowNumber(v8::Local<v8::Number> value) {
   printf("%lf\n", numberValue);
 }
 
-v8::Local<v8::String> caf_CreateString(char* value) { 
+v8::Local<v8::String> caf_CreateString(char* value) {
   printf("caf_CreateString\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
-  auto ret = v8::String::NewFromUtf8(caf_isolate, value, 
+  auto ret = v8::String::NewFromUtf8(caf_isolate, value,
     v8::NewStringType::kNormal).ToLocalChecked();
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 // Extracts a C string from a V8 Utf8Value.
@@ -185,7 +148,7 @@ v8::Local<v8::Boolean> caf_CreateBoolean(bool value) {
   printf("caf_CreateBoolean\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Boolean> ret = Boolean::New(caf_isolate, value);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 void caf_ShowBoolean(v8::Local<v8::Boolean> value) {
@@ -197,14 +160,14 @@ v8::Local<v8::Primitive> caf_CreateUndefined() {
   printf("caf_CreateUndefined\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Primitive> ret = v8::Undefined(caf_isolate);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 v8::Local<v8::Primitive> caf_CreateNull() {
   printf("caf_CreateNull\n");
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Primitive> ret = v8::Null(caf_isolate);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 Local<Array> caf_CreateArray(int8_t** elements, int size) {
@@ -213,7 +176,7 @@ Local<Array> caf_CreateArray(int8_t** elements, int size) {
   auto arrayElements = reinterpret_cast<Local<Value>*>(elements);
   v8::EscapableHandleScope handle_scope(caf_isolate);
   v8::Local<v8::Array> ret = v8::Array::New(caf_isolate, arrayElements, size);
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 v8::Local<v8::Function> caf_CreateFunction(int8_t* func) {
@@ -221,7 +184,7 @@ v8::Local<v8::Function> caf_CreateFunction(int8_t* func) {
   v8::EscapableHandleScope handle_scope(caf_isolate);
   auto functionCallback = reinterpret_cast<FunctionCallback>(func);
   auto ret = v8::Function::New(caf_context, functionCallback).ToLocalChecked();
-  return handle_scope.Escape(ret); 
+  return handle_scope.Escape(ret);
 }
 
 v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
@@ -241,7 +204,7 @@ v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
   for(int i = 1; i < 6; i++) {
     implicit_args[i] = caf_implicit_args[i];
   }
-  
+
   auto cafFunctionCallbackInfo = CafFunctionCallbackInfo(implicit_args, values, length);
   auto functionCallbackInfo = (v8::FunctionCallbackInfo<v8::Value>)(cafFunctionCallbackInfo);
   return functionCallbackInfo;

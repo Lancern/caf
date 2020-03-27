@@ -15,11 +15,40 @@ using namespace v8;
 #ifdef CAF_ENTRY
 extern "C" void __caf_main();
 
-void Method(const FunctionCallbackInfo<Value>& info) {
+
+class AddonData {
+ public:
+  AddonData(Isolate* isolate, Local<Object> exports):
+      call_count(0) {
+    // Link the existence of this object instance to the existence of exports.
+    exports_.Reset(isolate, exports);
+    exports_.SetWeak(this, DeleteMe, WeakCallbackType::kParameter);
+  }
+
+  // Per-addon data.
+  int call_count;
+
+ private:
+  // Method to call when "exports" is about to be garbage-collected.
+  static void DeleteMe(const WeakCallbackInfo<AddonData>& info) {
+    delete info.GetParameter();
+  }
+
+  // Weak handle to the "exports" object. An instance of this class will be
+  // destroyed along with the exports object to which it is weakly bound.
+  v8::Global<v8::Object> exports_;
+};
+
+static void Method(const v8::FunctionCallbackInfo<v8::Value>& info) {
+  // Retrieve the per-addon-instance data.
+  AddonData* data =
+      reinterpret_cast<AddonData*>(info.Data().As<External>()->Value());
+  data->call_count++;
+
   caf_v8lib::caf_isolate = info.GetIsolate();
   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
   caf_v8lib::caf_environment = 
-    node::Environment::GetCurrent(caf_v8lib::caf_context);
+    node::Environment::GetCurrent(info);
   
   caf_v8lib::CafFunctionCallbackInfo cafFunctionCallbackInfo(info);
   caf_v8lib::caf_implicit_args = cafFunctionCallbackInfo.caf_implicit_args();
@@ -29,11 +58,42 @@ void Method(const FunctionCallbackInfo<Value>& info) {
       info.GetIsolate(), "caf run seccessfully.", NewStringType::kNormal).ToLocalChecked());
 }
 
-void Initialize(Local<Object> exports) {
-  NODE_SET_METHOD(exports, "caf_entry", Method);
-}
 
-NODE_MODULE(caf_v8lib, Initialize)
+// Initialize this addon to be context-aware.
+NODE_MODULE_INIT(/* exports, module, context */) {
+  Isolate* isolate = context->GetIsolate();
+
+  // Create a new instance of AddonData for this instance of the addon.
+  AddonData* data = new AddonData(isolate, exports);
+  // Wrap the data in a v8::External so we can pass it to the method we expose.
+  Local<External> external = External::New(isolate, data);
+
+  // Expose the method "Method" to JavaScript, and make sure it receives the
+  // per-addon-instance data we created above by passing `external` as the
+  // third parameter to the FunctionTemplate constructor.
+  exports->Set(context,
+               String::NewFromUtf8(isolate, "caf_entry", NewStringType::kNormal)
+                  .ToLocalChecked(),
+               FunctionTemplate::New(isolate, Method, external)
+                  ->GetFunction(context).ToLocalChecked()).FromJust();
+}
+// void Initialize(Local<Object> exports) {
+//   NODE_SET_METHOD(exports, "caf_entry", Method);
+// }
+
+// static void Initialize(Local<Object> target,
+//                        Local<Value> unused,
+//                        Local<Context> context,
+//                        void* priv) {
+//   Environment* env = Environment::GetCurrent(context);
+//   Isolate* isolate = env->isolate();
+
+//   env->SetMethod(target, "caf_entry", Method);
+// }
+
+// NODE_MODULE(caf_v8lib, Initialize)
+
+// NODE_MODULE_CONTEXT_AWARE_INTERNAL(caf_v8lib, Initialize)
 
 // NAN_METHOD is a Nan macro enabling convenient way of creating native node functions.
 // It takes a method's name as a param. By C++ convention, I used the Capital cased name.

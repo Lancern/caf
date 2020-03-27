@@ -34,6 +34,7 @@ std::unique_ptr<v8::Platform> platform;
 v8::Isolate* caf_isolate;
 v8::Local<v8::Context> caf_context;
 node::Environment* caf_environment;
+int8_t** caf_implicit_args;
 
 alignas(alignof(v8::Context::Scope))
 char ContextScopeBuffer[sizeof(v8::Context::Scope)];
@@ -54,6 +55,11 @@ public:
     int8_t** values,
     int length
   );
+  CafFunctionCallbackInfo(
+    const v8::FunctionCallbackInfo<v8::Value>& info
+  );
+  v8::internal::Address* implicit_args() { return implicit_args_; }
+  int8_t** caf_implicit_args() {return reinterpret_cast<int8_t**>(implicit_args_); }
 };
 
 Local<Integer> caf_CreateInteger(int32_t value);

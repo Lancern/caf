@@ -15,28 +15,49 @@ using namespace v8;
 #ifdef CAF_ENTRY
 extern "C" void __caf_main();
 
-// NAN_METHOD is a Nan macro enabling convenient way of creating native node functions.
-// It takes a method's name as a param. By C++ convention, I used the Capital cased name.
-NAN_METHOD(caf_entry) {
+void Method(const FunctionCallbackInfo<Value>& info) {
   caf_v8lib::caf_isolate = info.GetIsolate();
   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
   caf_v8lib::caf_environment = 
-    node::Environment::GetCurrent(info.GetIsolate());
-  // caf_v8lib::caf_env_as_callback_data = 
-  //   caf_v8lib::caf_environment->as_callback_data();
+    node::Environment::GetCurrent(caf_v8lib::caf_context);
+  
+  caf_v8lib::CafFunctionCallbackInfo cafFunctionCallbackInfo(info);
+  caf_v8lib::caf_implicit_args = cafFunctionCallbackInfo.caf_implicit_args();
+  
   __caf_main();
-  info.GetReturnValue().Set(
-    String::NewFromUtf8(info.GetIsolate(), "caf run seccessfully."));
+  info.GetReturnValue().Set(String::NewFromUtf8(
+      info.GetIsolate(), "caf run seccessfully.", NewStringType::kNormal).ToLocalChecked());
 }
 
-// Module initialization logic
-NAN_MODULE_INIT(caf_init) {
-    // Export the `Caf_Init` function (equivalent to `export function Hello (...)` in JS)
-    NAN_EXPORT(target, caf_entry);
+void Initialize(Local<Object> exports) {
+  NODE_SET_METHOD(exports, "caf_entry", Method);
 }
 
-// Create the module called "caf_v8lib" and initialize it with `caf_init` function (created with NAN_MODULE_INIT macro)
-NODE_MODULE(caf_v8lib, caf_init);
+NODE_MODULE(caf_v8lib, Initialize)
+
+// NAN_METHOD is a Nan macro enabling convenient way of creating native node functions.
+// It takes a method's name as a param. By C++ convention, I used the Capital cased name.
+// NAN_METHOD(caf_entry) {
+//   caf_v8lib::caf_isolate = info.GetIsolate();
+//   caf_v8lib::caf_context = info.GetIsolate()->GetCurrentContext();
+//   caf_v8lib::caf_environment = 
+//     node::Environment::GetCurrent(caf_v8lib::caf_context);
+//   // info.Data();
+//   // caf_v8lib::caf_env_as_callback_data = 
+//   //   caf_v8lib::caf_environment->as_callback_data();
+//   __caf_main();
+//   info.GetReturnValue().Set(
+//     String::NewFromUtf8(info.GetIsolate(), "caf run seccessfully."));
+// }
+
+// // Module initialization logic
+// NAN_MODULE_INIT(caf_init) {
+//     // Export the `Caf_Init` function (equivalent to `export function Hello (...)` in JS)
+//     NAN_EXPORT(target, caf_entry);
+// }
+
+// // Create the module called "caf_v8lib" and initialize it with `caf_init` function (created with NAN_MODULE_INIT macro)
+// NODE_MODULE(caf_v8lib, caf_init);
 #endif
 
 #ifndef CAF_ENTRY
@@ -52,6 +73,10 @@ CafFunctionCallbackInfo::CafFunctionCallbackInfo(
     reinterpret_cast<v8::internal::Address*>(implicit_args), 
     reinterpret_cast<v8::internal::Address*>(values), 
     length) {}
+
+CafFunctionCallbackInfo::CafFunctionCallbackInfo(
+    const FunctionCallbackInfo<v8::Value>& info
+  ): v8::FunctionCallbackInfo<v8::Value> (info) {}
 
 v8::Local<v8::Integer> caf_CreateInteger(int32_t value) {
   printf("caf_CreateInteger\n");
@@ -143,18 +168,19 @@ v8::FunctionCallbackInfo<v8::Value> caf_CreateFunctionCallbackInfo(
   int8_t** implicit_args, int8_t** values, int length
   ) {
   printf("caf_CreateFunctionCallbackInfo\n");
-  // implicit_args[0] = <this: Value>, handled by IR imstrumentor.
-  implicit_args[1] = reinterpret_cast<int8_t*>(caf_isolate);
-  implicit_args[3] = reinterpret_cast<int8_t*>(
-    (v8::ReturnValue<Value>*)malloc(sizeof(v8::ReturnValue<Value>)));
-  // implicit_args[4] = (int8_t*)malloc(sizeof(int8_t));
-  auto env = *reinterpret_cast<internal::Address*>(*caf_environment->as_callback_data());
-  implicit_args[4] = reinterpret_cast<int8_t*>(env);
-  //   *reinterpret_cast<internal::Address*>(*caf_environment->as_callback_data());
-  implicit_args[5] = reinterpret_cast<int8_t*>(
-    (v8::Value*)malloc(sizeof(v8::Value)));
-
-
+  // // implicit_args[0] = <this: Value>, handled by IR imstrumentor.
+  // implicit_args[1] = reinterpret_cast<int8_t*>(caf_isolate);
+  // implicit_args[3] = reinterpret_cast<int8_t*>(
+  //   (v8::ReturnValue<Value>*)malloc(sizeof(v8::ReturnValue<Value>)));
+  // // implicit_args[4] = (int8_t*)malloc(sizeof(int8_t));
+  // auto env = *reinterpret_cast<volatile internal::Address*>(*functionCallbackInfo_Data);
+  // implicit_args[4] = reinterpret_cast<int8_t*>(env);
+  // //   *reinterpret_cast<internal::Address*>(*caf_environment->as_callback_data());
+  // implicit_args[5] = reinterpret_cast<int8_t*>(
+  //   (v8::Value*)malloc(sizeof(v8::Value)));
+  for(int i = 1; i < 6; i++) {
+    implicit_args[i] = caf_implicit_args[i];
+  }
   
   auto cafFunctionCallbackInfo = CafFunctionCallbackInfo(implicit_args, values, length);
   auto functionCallbackInfo = (v8::FunctionCallbackInfo<v8::Value>)(cafFunctionCallbackInfo);

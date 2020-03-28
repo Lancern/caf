@@ -10,6 +10,10 @@
             ],
             "defines": [
                 "NODE_WANT_INTERNALS=1"
+            ],
+            "libraries": [
+                "-L<!(pwd)/../../../build/lib",
+                "-lCAFV8Target"
             ]
         }
     ]

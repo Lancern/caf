@@ -140,7 +140,7 @@ public:
   { }
 
   void Read(void *buffer, size_t size) override {
-    auto availableSize = _end - _ptr;
+    auto availableSize = static_cast<size_t>(_end - _ptr);
     if (size > availableSize) {
       size = availableSize;
     }

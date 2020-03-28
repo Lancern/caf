@@ -1,0 +1,15 @@
+set(NODE_DIR CACHE PATH "Path to the nodejs source diretcory")
+
+add_custom_target(CAFNodeModule
+    COMMAND node-gyp rebuild --nodedir="${NODE_DIR}"
+    COMMAND cp ./build/Release/caf.node "${CMAKE_BINARY_DIR}/lib"
+    SOURCES
+        NodeTarget.cpp
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+add_dependencies(CAFNodeModule CAFV8Target)
+
+add_library(CAFNodeTarget STATIC
+    NodeTarget.cpp)
+target_include_directories(CAFNodeTarget PRIVATE "${NODE_DIR}/src")
+target_compile_options(CAFNodeTarget PRIVATE "-fPIC" "-DNODE_WANT_INTERNALS=1")
+target_link_libraries(CAFNodeTarget PRIVATE CAFV8Target CAFInfrastructure)

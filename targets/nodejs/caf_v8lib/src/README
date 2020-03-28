@@ -1,3 +1,0 @@
-compile command:
-  node-gyp configure
-  node-gyp build --nodedir=path/to/nodejs_code

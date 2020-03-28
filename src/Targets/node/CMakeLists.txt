@@ -1,8 +1,8 @@
 set(NODE_DIR CACHE PATH "Path to the nodejs source diretcory")
 
-add_custom_target(CAFNodeModule ALL
-    COMMAND node-gyp configure --nodedir="${NODE_DIR}"
-    COMMAND node-gyp build
+add_custom_target(CAFNodeModule
+    COMMAND node-gyp rebuild --nodedir="${NODE_DIR}"
+    COMMAND cp ./build/Release/caf.node "${CMAKE_BINARY_DIR}/lib"
     SOURCES
         NodeTarget.cpp
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

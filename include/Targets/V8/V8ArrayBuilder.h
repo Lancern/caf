@@ -20,10 +20,12 @@ public:
    * @brief Construct a new V8ArrayBuilder object.
    *
    * @param isolate the isolate instance.
+   * @param context the context.
    * @param size the size of the array.
    */
-  explicit V8ArrayBuilder(v8::Isolate* isolate, size_t size)
-    : _arr(v8::Array::New(isolate, size)),
+  explicit V8ArrayBuilder(v8::Isolate* isolate, v8::Local<v8::Context> context, size_t size)
+    : _context(context),
+      _arr(v8::Array::New(isolate, size)),
       _len(size),
       _nextIndex(0)
   { }
@@ -41,7 +43,7 @@ public:
    */
   void PushElement(ValueType element) {
     assert(_nextIndex < _len && "Too many elements.");
-    _arr->Set(_nextIndex++, element);
+    _arr->Set(_context, _nextIndex++, element).Check();
   }
 
   /**
@@ -52,6 +54,7 @@ public:
   ArrayType GetValue() const { return _arr; }
 
 private:
+  v8::Local<v8::Context> _context;
   ArrayType _arr;
   size_t _len;
   size_t _nextIndex;

@@ -60,7 +60,7 @@ private:
 
   std::vector<ValueType> _pool;
 
-  template <size_t IntSize, typename Integer>
+  template <typename Integer, size_t IntSize>
   Integer ReadInt() {
     static_assert(std::is_integral<Integer>::value, "Integer is not an integral type.");
     constexpr const bool IsSigned = std::is_signed<Integer>::value;

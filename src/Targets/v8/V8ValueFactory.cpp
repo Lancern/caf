@@ -67,7 +67,7 @@ V8ValueFactory::CreateFloat(double value) {
 
 typename V8Traits::ArrayBuilderType
 V8ValueFactory::StartBuildArray(size_t size) {
-  return V8ArrayBuilder { _isolate, size };
+  return V8ArrayBuilder { _isolate, _context, size };
 }
 
 } // namespace caf

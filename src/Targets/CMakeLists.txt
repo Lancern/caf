@@ -7,4 +7,4 @@ target_sources(CAFCommonTarget INTERFACE
 target_link_libraries(CAFCommonTarget INTERFACE CAFInfrastructure)
 
 add_subdirectory(v8)
-# add_subdirectory(node)
+add_subdirectory(node)

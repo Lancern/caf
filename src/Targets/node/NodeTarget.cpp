@@ -17,12 +17,25 @@ namespace caf {
 
 namespace {
 
+v8::Local<v8::Object> CreateCallbackData(
+    v8::Isolate* isolate, v8::Local<v8::Context> context, node::Environment* env) {
+  v8::EscapableHandleScope handleScope { isolate };
+  v8::Local<v8::FunctionTemplate> ctor = v8::FunctionTemplate::New(isolate);
+  ctor->InstanceTemplate()->SetInternalFieldCount(1);
+  v8::Local<v8::Object> ret =
+      ctor->GetFunction(context).ToLocalChecked()
+          ->NewInstance(context).ToLocalChecked();
+  ret->SetAlignedPointerInInternalField(0, env);
+  return handleScope.Escape(ret);
+}
+
 void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   auto isolate = args.GetIsolate();
   v8::HandleScope handleScope { isolate };
 
   auto context = isolate->GetCurrentContext();
-  auto callbackData = args.Data();
+  auto env = node::Environment::GetCurrent(context);
+  auto callbackData = CreateCallbackData(isolate, context, env);
 
   auto valueFactory = caf::make_unique<V8ValueFactory>(isolate, context, callbackData);
   auto executor = caf::make_unique<V8Executor>(isolate, context, callbackData);

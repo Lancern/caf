@@ -1,16 +1,24 @@
 #include "Targets/V8/V8Target.h"
 #include "Targets/V8/V8Traits.h"
 
-#define API_FUNCS callbackfunc_candidates
+#define ApiFunctions callbackfunc_candidates
+#define InitializeCAFStub __caf_dispatch_callbackfuncarr
 
 extern "C" {
-  extern void** API_FUNCS;
+  extern void** ApiFunctions;
+
+  extern void InitializeCAFStub();
 }
 
 namespace caf {
 
 typename V8Traits::ApiFunctionPtrType GetApiFunction(uint32_t funcId) {
-  return reinterpret_cast<typename V8Traits::ApiFunctionPtrType>(API_FUNCS[funcId]);
+  static bool Initialized = false;
+  if (!Initialized) {
+    Initialized = true;
+    InitializeCAFStub();
+  }
+  return reinterpret_cast<typename V8Traits::ApiFunctionPtrType>(ApiFunctions[funcId]);
 }
 
 }

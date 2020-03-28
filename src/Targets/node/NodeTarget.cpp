@@ -11,11 +11,26 @@
 #include "env-inl.h"
 #include "v8.h"
 
+#include <csignal>
+#include <cstdlib>
+#include <cstdio>
 #include <memory>
 
 namespace caf {
 
 namespace {
+
+void AbortHandler(int) {
+  std::fprintf(stderr, "aborted.\n");
+  std::exit(0);
+}
+
+void SetupAbortHandler() {
+  if (std::signal(SIGABRT, &AbortHandler) == SIG_ERR) {
+    std::fprintf(stderr, "Failed to setup abort handler.\n");
+    std::exit(1);
+  }
+}
 
 v8::Local<v8::Object> CreateCallbackData(
     v8::Isolate* isolate, v8::Local<v8::Context> context, node::Environment* env) {
@@ -30,6 +45,8 @@ v8::Local<v8::Object> CreateCallbackData(
 }
 
 void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  SetupAbortHandler();
+
   auto isolate = args.GetIsolate();
   v8::HandleScope handleScope { isolate };
 

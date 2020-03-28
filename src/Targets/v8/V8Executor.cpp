@@ -3,6 +3,8 @@
 
 #include "v8.h"
 
+#include <utility>
+
 namespace caf {
 
 typename V8Traits::ValueType

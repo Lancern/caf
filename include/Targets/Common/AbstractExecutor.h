@@ -1,6 +1,7 @@
 #ifndef CAF_ABSTRACT_EXECUTOR_H
 #define CAF_ABSTRACT_EXECUTOR_H
 
+#include <cstdint>
 #include <vector>
 
 namespace caf {
@@ -14,7 +15,6 @@ template <typename TargetTraits>
 class AbstractExecutor {
 public:
   using ValueType = typename TargetTraits::ValueType;
-  using FunctionIdType = typename TargetTraits::FunctionIdType;
 
   /**
    * @brief Destroy the AbstractExecutor object.
@@ -31,7 +31,7 @@ public:
    * @return ValueType the return value of the API function.
    */
   virtual ValueType Invoke(
-      FunctionIdType funcionId, ValueType receiver, const std::vector<ValueType>& args) = 0;
+      uint32_t funcionId, ValueType receiver, std::vector<ValueType>& args) = 0;
 
 protected:
   /**

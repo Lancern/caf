@@ -31,11 +31,22 @@ V8Executor::Invoke(
   v8::EscapableHandleScope handleScope { _isolate };
   auto callee = v8::Function::New(_context, funcPtr, _callbackData).ToLocalChecked();
 
+  v8::TryCatch tryBlock { _isolate };
+
   v8::Local<v8::Value> ret;
   if (isCtorCall) {
     ret = TryUnwrapMaybe(_isolate, callee->NewInstance(_context, args.size(), args.data()));
   } else {
     ret = TryUnwrapMaybe(_isolate, callee->Call(_context, receiver, args.size(), args.data()));
+  }
+
+  if (tryBlock.HasCaught()) {
+    if (tryBlock.CanContinue()) {
+      tryBlock.Reset();
+    } else {
+      // Ooops! An unusal exception has been thrown and the program should terminate.
+      tryBlock.ReThrow();
+    }
   }
 
   return handleScope.Escape(ret);

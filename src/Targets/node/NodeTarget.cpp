@@ -14,7 +14,26 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstdio>
+#include <ctime>
 #include <memory>
+
+#ifdef CAF_ENABLE_AFL_PERSIST
+
+extern "C" {
+  int __afl_persistent_loop(unsigned loops);
+}
+
+#define CAF_AFL_PERSIST_LOOPS 100
+
+#endif
+
+#ifdef CAF_ENABLE_AFL_DEFER
+
+extern "C" {
+  void __afl_manual_init();
+}
+
+#endif
 
 namespace caf {
 
@@ -57,7 +76,20 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   auto valueFactory = caf::make_unique<V8ValueFactory>(isolate, context, callbackData);
   auto executor = caf::make_unique<V8Executor>(isolate, context, callbackData);
   Target<V8Traits> target { std::move(valueFactory), std::move(executor) };
+
+#ifdef CAF_ENABLE_AFL_DEFER
+  __afl_manual_init();
+#endif
+
+#ifdef CAF_ENABLE_AFL_PERSIST
+  while (__afl_persistent_loop(CAF_AFL_PERSIST_LOOPS)) {
+#endif
+
   target.Run();
+
+#ifdef CAF_ENABLE_AFL_PERSIST
+  }
+#endif
 }
 
 } // namespace <anonymous>

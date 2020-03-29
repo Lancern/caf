@@ -90,6 +90,7 @@ private:
   void ParseCall() {
     auto funcId = ReadInt<uint32_t, 4>();
     auto thisValue = ParseValue();
+    auto isCtorCall = ReadInt<uint8_t, 1>();
 
     auto argsCount = ReadInt<size_t, 4>();
     std::vector<ValueType> args;
@@ -99,7 +100,7 @@ private:
       args.push_back(ParseValue());
     }
 
-    auto ret = _executor.Invoke(funcId, thisValue, args);
+    auto ret = _executor.Invoke(funcId, thisValue, isCtorCall, args);
     _pool.push_back(ret);
   }
 

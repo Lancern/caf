@@ -91,6 +91,9 @@ FunctionCall TestCaseDeserializer::DeserializeFunctionCall(DeserializationContex
   auto thisValue = DeserializeValue(context);
   call.SetThis(thisValue);
 
+  auto isCtor = ReadInt<1, uint8_t>(_in);
+  call.SetConstructorCall(isCtor);
+
   auto argsCount = ReadInt<4, size_t>(_in);
   call.ReserveArgs(argsCount);
 

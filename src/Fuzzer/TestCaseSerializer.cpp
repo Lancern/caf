@@ -88,8 +88,10 @@ void TestCaseSerializer::Serialize(const FunctionCall& call, SerializationContex
     Serialize(&undefined, context);
   }
 
+  WriteInt<1>(_out, static_cast<uint8_t>(call.IsConstructorCall()));
+
   WriteInt<4>(_out, call.GetArgsCount());
-  for (const auto& arg : call) {
+  for (auto arg : call) {
     Serialize(arg, context);
   }
 }

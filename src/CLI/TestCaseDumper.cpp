@@ -89,6 +89,10 @@ void TestCaseDumper::Dump(const TestCase& tc) {
 void TestCaseDumper::DumpFunctionCall(const FunctionCall& value, DumpContext& context) {
   const auto& func = _store.GetFunction(value.funcId());
   _printer << "A" << value.funcId() << " ";
+  if (value.IsConstructorCall()) {
+    _printer.PrintWithColor(KeywordColor, "CTOR");
+    _printer << " ";
+  }
   DumpSymbolName(func.name().c_str());
 
   // Print `this` value.

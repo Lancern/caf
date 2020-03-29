@@ -28,6 +28,7 @@ public:
   explicit FunctionCall(FunctionIdType funcId)
     : _funcId(funcId),
       _this(nullptr),
+      _ctor(false),
       _args()
   { }
 
@@ -61,6 +62,21 @@ public:
    * @return false if `this` object has not been set.
    */
   bool HasThis() const { return static_cast<bool>(_this); }
+
+  /**
+   * @brief Determine whether this function call is a constructor call.
+   *
+   * @return true if this function call is a constructor call.
+   * @return false if this function call is not a constructor call.
+   */
+  bool IsConstructorCall() const { return _ctor; }
+
+  /**
+   * @brief Set whether this function call is a constructor call.
+   *
+   * @param isConstructorCall whether is function call is a constructor call.
+   */
+  void SetConstructorCall(bool isConstructorCall) { _ctor = isConstructorCall; }
 
   /**
    * @brief Reserve the minimum capacity of the arguments array.
@@ -119,6 +135,7 @@ public:
 private:
   FunctionIdType _funcId;
   Value* _this;
+  bool _ctor;
   std::vector<Value*> _args;
 }; // class FunctionCall
 

@@ -18,21 +18,28 @@
 #include <memory>
 #include <utility>
 
-static std::unique_ptr<caf::CAFStore> Store;
-static std::unique_ptr<caf::ObjectPool> Pool;
-static caf::Random<> Rng;
-
 namespace {
 
-constexpr static const int MAX_FD_COUNTS = 4;
+std::unique_ptr<caf::CAFStore> Store;
+std::vector<uint8_t> Buffer;
 
-std::unique_ptr<caf::CAFStore> LoadCAFStore(const char* filePath) {
-  std::cout << "Loading CAF metadata store from file \"" << filePath << "\"..." << std::endl;
+void LoadCAFStore() {
+  if (Store) {
+    return;
+  }
 
-  std::ifstream file { filePath };
+  auto storeFilePath = std::getenv("CAF_STORE");
+  if (!storeFilePath) {
+    std::cerr << "CAF_STORE not set." << std::endl;
+    std::exit(1);
+  }
+
+  std::cout << "Loading CAF metadata store from file \"" << storeFilePath << "\"..." << std::endl;
+
+  std::ifstream file { storeFilePath };
   if (file.fail()) {
     auto code = errno;
-    std::cerr << "error: failed to open " << filePath << ": "
+    std::cerr << "error: failed to open " << storeFilePath << ": "
               << std::strerror(code) << " (" << code << ")"
               << std::endl;
     std::exit(1);
@@ -41,80 +48,53 @@ std::unique_ptr<caf::CAFStore> LoadCAFStore(const char* filePath) {
   nlohmann::json json;
   file >> json;
 
-  return caf::make_unique<caf::CAFStore>(json);
+  Store = caf::make_unique<caf::CAFStore>(json);
 }
 
 } // namespace <anonymous>
 
 extern "C" {
 
-struct afl_state_t;
-
 // For a detailed document about all the exported afl_* functions, please see
 // https://github.com/vanhauser-thc/AFLplusplus/blob/master/docs/custom_mutators.md
 
-void afl_custom_init(afl_state_t *, unsigned int seed) {
-  auto storeFilePath = std::getenv("CAF_STORE");
-  if (!storeFilePath) {
-    std::cerr << "CAF_STORE not set." << std::endl;
-    std::exit(1);
-  }
-  Store = LoadCAFStore(storeFilePath);
+size_t afl_custom_mutator(
+    uint8_t *data, size_t size,
+    uint8_t *mutated_out, size_t max_size,
+    unsigned int seed) {
   if (!Store) {
-    std::cerr << "Failed to load CAF store." << std::endl;
-    std::exit(1);
+    LoadCAFStore();
   }
 
-  Pool = caf::make_unique<caf::ObjectPool>();
-
-  Rng.seed(seed);
-}
-
-size_t afl_custom_fuzz(afl_state_t *,
-    uint8_t** buf, size_t buf_size,
-    uint8_t* add_buf, size_t add_buf_size,
-    size_t max_size) {
-  Pool->clear();
-
-  caf::MemoryInputStream primaryBufStream { *buf, buf_size };
-  caf::TestCaseDeserializer de { *Pool.get(), primaryBufStream };
+  caf::ObjectPool pool { };
+  caf::MemoryInputStream primaryBufStream { data, size };
+  caf::TestCaseDeserializer de { pool, primaryBufStream };
   auto primaryTestCase = de.Deserialize();
 
-  caf::TestCaseMutator mutator { *Store.get(), *Pool.get(), Rng };
+  caf::Random<> rng { };
+  rng.seed(seed);
+  caf::TestCaseMutator mutator { *Store, pool, rng };
   caf::TestCase addTestCase;
 
-  if (add_buf) {
-    caf::MemoryInputStream addBufStream { add_buf, add_buf_size };
-    caf::TestCaseDeserializer addDe { *Pool.get(), addBufStream };
-    addTestCase = addDe.Deserialize();
-    mutator.SetSpliceCandidate(&addTestCase);
-  }
+  // if (add_buf) {
+  //   caf::MemoryInputStream addBufStream { add_buf, add_buf_size };
+  //   caf::TestCaseDeserializer addDe { pool, addBufStream };
+  //   addTestCase = addDe.Deserialize();
+  //   mutator.SetSpliceCandidate(&addTestCase);
+  // }
 
   mutator.Mutate(primaryTestCase);
 
-  static std::vector<uint8_t> TestCaseBuffer;
-  TestCaseBuffer.clear();
-
-  caf::MemoryOutputStream outputStream { TestCaseBuffer };
+  Buffer.clear();
+  caf::MemoryOutputStream outputStream { Buffer };
   caf::TestCaseSerializer ser { outputStream };
   ser.Serialize(primaryTestCase);
 
-  *buf = TestCaseBuffer.data();
-  return TestCaseBuffer.size();
-}
+  auto mutatedSize = Buffer.size();
+  assert(mutatedSize <= max_size && "Mutated size is too large.");
+  std::memcpy(mutated_out, Buffer.data(), mutatedSize);
 
-uint32_t afl_custom_init_trim(uint8_t* buf, size_t buf_size) {
-  // We don't need AFL to trim our test case.
-  return 0;
-}
-
-void afl_custom_trim(uint8_t** out_buf, size_t* out_buf_size) {
-  assert(false && "afl_custom_trim should be unreachable.");
-}
-
-uint32_t afl_custom_post_trim(uint8_t success) {
-  assert(false && "afl_custom_post_trim should be unreachable.");
-  return 1;
+  return mutatedSize;
 }
 
 }

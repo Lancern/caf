@@ -22,7 +22,7 @@ constexpr static const double FLOAT_MIN_INCREMENT = -100;
 
 void TestCaseMutator::Mutate(TestCase& testCase) {
   using Mutator = void (TestCaseMutator::*)(TestCase &);
-  Mutator mutators[7];
+  Mutator mutators[8];
   Mutator* head = mutators;
 
   // Can we mutate the test case by `AddFunctionCall`?
@@ -40,8 +40,9 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
     *head++ = &TestCaseMutator::Splice;
   }
 
-  // We can always mutate the test case by `MutateThis`.
+  // We can always mutate the test case by `MutateThis` and `MutateCtor`.
   *head++ = &TestCaseMutator::MutateThis;
+  *head++ = &TestCaseMutator::MutateCtor;
 
   // Can we mutate the test case by `AddArgument`?
   for (const auto& call : testCase) {
@@ -86,7 +87,6 @@ void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
 void TestCaseMutator::Splice(TestCase& testCase) {
   assert(_spliceCandidate && "No splice candidate set.");
 
-  // Randomly choose another test case from the corpus.
   auto prefixLen = _rnd.Next<size_t>(
       0, std::min(options().MaxCalls, testCase.GetFunctionCallsCount()));
   auto suffixLen = _rnd.Next<size_t>(
@@ -114,6 +114,13 @@ void TestCaseMutator::MutateThis(TestCase& testCase) {
     call.SetThis(_gen.GenerateValue(
         TestCaseGenerator::GeneratePlaceholderValueParams { callIndex }));
   }
+}
+
+void TestCaseMutator::MutateCtor(TestCase& testCase) {
+  // Choose a function call.
+  auto callIndex = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
+  auto& call = testCase.GetFunctionCall(callIndex);
+  call.SetConstructorCall(!call.IsConstructorCall());
 }
 
 void TestCaseMutator::AddArgument(TestCase& testCase) {
@@ -385,7 +392,7 @@ ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, int) {
 }
 
 ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, size_t callIndex, int depth) {
-  auto pos = _rnd.Next<size_t>(0, value->size());
+  auto pos = _rnd.Next<size_t>(0, value->size() - 1);
   auto mutatedElement = Mutate(value->GetElement(pos), callIndex, depth + 1);
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size());

@@ -111,6 +111,14 @@ private:
   void MutateThis(TestCase& testCase);
 
   /**
+   * @brief Mutate the given test case by choosing a function call and negate whether it is a
+   * constructor call.
+   *
+   * @param testCase the test case to mutate.
+   */
+  void MutateCtor(TestCase& testCase);
+
+  /**
    * @brief Mutate the given test case by choosing a function call and add an argument to the
    * function call.
    *

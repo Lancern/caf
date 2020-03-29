@@ -32,6 +32,7 @@ public:
   typename V8Traits::ValueType Invoke(
       uint32_t funcId,
       typename V8Traits::ValueType receiver,
+      bool isCtorCall,
       std::vector<typename V8Traits::ValueType>& args) override;
 
 private:

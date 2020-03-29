@@ -11,6 +11,7 @@
 #include <string>
 
 constexpr static const double GENERATE_THIS_PROB = 0.5;
+constexpr static const double GENERATE_CTOR_PROB = 0.2;
 constexpr static const double GENERATE_DICT_INT_PROB = 0.6;
 constexpr static const double CHOOSE_EXISTING_PROB = 0.2;
 constexpr static const double GENERATE_DICT_FLOAT_PROB = 0.2;
@@ -68,6 +69,11 @@ FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index) {
   if (_rnd.WithProbability(GENERATE_THIS_PROB)) {
     // Generate `this` object.
     call.SetThis(GenerateValue(params));
+  }
+
+  // Decide whether to generate a constructor call.
+  if (_rnd.WithProbability(GENERATE_CTOR_PROB)) {
+    call.SetConstructorCall(true);
   }
 
   // Decide how many arguments should be generated.

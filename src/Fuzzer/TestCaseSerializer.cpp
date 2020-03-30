@@ -99,13 +99,18 @@ void TestCaseSerializer::Serialize(const FunctionCall& call, SerializationContex
 void TestCaseSerializer::Serialize(const Value* value, SerializationContext& context) {
   assert(value && "value cannot be null.");
 
-  if (context.HasValue(value)) {
-    PlaceholderValue placeholder { context.GetValueIndex(value) };
-    Serialize(&placeholder, context);
-    return;
+  PlaceholderValue pv { 0 };
+  if (value->IsPlaceholder()) {
+    pv = PlaceholderValue(context.GetReturnValueIndex(value->GetPlaceholderIndex()));
+    value = &pv;
   }
 
-  if (value->kind() == ValueKind::Array) {
+  if (context.HasValue(value)) {
+    pv = PlaceholderValue(context.GetValueIndex(value));
+    value = &pv;
+  }
+
+  if (value->IsArray()) {
     context.SetNextValue(value);
   }
 

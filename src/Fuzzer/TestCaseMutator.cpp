@@ -77,11 +77,48 @@ void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
   auto call = _gen.GenerateFunctionCall(index);
   testCase.InsertFunctionCall(index, std::move(call));
+
+  // Fix all placeholder values that reference to functions whose index is greater than or equal to
+  // the inserted index.
+  auto mapIndex = [] (size_t oldIndex) -> size_t { return oldIndex + 1; };
+
+  for (size_t i = index + 1; i < testCase.GetFunctionCallsCount(); ++i) {
+    auto& call = testCase.GetFunctionCall(i);
+    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
+      auto newIndex = mapIndex(call.GetThis()->GetPlaceholderIndex());
+      call.SetThis(_pool.GetPlaceholderValue(newIndex));
+    }
+    for (size_t ai = 0; ai < call.GetArgsCount(); ++ai) {
+      auto arg = call.GetArg(ai);
+      if (!arg->IsPlaceholder()) {
+        continue;
+      }
+      auto newIndex = mapIndex(call.GetThis()->GetPlaceholderIndex());
+      call.SetArg(ai, _pool.GetPlaceholderValue(ai));
+    }
+  }
 }
 
 void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
   auto callIndex = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
   testCase.RemoveFunctionCall(callIndex);
+
+  // Fix all placeholder values that references to functions whose index is greater than or equal to
+  // the removed index.
+  auto mapIndex = [] (size_t oldIndex) -> size_t { return oldIndex - 1; };
+
+  for (size_t i = callIndex; i < testCase.GetFunctionCallsCount(); ++i) {
+    auto& call = testCase.GetFunctionCall(i);
+    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
+      auto oldIndex = call.GetThis()->GetPlaceholderIndex();
+      if (oldIndex == callIndex) {
+        call.SetThis(_gen.GenerateValue(TestCaseGenerator::GeneratePlaceholderValueParams { i }));
+      } else {
+        auto newIndex = mapIndex(oldIndex);
+        call.SetThis(_pool.GetPlaceholderValue(newIndex));
+      }
+    }
+  }
 }
 
 void TestCaseMutator::Splice(TestCase& testCase) {
@@ -101,6 +138,9 @@ void TestCaseMutator::Splice(TestCase& testCase) {
 
   testCase.RemoveTailCalls(prefixLen);
   testCase.AppendFunctionCalls(std::move(calls));
+
+  // TODO: Fix all placeholder values that reference to function calls whose index is greater than
+  // TODO: or equal to prefixLen.
 }
 
 void TestCaseMutator::MutateThis(TestCase& testCase) {

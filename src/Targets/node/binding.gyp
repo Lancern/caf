@@ -10,7 +10,7 @@
             ],
             "defines": [
                 "NODE_WANT_INTERNALS=1",
-                "CAF_ENABLE_AFL_PERSIST=1"
+                "CAF_ENABLE_AFL_DEFER=1"
             ],
             "libraries": [
                 "-L<!(pwd)/../../../build/lib",

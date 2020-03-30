@@ -96,6 +96,7 @@ public:
         ->required();
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
         ->check(CLI::ExistingFile);
+    app.add_flag("--resume", _opts.Resume, "Enable AFLplusplus auto resume");
     app.add_option("-X", _opts.AFLArgs, "Arguments passed to AFL executable");
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
     app.add_option("target", _opts.Target, "The target executable and its params")
@@ -134,15 +135,22 @@ public:
     aflEnv.push_back(DuplicateString(storeVar.c_str()));
     aflEnv.push_back(DuplicateString(mutatorLibVar.c_str()));
     aflEnv.push_back(DuplicateString("AFL_CUSTOM_MUTATOR_ONLY=1"));
+    if (_opts.Resume) {
+      aflEnv.push_back(DuplicateString("AFL_AUTORESUME=1"));
+    }
     aflEnv.push_back(nullptr);
 
     std::vector<char *> aflArgs {
       DuplicateString(_opts.AflExecutable.c_str()),
-      DuplicateString("-i"),
-      DuplicateString(_opts.SeedDir.c_str()),
       DuplicateString("-o"),
       DuplicateString(_opts.FindingsDir.c_str())
     };
+    aflArgs.push_back(DuplicateString("-i"));
+    if (_opts.Resume) {
+      aflArgs.push_back(DuplicateString("-"));
+    } else {
+      aflArgs.push_back(DuplicateString(_opts.SeedDir.c_str()));
+    }
     for (const auto& arg : _opts.AFLArgs) {
       aflArgs.push_back(DuplicateString(arg.c_str()));
     }
@@ -171,12 +179,18 @@ public:
 
 private:
   struct Opts {
+    explicit Opts()
+      : StoreFileName(), SeedDir(), FindingsDir(), AflExecutable(), Target(),
+        AFLArgs(), Resume(false), Verbose(false)
+    { }
+
     std::string StoreFileName;
     std::string SeedDir;
     std::string FindingsDir;
     std::string AflExecutable;
     std::vector<std::string> Target;
     std::vector<std::string> AFLArgs;
+    bool Resume;
     bool Verbose;
   }; // struct Opts
 

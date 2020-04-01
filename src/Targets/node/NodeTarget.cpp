@@ -5,12 +5,14 @@
 #include "Targets/V8/V8ArrayBuilder.h"
 #include "Targets/V8/V8ValueFactory.h"
 #include "Targets/V8/V8Executor.h"
+#include "Targets/V8/V8Target.h"
 
 #include "node.h"
 #include "env.h"
 #include "env-inl.h"
 #include "v8.h"
 
+#include <cassert>
 #include <csignal>
 #include <cstdlib>
 #include <cstdio>
@@ -76,6 +78,8 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   auto valueFactory = caf::make_unique<V8ValueFactory>(isolate, context, callbackData);
   auto executor = caf::make_unique<V8Executor>(isolate, context, callbackData);
   Target<V8Traits> target { std::move(valueFactory), std::move(executor) };
+
+  V8Target::PopulateFunctionDatabase(target, args);
 
 #ifdef CAF_ENABLE_AFL_DEFER
   __afl_manual_init();

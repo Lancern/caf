@@ -23,14 +23,10 @@ CAFStore::Statistics CAFStore::GetStatistics() const {
 }
 
 nlohmann::json CAFStore::ToJson() const {
-  auto funcsJson = nlohmann::json::array();
+  auto json = nlohmann::json::array();
   for (const auto& func : _funcs) {
-    funcsJson.push_back(func.ToJson());
+    json.push_back(func.ToJson());
   }
-
-  auto json = nlohmann::json::object();
-  json["funcs"] = std::move(funcsJson);
-
   return json;
 }
 

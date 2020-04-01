@@ -1,17 +1,31 @@
 #ifndef CAF_V8_TARGET_H
 #define CAF_V8_TARGET_H
 
+#include "Targets/Common/Target.h"
 #include "Targets/V8/V8Traits.h"
+
+#include "v8.h"
 
 namespace caf {
 
 /**
- * @brief Get the pointer to the API function with the given ID.
+ * @brief Provide some target-specific utility functions.
  *
- * @param funcId the function ID.
- * @return V8Traits::ApiFunctionPtrType pointer to the function.
  */
-typename V8Traits::ApiFunctionPtrType GetApiFunction(uint32_t funcId);
+struct V8Target {
+
+  /**
+  * @brief Populate the function database, using the parameters wrapped in the giben function
+  * callback info instance.
+  *
+  * @param target the target.
+  * @param args the arguments.
+  */
+  static void PopulateFunctionDatabase(
+      Target<V8Traits>& target,
+      const v8::FunctionCallbackInfo<v8::Value>& args);
+
+}; // struct V8Target
 
 } // namespace caf
 

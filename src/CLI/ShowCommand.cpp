@@ -22,7 +22,6 @@ public:
     app.add_option("-s", _opts.StoreFileName, "Path to the cafstore.json file")
         ->required()
         ->check(CLI::ExistingFile);
-    app.add_flag("-d,--demangle", _opts.Demangle, "Demangle symbol names before printing");
     app.add_flag("--no-color", _opts.NoColor, "Disable coloring output");
     app.add_option("tc", _opts.TestCaseFileName, "Path to the test case file")
         ->required()
@@ -53,8 +52,6 @@ public:
     printer.SetColorOn(!_opts.NoColor);
 
     TestCaseDumper dumper { *store, printer };
-    dumper.SetDemangle(_opts.Demangle);
-
     dumper.Dump(tc);
 
     printer << Printer::endl;
@@ -65,7 +62,6 @@ private:
   struct Opts {
     std::string StoreFileName;
     std::string TestCaseFileName;
-    bool Demangle = false;
     bool NoColor = false;
   }; // struct Opts
 

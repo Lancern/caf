@@ -1,5 +1,4 @@
 #include "Targets/V8/V8Executor.h"
-#include "Targets/V8/V8Target.h"
 
 #include "v8.h"
 
@@ -22,22 +21,18 @@ inline v8::Local<v8::Value> TryUnwrapMaybe(v8::Isolate* isolate, v8::MaybeLocal<
 
 typename V8Traits::ValueType
 V8Executor::Invoke(
-    uint32_t funcId,
+    v8::Local<v8::Function> function,
     typename V8Traits::ValueType receiver,
     bool isCtorCall,
     std::vector<typename V8Traits::ValueType> &args) {
-  auto funcPtr = reinterpret_cast<typename V8Traits::ApiFunctionPtrType>(GetApiFunction(funcId));
-
   v8::EscapableHandleScope handleScope { _isolate };
-  auto callee = v8::Function::New(_context, funcPtr, _callbackData).ToLocalChecked();
-
   v8::TryCatch tryBlock { _isolate };
 
   v8::Local<v8::Value> ret;
   if (isCtorCall) {
-    ret = TryUnwrapMaybe(_isolate, callee->NewInstance(_context, args.size(), args.data()));
+    ret = TryUnwrapMaybe(_isolate, function->NewInstance(_context, args.size(), args.data()));
   } else {
-    ret = TryUnwrapMaybe(_isolate, callee->Call(_context, receiver, args.size(), args.data()));
+    ret = TryUnwrapMaybe(_isolate, function->Call(_context, receiver, args.size(), args.data()));
   }
 
   if (tryBlock.HasCaught()) {

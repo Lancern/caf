@@ -5,8 +5,6 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Stream.h"
-#include "Targets/Common/AbstractExecutor.h"
-#include "Targets/Common/ValueFactory.h"
 
 #include <cassert>
 #include <cstddef>
@@ -15,6 +13,9 @@
 #include <type_traits>
 
 namespace caf {
+
+template <typename TargetTraits>
+class Target;
 
 /**
  * @brief Parse test cases and execute them.
@@ -29,13 +30,11 @@ public:
   /**
    * @brief Construct a new TestCaseParser object.
    *
+   * @param target the target.
    * @param in the input stream from which the test cases will be read.
-   * @param factory the value factory.
-   * @param executor the target-specific executor.
    */
-  explicit TestCaseParser(InputStream& in,
-      ValueFactory<TargetTraits>& factory, AbstractExecutor<TargetTraits>& executor)
-    : _in(in), _factory(factory), _executor(executor)
+  explicit TestCaseParser(Target<TargetTraits>& target, InputStream& in)
+    : _target(target), _in(in)
   { }
 
   TestCaseParser(const TestCaseParser &) = delete;
@@ -54,9 +53,8 @@ public:
   }
 
 private:
+  Target<TargetTraits>& _target;
   InputStream& _in;
-  ValueFactory<TargetTraits>& _factory;
-  AbstractExecutor<TargetTraits>& _executor;
 
   std::vector<ValueType> _pool;
 
@@ -100,7 +98,8 @@ private:
       args.push_back(ParseValue());
     }
 
-    auto ret = _executor.Invoke(funcId, thisValue, isCtorCall, args);
+    auto function = _target.functions().GetFunction(funcId);
+    auto ret = _target.executor().Invoke(function, thisValue, isCtorCall, args);
     _pool.push_back(ret);
   }
 
@@ -125,9 +124,9 @@ private:
     auto kind = static_cast<ValueKind>(ReadInt<uint8_t, 1>());
     switch (kind) {
       case VK_UNDEFINED:
-        return _factory.CreateUndefined();
+        return _target.factory().CreateUndefined();
       case VK_NULL:
-        return _factory.CreateNull();
+        return _target.factory().CreateNull();
       case VK_BOOLEAN:
         return ParseBooleanValue();
       case VK_STRING:
@@ -150,7 +149,7 @@ private:
   typename TargetTraits::BooleanType ParseBooleanValue() {
     auto value = ReadInt<uint8_t, 1>();
     assert((value == 0 || value == 1) && "Boolean value is out of range.");
-    return _factory.CreateBoolean(value);
+    return _target.factory().CreateBoolean(value);
   }
 
   typename TargetTraits::StringType ParseStringValue() {
@@ -158,27 +157,27 @@ private:
     auto buffer = caf::make_unique<uint8_t[]>(size);
     _in.Read(buffer.get(), size);
 
-    return _factory.CreateString(buffer.get(), size);
+    return _target.factory().CreateString(buffer.get(), size);
   }
 
   typename TargetTraits::FunctionType ParseFunctionValue() {
     auto funcId = ReadInt<uint32_t, 4>();
-    return _factory.CreateFunction(funcId);
+    return _target.factory().CreateFunction(funcId);
   }
 
   typename TargetTraits::IntegerType ParseIntegerValue() {
     auto value = ReadInt<int32_t, 4>();
-    return _factory.CreateInteger(value);
+    return _target.factory().CreateInteger(value);
   }
 
   typename TargetTraits::FloatType ParseFloatValue() {
     auto value = ReadLiteral<double>();
-    return _factory.CreateFloat(value);
+    return _target.factory().CreateFloat(value);
   }
 
   typename TargetTraits::ArrayType ParseArrayValue() {
     auto size = ReadInt<size_t, 4>();
-    auto arrayBuilder = _factory.StartBuildArray(size);
+    auto arrayBuilder = _target.factory().StartBuildArray(size);
     _pool.push_back(arrayBuilder.GetValue());
     for (size_t i = 0; i < size; ++i) {
       auto element = ParseValue();

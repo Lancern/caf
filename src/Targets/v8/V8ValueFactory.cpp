@@ -1,6 +1,7 @@
+#include "Targets/Common/Target.h"
+#include "Targets/V8/V8Traits.h"
 #include "Targets/V8/V8ValueFactory.h"
 #include "Targets/V8/V8ArrayBuilder.h"
-#include "Targets/V8/V8Target.h"
 
 #include "v8.h"
 
@@ -36,10 +37,7 @@ V8ValueFactory::CreateBoolean(bool value) {
 
 typename V8Traits::FunctionType
 V8ValueFactory::CreateFunction(uint32_t funcId) {
-  auto funcPtr = reinterpret_cast<V8Traits::ApiFunctionPtrType>(GetApiFunction(funcId));
-  BEGIN_MAKE_HANDLE(_isolate);
-  auto ret = v8::Function::New(_context, funcPtr, _callbackData).ToLocalChecked();
-  return END_MAKE_HANDLE(ret);
+  return Target<V8Traits>::GetSingleton()->functions().GetFunction(funcId);
 }
 
 typename V8Traits::StringType

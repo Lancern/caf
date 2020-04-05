@@ -1,0 +1,4758 @@
+[
+    {
+        "id": 0,
+        "name": "assert"
+    },
+    {
+        "id": 1,
+        "name": "events"
+    },
+    {
+        "id": 2,
+        "name": "module"
+    },
+    {
+        "id": 3,
+        "name": "stream"
+    },
+    {
+        "id": 4,
+        "name": "assert.fail"
+    },
+    {
+        "id": 5,
+        "name": "assert.AssertionError"
+    },
+    {
+        "id": 6,
+        "name": "assert.equal"
+    },
+    {
+        "id": 7,
+        "name": "assert.notEqual"
+    },
+    {
+        "id": 8,
+        "name": "assert.deepEqual"
+    },
+    {
+        "id": 9,
+        "name": "assert.notDeepEqual"
+    },
+    {
+        "id": 10,
+        "name": "assert.deepStrictEqual"
+    },
+    {
+        "id": 11,
+        "name": "assert.notDeepStrictEqual"
+    },
+    {
+        "id": 12,
+        "name": "assert.strictEqual"
+    },
+    {
+        "id": 13,
+        "name": "assert.notStrictEqual"
+    },
+    {
+        "id": 14,
+        "name": "assert.throws"
+    },
+    {
+        "id": 15,
+        "name": "assert.rejects"
+    },
+    {
+        "id": 16,
+        "name": "assert.doesNotThrow"
+    },
+    {
+        "id": 17,
+        "name": "assert.doesNotReject"
+    },
+    {
+        "id": 18,
+        "name": "assert.ifError"
+    },
+    {
+        "id": 19,
+        "name": "assert.match"
+    },
+    {
+        "id": 20,
+        "name": "assert.doesNotMatch"
+    },
+    {
+        "id": 21,
+        "name": "assert.strict"
+    },
+    {
+        "id": 22,
+        "name": "async_hooks.createHook"
+    },
+    {
+        "id": 23,
+        "name": "async_hooks.executionAsyncId"
+    },
+    {
+        "id": 24,
+        "name": "async_hooks.triggerAsyncId"
+    },
+    {
+        "id": 25,
+        "name": "async_hooks.AsyncResource"
+    },
+    {
+        "id": 26,
+        "name": "buffer.Buffer"
+    },
+    {
+        "id": 27,
+        "name": "buffer.SlowBuffer"
+    },
+    {
+        "id": 28,
+        "name": "buffer.transcode"
+    },
+    {
+        "id": 29,
+        "name": "child_process._forkChild"
+    },
+    {
+        "id": 30,
+        "name": "child_process.ChildProcess"
+    },
+    {
+        "id": 31,
+        "name": "child_process.exec"
+    },
+    {
+        "id": 32,
+        "name": "child_process.execFile"
+    },
+    {
+        "id": 33,
+        "name": "child_process.execFileSync"
+    },
+    {
+        "id": 34,
+        "name": "child_process.execSync"
+    },
+    {
+        "id": 35,
+        "name": "child_process.fork"
+    },
+    {
+        "id": 36,
+        "name": "child_process.spawn"
+    },
+    {
+        "id": 37,
+        "name": "child_process.spawnSync"
+    },
+    {
+        "id": 38,
+        "name": "cluster.Worker"
+    },
+    {
+        "id": 39,
+        "name": "cluster.setupMaster"
+    },
+    {
+        "id": 40,
+        "name": "cluster.fork"
+    },
+    {
+        "id": 41,
+        "name": "cluster.disconnect"
+    },
+    {
+        "id": 42,
+        "name": "console.log"
+    },
+    {
+        "id": 43,
+        "name": "console.warn"
+    },
+    {
+        "id": 44,
+        "name": "console.dir"
+    },
+    {
+        "id": 45,
+        "name": "console.time"
+    },
+    {
+        "id": 46,
+        "name": "console.timeEnd"
+    },
+    {
+        "id": 47,
+        "name": "console.timeLog"
+    },
+    {
+        "id": 48,
+        "name": "console.trace"
+    },
+    {
+        "id": 49,
+        "name": "console.assert"
+    },
+    {
+        "id": 50,
+        "name": "console.clear"
+    },
+    {
+        "id": 51,
+        "name": "console.count"
+    },
+    {
+        "id": 52,
+        "name": "console.countReset"
+    },
+    {
+        "id": 53,
+        "name": "console.group"
+    },
+    {
+        "id": 54,
+        "name": "console.groupEnd"
+    },
+    {
+        "id": 55,
+        "name": "console.table"
+    },
+    {
+        "id": 56,
+        "name": "console.debug"
+    },
+    {
+        "id": 57,
+        "name": "console.info"
+    },
+    {
+        "id": 58,
+        "name": "console.dirxml"
+    },
+    {
+        "id": 59,
+        "name": "console.error"
+    },
+    {
+        "id": 60,
+        "name": "console.groupCollapsed"
+    },
+    {
+        "id": 61,
+        "name": "console._stdoutErrorHandler"
+    },
+    {
+        "id": 62,
+        "name": "console._stderrErrorHandler"
+    },
+    {
+        "id": 63,
+        "name": "console.Console"
+    },
+    {
+        "id": 64,
+        "name": "console.profile"
+    },
+    {
+        "id": 65,
+        "name": "console.profileEnd"
+    },
+    {
+        "id": 66,
+        "name": "console.timeStamp"
+    },
+    {
+        "id": 67,
+        "name": "console.context"
+    },
+    {
+        "id": 68,
+        "name": "crypto.createCipheriv"
+    },
+    {
+        "id": 69,
+        "name": "crypto.createDecipheriv"
+    },
+    {
+        "id": 70,
+        "name": "crypto.createDiffieHellman"
+    },
+    {
+        "id": 71,
+        "name": "crypto.createDiffieHellmanGroup"
+    },
+    {
+        "id": 72,
+        "name": "crypto.createECDH"
+    },
+    {
+        "id": 73,
+        "name": "crypto.createHash"
+    },
+    {
+        "id": 74,
+        "name": "crypto.createHmac"
+    },
+    {
+        "id": 75,
+        "name": "crypto.createPrivateKey"
+    },
+    {
+        "id": 76,
+        "name": "crypto.createPublicKey"
+    },
+    {
+        "id": 77,
+        "name": "crypto.createSecretKey"
+    },
+    {
+        "id": 78,
+        "name": "crypto.createSign"
+    },
+    {
+        "id": 79,
+        "name": "crypto.createVerify"
+    },
+    {
+        "id": 80,
+        "name": "crypto.getCiphers"
+    },
+    {
+        "id": 81,
+        "name": "crypto.getCurves"
+    },
+    {
+        "id": 82,
+        "name": "crypto.getHashes"
+    },
+    {
+        "id": 83,
+        "name": "crypto.pbkdf2"
+    },
+    {
+        "id": 84,
+        "name": "crypto.pbkdf2Sync"
+    },
+    {
+        "id": 85,
+        "name": "crypto.generateKeyPair"
+    },
+    {
+        "id": 86,
+        "name": "crypto.generateKeyPairSync"
+    },
+    {
+        "id": 87,
+        "name": "crypto.privateDecrypt"
+    },
+    {
+        "id": 88,
+        "name": "crypto.privateEncrypt"
+    },
+    {
+        "id": 89,
+        "name": "crypto.publicDecrypt"
+    },
+    {
+        "id": 90,
+        "name": "crypto.publicEncrypt"
+    },
+    {
+        "id": 91,
+        "name": "crypto.randomBytes"
+    },
+    {
+        "id": 92,
+        "name": "crypto.randomFill"
+    },
+    {
+        "id": 93,
+        "name": "crypto.randomFillSync"
+    },
+    {
+        "id": 94,
+        "name": "crypto.scrypt"
+    },
+    {
+        "id": 95,
+        "name": "crypto.scryptSync"
+    },
+    {
+        "id": 96,
+        "name": "crypto.sign"
+    },
+    {
+        "id": 97,
+        "name": "crypto.setEngine"
+    },
+    {
+        "id": 98,
+        "name": "crypto.timingSafeEqual"
+    },
+    {
+        "id": 99,
+        "name": "crypto.getFips"
+    },
+    {
+        "id": 100,
+        "name": "crypto.setFips"
+    },
+    {
+        "id": 101,
+        "name": "crypto.verify"
+    },
+    {
+        "id": 102,
+        "name": "crypto.Certificate"
+    },
+    {
+        "id": 103,
+        "name": "crypto.Cipher"
+    },
+    {
+        "id": 104,
+        "name": "crypto.Cipheriv"
+    },
+    {
+        "id": 105,
+        "name": "crypto.Decipher"
+    },
+    {
+        "id": 106,
+        "name": "crypto.Decipheriv"
+    },
+    {
+        "id": 107,
+        "name": "crypto.DiffieHellman"
+    },
+    {
+        "id": 108,
+        "name": "crypto.DiffieHellmanGroup"
+    },
+    {
+        "id": 109,
+        "name": "crypto.ECDH"
+    },
+    {
+        "id": 110,
+        "name": "crypto.Hash"
+    },
+    {
+        "id": 111,
+        "name": "crypto.Hmac"
+    },
+    {
+        "id": 112,
+        "name": "crypto.KeyObject"
+    },
+    {
+        "id": 113,
+        "name": "crypto.Sign"
+    },
+    {
+        "id": 114,
+        "name": "crypto.Verify"
+    },
+    {
+        "id": 115,
+        "name": "crypto.createCipher"
+    },
+    {
+        "id": 116,
+        "name": "crypto.createDecipher"
+    },
+    {
+        "id": 117,
+        "name": "dgram._createSocketHandle"
+    },
+    {
+        "id": 118,
+        "name": "dgram.createSocket"
+    },
+    {
+        "id": 119,
+        "name": "dgram.Socket"
+    },
+    {
+        "id": 120,
+        "name": "dns.lookup"
+    },
+    {
+        "id": 121,
+        "name": "dns.lookupService"
+    },
+    {
+        "id": 122,
+        "name": "dns.Resolver"
+    },
+    {
+        "id": 123,
+        "name": "dns.setServers"
+    },
+    {
+        "id": 124,
+        "name": "dns.getServers"
+    },
+    {
+        "id": 125,
+        "name": "dns.resolve"
+    },
+    {
+        "id": 126,
+        "name": "dns.resolve4"
+    },
+    {
+        "id": 127,
+        "name": "dns.resolve6"
+    },
+    {
+        "id": 128,
+        "name": "dns.resolveAny"
+    },
+    {
+        "id": 129,
+        "name": "dns.resolveCname"
+    },
+    {
+        "id": 130,
+        "name": "dns.resolveMx"
+    },
+    {
+        "id": 131,
+        "name": "dns.resolveNaptr"
+    },
+    {
+        "id": 132,
+        "name": "dns.resolveNs"
+    },
+    {
+        "id": 133,
+        "name": "dns.resolvePtr"
+    },
+    {
+        "id": 134,
+        "name": "dns.resolveSoa"
+    },
+    {
+        "id": 135,
+        "name": "dns.resolveSrv"
+    },
+    {
+        "id": 136,
+        "name": "dns.resolveTxt"
+    },
+    {
+        "id": 137,
+        "name": "dns.reverse"
+    },
+    {
+        "id": 138,
+        "name": "domain.Domain"
+    },
+    {
+        "id": 139,
+        "name": "domain.createDomain"
+    },
+    {
+        "id": 140,
+        "name": "events.once"
+    },
+    {
+        "id": 141,
+        "name": "events.on"
+    },
+    {
+        "id": 142,
+        "name": "events.init"
+    },
+    {
+        "id": 143,
+        "name": "events.listenerCount"
+    },
+    {
+        "id": 144,
+        "name": "fs.appendFile"
+    },
+    {
+        "id": 145,
+        "name": "fs.appendFileSync"
+    },
+    {
+        "id": 146,
+        "name": "fs.access"
+    },
+    {
+        "id": 147,
+        "name": "fs.accessSync"
+    },
+    {
+        "id": 148,
+        "name": "fs.chown"
+    },
+    {
+        "id": 149,
+        "name": "fs.chownSync"
+    },
+    {
+        "id": 150,
+        "name": "fs.chmod"
+    },
+    {
+        "id": 151,
+        "name": "fs.chmodSync"
+    },
+    {
+        "id": 152,
+        "name": "fs.close"
+    },
+    {
+        "id": 153,
+        "name": "fs.closeSync"
+    },
+    {
+        "id": 154,
+        "name": "fs.copyFile"
+    },
+    {
+        "id": 155,
+        "name": "fs.copyFileSync"
+    },
+    {
+        "id": 156,
+        "name": "fs.createReadStream"
+    },
+    {
+        "id": 157,
+        "name": "fs.createWriteStream"
+    },
+    {
+        "id": 158,
+        "name": "fs.exists"
+    },
+    {
+        "id": 159,
+        "name": "fs.existsSync"
+    },
+    {
+        "id": 160,
+        "name": "fs.fchown"
+    },
+    {
+        "id": 161,
+        "name": "fs.fchownSync"
+    },
+    {
+        "id": 162,
+        "name": "fs.fchmod"
+    },
+    {
+        "id": 163,
+        "name": "fs.fchmodSync"
+    },
+    {
+        "id": 164,
+        "name": "fs.fdatasync"
+    },
+    {
+        "id": 165,
+        "name": "fs.fdatasyncSync"
+    },
+    {
+        "id": 166,
+        "name": "fs.fstat"
+    },
+    {
+        "id": 167,
+        "name": "fs.fstatSync"
+    },
+    {
+        "id": 168,
+        "name": "fs.fsync"
+    },
+    {
+        "id": 169,
+        "name": "fs.fsyncSync"
+    },
+    {
+        "id": 170,
+        "name": "fs.ftruncate"
+    },
+    {
+        "id": 171,
+        "name": "fs.ftruncateSync"
+    },
+    {
+        "id": 172,
+        "name": "fs.futimes"
+    },
+    {
+        "id": 173,
+        "name": "fs.futimesSync"
+    },
+    {
+        "id": 174,
+        "name": "fs.lchown"
+    },
+    {
+        "id": 175,
+        "name": "fs.lchownSync"
+    },
+    {
+        "id": 176,
+        "name": "fs.link"
+    },
+    {
+        "id": 177,
+        "name": "fs.linkSync"
+    },
+    {
+        "id": 178,
+        "name": "fs.lstat"
+    },
+    {
+        "id": 179,
+        "name": "fs.lstatSync"
+    },
+    {
+        "id": 180,
+        "name": "fs.mkdir"
+    },
+    {
+        "id": 181,
+        "name": "fs.mkdirSync"
+    },
+    {
+        "id": 182,
+        "name": "fs.mkdtemp"
+    },
+    {
+        "id": 183,
+        "name": "fs.mkdtempSync"
+    },
+    {
+        "id": 184,
+        "name": "fs.open"
+    },
+    {
+        "id": 185,
+        "name": "fs.openSync"
+    },
+    {
+        "id": 186,
+        "name": "fs.opendir"
+    },
+    {
+        "id": 187,
+        "name": "fs.opendirSync"
+    },
+    {
+        "id": 188,
+        "name": "fs.readdir"
+    },
+    {
+        "id": 189,
+        "name": "fs.readdirSync"
+    },
+    {
+        "id": 190,
+        "name": "fs.read"
+    },
+    {
+        "id": 191,
+        "name": "fs.readSync"
+    },
+    {
+        "id": 192,
+        "name": "fs.readFile"
+    },
+    {
+        "id": 193,
+        "name": "fs.readFileSync"
+    },
+    {
+        "id": 194,
+        "name": "fs.readlink"
+    },
+    {
+        "id": 195,
+        "name": "fs.readlinkSync"
+    },
+    {
+        "id": 196,
+        "name": "fs.realpath"
+    },
+    {
+        "id": 197,
+        "name": "fs.realpathSync"
+    },
+    {
+        "id": 198,
+        "name": "fs.rename"
+    },
+    {
+        "id": 199,
+        "name": "fs.renameSync"
+    },
+    {
+        "id": 200,
+        "name": "fs.rmdir"
+    },
+    {
+        "id": 201,
+        "name": "fs.rmdirSync"
+    },
+    {
+        "id": 202,
+        "name": "fs.stat"
+    },
+    {
+        "id": 203,
+        "name": "fs.statSync"
+    },
+    {
+        "id": 204,
+        "name": "fs.symlink"
+    },
+    {
+        "id": 205,
+        "name": "fs.symlinkSync"
+    },
+    {
+        "id": 206,
+        "name": "fs.truncate"
+    },
+    {
+        "id": 207,
+        "name": "fs.truncateSync"
+    },
+    {
+        "id": 208,
+        "name": "fs.unwatchFile"
+    },
+    {
+        "id": 209,
+        "name": "fs.unlink"
+    },
+    {
+        "id": 210,
+        "name": "fs.unlinkSync"
+    },
+    {
+        "id": 211,
+        "name": "fs.utimes"
+    },
+    {
+        "id": 212,
+        "name": "fs.utimesSync"
+    },
+    {
+        "id": 213,
+        "name": "fs.watch"
+    },
+    {
+        "id": 214,
+        "name": "fs.watchFile"
+    },
+    {
+        "id": 215,
+        "name": "fs.writeFile"
+    },
+    {
+        "id": 216,
+        "name": "fs.writeFileSync"
+    },
+    {
+        "id": 217,
+        "name": "fs.write"
+    },
+    {
+        "id": 218,
+        "name": "fs.writeSync"
+    },
+    {
+        "id": 219,
+        "name": "fs.writev"
+    },
+    {
+        "id": 220,
+        "name": "fs.writevSync"
+    },
+    {
+        "id": 221,
+        "name": "fs.Dir"
+    },
+    {
+        "id": 222,
+        "name": "fs.Dirent"
+    },
+    {
+        "id": 223,
+        "name": "fs.Stats"
+    },
+    {
+        "id": 224,
+        "name": "fs.ReadStream"
+    },
+    {
+        "id": 225,
+        "name": "fs.WriteStream"
+    },
+    {
+        "id": 226,
+        "name": "fs._toUnixTimestamp"
+    },
+    {
+        "id": 227,
+        "name": "http._connectionListener"
+    },
+    {
+        "id": 228,
+        "name": "http.Agent"
+    },
+    {
+        "id": 229,
+        "name": "http.ClientRequest"
+    },
+    {
+        "id": 230,
+        "name": "http.IncomingMessage"
+    },
+    {
+        "id": 231,
+        "name": "http.OutgoingMessage"
+    },
+    {
+        "id": 232,
+        "name": "http.Server"
+    },
+    {
+        "id": 233,
+        "name": "http.ServerResponse"
+    },
+    {
+        "id": 234,
+        "name": "http.createServer"
+    },
+    {
+        "id": 235,
+        "name": "http.get"
+    },
+    {
+        "id": 236,
+        "name": "http.request"
+    },
+    {
+        "id": 237,
+        "name": "http2.connect"
+    },
+    {
+        "id": 238,
+        "name": "http2.createServer"
+    },
+    {
+        "id": 239,
+        "name": "http2.createSecureServer"
+    },
+    {
+        "id": 240,
+        "name": "http2.getDefaultSettings"
+    },
+    {
+        "id": 241,
+        "name": "http2.getPackedSettings"
+    },
+    {
+        "id": 242,
+        "name": "http2.getUnpackedSettings"
+    },
+    {
+        "id": 243,
+        "name": "http2.Http2ServerRequest"
+    },
+    {
+        "id": 244,
+        "name": "http2.Http2ServerResponse"
+    },
+    {
+        "id": 245,
+        "name": "https.Agent"
+    },
+    {
+        "id": 246,
+        "name": "https.Server"
+    },
+    {
+        "id": 247,
+        "name": "https.createServer"
+    },
+    {
+        "id": 248,
+        "name": "https.get"
+    },
+    {
+        "id": 249,
+        "name": "https.request"
+    },
+    {
+        "id": 250,
+        "name": "inspector.open"
+    },
+    {
+        "id": 251,
+        "name": "inspector.close"
+    },
+    {
+        "id": 252,
+        "name": "inspector.url"
+    },
+    {
+        "id": 253,
+        "name": "inspector.waitForDebugger"
+    },
+    {
+        "id": 254,
+        "name": "inspector.Session"
+    },
+    {
+        "id": 255,
+        "name": "module.wrap"
+    },
+    {
+        "id": 256,
+        "name": "module._debug"
+    },
+    {
+        "id": 257,
+        "name": "module._findPath"
+    },
+    {
+        "id": 258,
+        "name": "module._nodeModulePaths"
+    },
+    {
+        "id": 259,
+        "name": "module._resolveLookupPaths"
+    },
+    {
+        "id": 260,
+        "name": "module._load"
+    },
+    {
+        "id": 261,
+        "name": "module._resolveFilename"
+    },
+    {
+        "id": 262,
+        "name": "module.createRequireFromPath"
+    },
+    {
+        "id": 263,
+        "name": "module.createRequire"
+    },
+    {
+        "id": 264,
+        "name": "module._initPaths"
+    },
+    {
+        "id": 265,
+        "name": "module._preloadModules"
+    },
+    {
+        "id": 266,
+        "name": "module.syncBuiltinESMExports"
+    },
+    {
+        "id": 267,
+        "name": "module.runMain"
+    },
+    {
+        "id": 268,
+        "name": "net._createServerHandle"
+    },
+    {
+        "id": 269,
+        "name": "net._normalizeArgs"
+    },
+    {
+        "id": 270,
+        "name": "net._setSimultaneousAccepts"
+    },
+    {
+        "id": 271,
+        "name": "net.connect"
+    },
+    {
+        "id": 272,
+        "name": "net.createServer"
+    },
+    {
+        "id": 273,
+        "name": "net.isIP"
+    },
+    {
+        "id": 274,
+        "name": "net.isIPv4"
+    },
+    {
+        "id": 275,
+        "name": "net.isIPv6"
+    },
+    {
+        "id": 276,
+        "name": "net.Server"
+    },
+    {
+        "id": 277,
+        "name": "net.Socket"
+    },
+    {
+        "id": 278,
+        "name": "os.arch"
+    },
+    {
+        "id": 279,
+        "name": "os.cpus"
+    },
+    {
+        "id": 280,
+        "name": "os.endianness"
+    },
+    {
+        "id": 281,
+        "name": "os.freemem"
+    },
+    {
+        "id": 282,
+        "name": "os.getPriority"
+    },
+    {
+        "id": 283,
+        "name": "os.homedir"
+    },
+    {
+        "id": 284,
+        "name": "os.hostname"
+    },
+    {
+        "id": 285,
+        "name": "os.loadavg"
+    },
+    {
+        "id": 286,
+        "name": "os.networkInterfaces"
+    },
+    {
+        "id": 287,
+        "name": "os.platform"
+    },
+    {
+        "id": 288,
+        "name": "os.release"
+    },
+    {
+        "id": 289,
+        "name": "os.setPriority"
+    },
+    {
+        "id": 290,
+        "name": "os.tmpdir"
+    },
+    {
+        "id": 291,
+        "name": "os.totalmem"
+    },
+    {
+        "id": 292,
+        "name": "os.type"
+    },
+    {
+        "id": 293,
+        "name": "os.userInfo"
+    },
+    {
+        "id": 294,
+        "name": "os.uptime"
+    },
+    {
+        "id": 295,
+        "name": "os.tmpDir"
+    },
+    {
+        "id": 296,
+        "name": "path.resolve"
+    },
+    {
+        "id": 297,
+        "name": "path.normalize"
+    },
+    {
+        "id": 298,
+        "name": "path.isAbsolute"
+    },
+    {
+        "id": 299,
+        "name": "path.join"
+    },
+    {
+        "id": 300,
+        "name": "path.relative"
+    },
+    {
+        "id": 301,
+        "name": "path.toNamespacedPath"
+    },
+    {
+        "id": 302,
+        "name": "path.dirname"
+    },
+    {
+        "id": 303,
+        "name": "path.basename"
+    },
+    {
+        "id": 304,
+        "name": "path.extname"
+    },
+    {
+        "id": 305,
+        "name": "path.format"
+    },
+    {
+        "id": 306,
+        "name": "path.parse"
+    },
+    {
+        "id": 307,
+        "name": "perf_hooks.PerformanceObserver"
+    },
+    {
+        "id": 308,
+        "name": "perf_hooks.monitorEventLoopDelay"
+    },
+    {
+        "id": 309,
+        "name": "process._rawDebug"
+    },
+    {
+        "id": 310,
+        "name": "process.binding"
+    },
+    {
+        "id": 311,
+        "name": "process._linkedBinding"
+    },
+    {
+        "id": 312,
+        "name": "process.dlopen"
+    },
+    {
+        "id": 313,
+        "name": "process.uptime"
+    },
+    {
+        "id": 314,
+        "name": "process._getActiveRequests"
+    },
+    {
+        "id": 315,
+        "name": "process._getActiveHandles"
+    },
+    {
+        "id": 316,
+        "name": "process.reallyExit"
+    },
+    {
+        "id": 317,
+        "name": "process._kill"
+    },
+    {
+        "id": 318,
+        "name": "process.hrtime"
+    },
+    {
+        "id": 319,
+        "name": "process.cpuUsage"
+    },
+    {
+        "id": 320,
+        "name": "process.resourceUsage"
+    },
+    {
+        "id": 321,
+        "name": "process.memoryUsage"
+    },
+    {
+        "id": 322,
+        "name": "process.kill"
+    },
+    {
+        "id": 323,
+        "name": "process.exit"
+    },
+    {
+        "id": 324,
+        "name": "process.openStdin"
+    },
+    {
+        "id": 325,
+        "name": "process.getuid"
+    },
+    {
+        "id": 326,
+        "name": "process.geteuid"
+    },
+    {
+        "id": 327,
+        "name": "process.getgid"
+    },
+    {
+        "id": 328,
+        "name": "process.getegid"
+    },
+    {
+        "id": 329,
+        "name": "process.getgroups"
+    },
+    {
+        "id": 330,
+        "name": "process.assert"
+    },
+    {
+        "id": 331,
+        "name": "process._fatalException"
+    },
+    {
+        "id": 332,
+        "name": "process.setUncaughtExceptionCaptureCallback"
+    },
+    {
+        "id": 333,
+        "name": "process.hasUncaughtExceptionCaptureCallback"
+    },
+    {
+        "id": 334,
+        "name": "process.emitWarning"
+    },
+    {
+        "id": 335,
+        "name": "process.nextTick"
+    },
+    {
+        "id": 336,
+        "name": "process._tickCallback"
+    },
+    {
+        "id": 337,
+        "name": "process._debugProcess"
+    },
+    {
+        "id": 338,
+        "name": "process._startProfilerIdleNotifier"
+    },
+    {
+        "id": 339,
+        "name": "process._stopProfilerIdleNotifier"
+    },
+    {
+        "id": 340,
+        "name": "process.abort"
+    },
+    {
+        "id": 341,
+        "name": "process.umask"
+    },
+    {
+        "id": 342,
+        "name": "process.chdir"
+    },
+    {
+        "id": 343,
+        "name": "process.cwd"
+    },
+    {
+        "id": 344,
+        "name": "process.initgroups"
+    },
+    {
+        "id": 345,
+        "name": "process.setgroups"
+    },
+    {
+        "id": 346,
+        "name": "process.setegid"
+    },
+    {
+        "id": 347,
+        "name": "process.seteuid"
+    },
+    {
+        "id": 348,
+        "name": "process.setgid"
+    },
+    {
+        "id": 349,
+        "name": "process.setuid"
+    },
+    {
+        "id": 350,
+        "name": "punycode.decode"
+    },
+    {
+        "id": 351,
+        "name": "punycode.encode"
+    },
+    {
+        "id": 352,
+        "name": "punycode.toASCII"
+    },
+    {
+        "id": 353,
+        "name": "punycode.toUnicode"
+    },
+    {
+        "id": 354,
+        "name": "querystring.unescapeBuffer"
+    },
+    {
+        "id": 355,
+        "name": "querystring.unescape"
+    },
+    {
+        "id": 356,
+        "name": "querystring.escape"
+    },
+    {
+        "id": 357,
+        "name": "querystring.stringify"
+    },
+    {
+        "id": 358,
+        "name": "querystring.parse"
+    },
+    {
+        "id": 359,
+        "name": "readline.Interface"
+    },
+    {
+        "id": 360,
+        "name": "readline.clearLine"
+    },
+    {
+        "id": 361,
+        "name": "readline.clearScreenDown"
+    },
+    {
+        "id": 362,
+        "name": "readline.createInterface"
+    },
+    {
+        "id": 363,
+        "name": "readline.cursorTo"
+    },
+    {
+        "id": 364,
+        "name": "readline.emitKeypressEvents"
+    },
+    {
+        "id": 365,
+        "name": "readline.moveCursor"
+    },
+    {
+        "id": 366,
+        "name": "repl.writer"
+    },
+    {
+        "id": 367,
+        "name": "repl.REPLServer"
+    },
+    {
+        "id": 368,
+        "name": "repl.start"
+    },
+    {
+        "id": 369,
+        "name": "repl.Recoverable"
+    },
+    {
+        "id": 370,
+        "name": "stream.Readable"
+    },
+    {
+        "id": 371,
+        "name": "stream.Writable"
+    },
+    {
+        "id": 372,
+        "name": "stream.Duplex"
+    },
+    {
+        "id": 373,
+        "name": "stream.Transform"
+    },
+    {
+        "id": 374,
+        "name": "stream.PassThrough"
+    },
+    {
+        "id": 375,
+        "name": "stream.pipeline"
+    },
+    {
+        "id": 376,
+        "name": "stream.finished"
+    },
+    {
+        "id": 377,
+        "name": "stream._isUint8Array"
+    },
+    {
+        "id": 378,
+        "name": "stream._uint8ArrayToBuffer"
+    },
+    {
+        "id": 379,
+        "name": "string_decoder.StringDecoder"
+    },
+    {
+        "id": 380,
+        "name": "sys._errnoException"
+    },
+    {
+        "id": 381,
+        "name": "sys._exceptionWithHostPort"
+    },
+    {
+        "id": 382,
+        "name": "sys._extend"
+    },
+    {
+        "id": 383,
+        "name": "sys.callbackify"
+    },
+    {
+        "id": 384,
+        "name": "sys.debuglog"
+    },
+    {
+        "id": 385,
+        "name": "sys.deprecate"
+    },
+    {
+        "id": 386,
+        "name": "sys.format"
+    },
+    {
+        "id": 387,
+        "name": "sys.formatWithOptions"
+    },
+    {
+        "id": 388,
+        "name": "sys.getSystemErrorName"
+    },
+    {
+        "id": 389,
+        "name": "sys.inherits"
+    },
+    {
+        "id": 390,
+        "name": "sys.inspect"
+    },
+    {
+        "id": 391,
+        "name": "sys.isArray"
+    },
+    {
+        "id": 392,
+        "name": "sys.isBoolean"
+    },
+    {
+        "id": 393,
+        "name": "sys.isBuffer"
+    },
+    {
+        "id": 394,
+        "name": "sys.isDeepStrictEqual"
+    },
+    {
+        "id": 395,
+        "name": "sys.isNull"
+    },
+    {
+        "id": 396,
+        "name": "sys.isNullOrUndefined"
+    },
+    {
+        "id": 397,
+        "name": "sys.isNumber"
+    },
+    {
+        "id": 398,
+        "name": "sys.isString"
+    },
+    {
+        "id": 399,
+        "name": "sys.isSymbol"
+    },
+    {
+        "id": 400,
+        "name": "sys.isUndefined"
+    },
+    {
+        "id": 401,
+        "name": "sys.isRegExp"
+    },
+    {
+        "id": 402,
+        "name": "sys.isObject"
+    },
+    {
+        "id": 403,
+        "name": "sys.isDate"
+    },
+    {
+        "id": 404,
+        "name": "sys.isError"
+    },
+    {
+        "id": 405,
+        "name": "sys.isFunction"
+    },
+    {
+        "id": 406,
+        "name": "sys.isPrimitive"
+    },
+    {
+        "id": 407,
+        "name": "sys.log"
+    },
+    {
+        "id": 408,
+        "name": "sys.promisify"
+    },
+    {
+        "id": 409,
+        "name": "sys.TextDecoder"
+    },
+    {
+        "id": 410,
+        "name": "sys.TextEncoder"
+    },
+    {
+        "id": 411,
+        "name": "timers.setTimeout"
+    },
+    {
+        "id": 412,
+        "name": "timers.clearTimeout"
+    },
+    {
+        "id": 413,
+        "name": "timers.setImmediate"
+    },
+    {
+        "id": 414,
+        "name": "timers.clearImmediate"
+    },
+    {
+        "id": 415,
+        "name": "timers.setInterval"
+    },
+    {
+        "id": 416,
+        "name": "timers.clearInterval"
+    },
+    {
+        "id": 417,
+        "name": "timers._unrefActive"
+    },
+    {
+        "id": 418,
+        "name": "timers.active"
+    },
+    {
+        "id": 419,
+        "name": "timers.unenroll"
+    },
+    {
+        "id": 420,
+        "name": "timers.enroll"
+    },
+    {
+        "id": 421,
+        "name": "tls.getCiphers"
+    },
+    {
+        "id": 422,
+        "name": "tls.convertALPNProtocols"
+    },
+    {
+        "id": 423,
+        "name": "tls.checkServerIdentity"
+    },
+    {
+        "id": 424,
+        "name": "tls.parseCertString"
+    },
+    {
+        "id": 425,
+        "name": "tls.createSecureContext"
+    },
+    {
+        "id": 426,
+        "name": "tls.SecureContext"
+    },
+    {
+        "id": 427,
+        "name": "tls.TLSSocket"
+    },
+    {
+        "id": 428,
+        "name": "tls.Server"
+    },
+    {
+        "id": 429,
+        "name": "tls.createServer"
+    },
+    {
+        "id": 430,
+        "name": "tls.connect"
+    },
+    {
+        "id": 431,
+        "name": "tls.createSecurePair"
+    },
+    {
+        "id": 432,
+        "name": "trace_events.createTracing"
+    },
+    {
+        "id": 433,
+        "name": "trace_events.getEnabledCategories"
+    },
+    {
+        "id": 434,
+        "name": "tty.isatty"
+    },
+    {
+        "id": 435,
+        "name": "tty.ReadStream"
+    },
+    {
+        "id": 436,
+        "name": "tty.WriteStream"
+    },
+    {
+        "id": 437,
+        "name": "url.Url"
+    },
+    {
+        "id": 438,
+        "name": "url.parse"
+    },
+    {
+        "id": 439,
+        "name": "url.resolve"
+    },
+    {
+        "id": 440,
+        "name": "url.resolveObject"
+    },
+    {
+        "id": 441,
+        "name": "url.format"
+    },
+    {
+        "id": 442,
+        "name": "url.URL"
+    },
+    {
+        "id": 443,
+        "name": "url.URLSearchParams"
+    },
+    {
+        "id": 444,
+        "name": "url.domainToASCII"
+    },
+    {
+        "id": 445,
+        "name": "url.domainToUnicode"
+    },
+    {
+        "id": 446,
+        "name": "url.pathToFileURL"
+    },
+    {
+        "id": 447,
+        "name": "url.fileURLToPath"
+    },
+    {
+        "id": 448,
+        "name": "v8.cachedDataVersionTag"
+    },
+    {
+        "id": 449,
+        "name": "v8.getHeapSnapshot"
+    },
+    {
+        "id": 450,
+        "name": "v8.getHeapStatistics"
+    },
+    {
+        "id": 451,
+        "name": "v8.getHeapSpaceStatistics"
+    },
+    {
+        "id": 452,
+        "name": "v8.getHeapCodeStatistics"
+    },
+    {
+        "id": 453,
+        "name": "v8.setFlagsFromString"
+    },
+    {
+        "id": 454,
+        "name": "v8.Serializer"
+    },
+    {
+        "id": 455,
+        "name": "v8.Deserializer"
+    },
+    {
+        "id": 456,
+        "name": "v8.DefaultSerializer"
+    },
+    {
+        "id": 457,
+        "name": "v8.DefaultDeserializer"
+    },
+    {
+        "id": 458,
+        "name": "v8.deserialize"
+    },
+    {
+        "id": 459,
+        "name": "v8.serialize"
+    },
+    {
+        "id": 460,
+        "name": "v8.writeHeapSnapshot"
+    },
+    {
+        "id": 461,
+        "name": "vm.Script"
+    },
+    {
+        "id": 462,
+        "name": "vm.createContext"
+    },
+    {
+        "id": 463,
+        "name": "vm.createScript"
+    },
+    {
+        "id": 464,
+        "name": "vm.runInContext"
+    },
+    {
+        "id": 465,
+        "name": "vm.runInNewContext"
+    },
+    {
+        "id": 466,
+        "name": "vm.runInThisContext"
+    },
+    {
+        "id": 467,
+        "name": "vm.isContext"
+    },
+    {
+        "id": 468,
+        "name": "vm.compileFunction"
+    },
+    {
+        "id": 469,
+        "name": "worker_threads.MessagePort"
+    },
+    {
+        "id": 470,
+        "name": "worker_threads.MessageChannel"
+    },
+    {
+        "id": 471,
+        "name": "worker_threads.moveMessagePortToContext"
+    },
+    {
+        "id": 472,
+        "name": "worker_threads.receiveMessageOnPort"
+    },
+    {
+        "id": 473,
+        "name": "worker_threads.Worker"
+    },
+    {
+        "id": 474,
+        "name": "zlib.Deflate"
+    },
+    {
+        "id": 475,
+        "name": "zlib.Inflate"
+    },
+    {
+        "id": 476,
+        "name": "zlib.Gzip"
+    },
+    {
+        "id": 477,
+        "name": "zlib.Gunzip"
+    },
+    {
+        "id": 478,
+        "name": "zlib.DeflateRaw"
+    },
+    {
+        "id": 479,
+        "name": "zlib.InflateRaw"
+    },
+    {
+        "id": 480,
+        "name": "zlib.Unzip"
+    },
+    {
+        "id": 481,
+        "name": "zlib.BrotliCompress"
+    },
+    {
+        "id": 482,
+        "name": "zlib.BrotliDecompress"
+    },
+    {
+        "id": 483,
+        "name": "zlib.deflate"
+    },
+    {
+        "id": 484,
+        "name": "zlib.deflateSync"
+    },
+    {
+        "id": 485,
+        "name": "zlib.gzip"
+    },
+    {
+        "id": 486,
+        "name": "zlib.gzipSync"
+    },
+    {
+        "id": 487,
+        "name": "zlib.deflateRaw"
+    },
+    {
+        "id": 488,
+        "name": "zlib.deflateRawSync"
+    },
+    {
+        "id": 489,
+        "name": "zlib.unzip"
+    },
+    {
+        "id": 490,
+        "name": "zlib.unzipSync"
+    },
+    {
+        "id": 491,
+        "name": "zlib.inflate"
+    },
+    {
+        "id": 492,
+        "name": "zlib.inflateSync"
+    },
+    {
+        "id": 493,
+        "name": "zlib.gunzip"
+    },
+    {
+        "id": 494,
+        "name": "zlib.gunzipSync"
+    },
+    {
+        "id": 495,
+        "name": "zlib.inflateRaw"
+    },
+    {
+        "id": 496,
+        "name": "zlib.inflateRawSync"
+    },
+    {
+        "id": 497,
+        "name": "zlib.brotliCompress"
+    },
+    {
+        "id": 498,
+        "name": "zlib.brotliCompressSync"
+    },
+    {
+        "id": 499,
+        "name": "zlib.brotliDecompress"
+    },
+    {
+        "id": 500,
+        "name": "zlib.brotliDecompressSync"
+    },
+    {
+        "id": 501,
+        "name": "zlib.createDeflate"
+    },
+    {
+        "id": 502,
+        "name": "zlib.createInflate"
+    },
+    {
+        "id": 503,
+        "name": "zlib.createDeflateRaw"
+    },
+    {
+        "id": 504,
+        "name": "zlib.createInflateRaw"
+    },
+    {
+        "id": 505,
+        "name": "zlib.createGzip"
+    },
+    {
+        "id": 506,
+        "name": "zlib.createGunzip"
+    },
+    {
+        "id": 507,
+        "name": "zlib.createUnzip"
+    },
+    {
+        "id": 508,
+        "name": "zlib.createBrotliCompress"
+    },
+    {
+        "id": 509,
+        "name": "zlib.createBrotliDecompress"
+    },
+    {
+        "id": 510,
+        "name": "buffer.Buffer.from"
+    },
+    {
+        "id": 511,
+        "name": "buffer.Buffer.of"
+    },
+    {
+        "id": 512,
+        "name": "buffer.Buffer.alloc"
+    },
+    {
+        "id": 513,
+        "name": "buffer.Buffer.allocUnsafe"
+    },
+    {
+        "id": 514,
+        "name": "buffer.Buffer.allocUnsafeSlow"
+    },
+    {
+        "id": 515,
+        "name": "buffer.Buffer.compare"
+    },
+    {
+        "id": 516,
+        "name": "buffer.Buffer.isEncoding"
+    },
+    {
+        "id": 517,
+        "name": "buffer.Buffer.concat"
+    },
+    {
+        "id": 518,
+        "name": "buffer.Buffer.byteLength"
+    },
+    {
+        "id": 519,
+        "name": "console._stdout.destroySoon"
+    },
+    {
+        "id": 520,
+        "name": "console._stdout._destroy"
+    },
+    {
+        "id": 521,
+        "name": "crypto.Certificate.exportChallenge"
+    },
+    {
+        "id": 522,
+        "name": "crypto.Certificate.exportPublicKey"
+    },
+    {
+        "id": 523,
+        "name": "crypto.Certificate.verifySpkac"
+    },
+    {
+        "id": 524,
+        "name": "crypto.ECDH.convertKey"
+    },
+    {
+        "id": 525,
+        "name": "dns.promises.lookup"
+    },
+    {
+        "id": 526,
+        "name": "dns.promises.lookupService"
+    },
+    {
+        "id": 527,
+        "name": "dns.promises.Resolver"
+    },
+    {
+        "id": 528,
+        "name": "dns.promises.getServers"
+    },
+    {
+        "id": 529,
+        "name": "dns.promises.resolve"
+    },
+    {
+        "id": 530,
+        "name": "dns.promises.resolve4"
+    },
+    {
+        "id": 531,
+        "name": "dns.promises.resolve6"
+    },
+    {
+        "id": 532,
+        "name": "dns.promises.resolveAny"
+    },
+    {
+        "id": 533,
+        "name": "dns.promises.resolveCname"
+    },
+    {
+        "id": 534,
+        "name": "dns.promises.resolveMx"
+    },
+    {
+        "id": 535,
+        "name": "dns.promises.resolveNaptr"
+    },
+    {
+        "id": 536,
+        "name": "dns.promises.resolveNs"
+    },
+    {
+        "id": 537,
+        "name": "dns.promises.resolvePtr"
+    },
+    {
+        "id": 538,
+        "name": "dns.promises.resolveSoa"
+    },
+    {
+        "id": 539,
+        "name": "dns.promises.resolveSrv"
+    },
+    {
+        "id": 540,
+        "name": "dns.promises.resolveTxt"
+    },
+    {
+        "id": 541,
+        "name": "dns.promises.reverse"
+    },
+    {
+        "id": 542,
+        "name": "events.prototype.setMaxListeners"
+    },
+    {
+        "id": 543,
+        "name": "events.prototype.getMaxListeners"
+    },
+    {
+        "id": 544,
+        "name": "events.prototype.emit"
+    },
+    {
+        "id": 545,
+        "name": "events.prototype.addListener"
+    },
+    {
+        "id": 546,
+        "name": "events.prototype.prependListener"
+    },
+    {
+        "id": 547,
+        "name": "events.prototype.once"
+    },
+    {
+        "id": 548,
+        "name": "events.prototype.prependOnceListener"
+    },
+    {
+        "id": 549,
+        "name": "events.prototype.removeListener"
+    },
+    {
+        "id": 550,
+        "name": "events.prototype.removeAllListeners"
+    },
+    {
+        "id": 551,
+        "name": "events.prototype.listeners"
+    },
+    {
+        "id": 552,
+        "name": "events.prototype.rawListeners"
+    },
+    {
+        "id": 553,
+        "name": "events.prototype.listenerCount"
+    },
+    {
+        "id": 554,
+        "name": "events.prototype.eventNames"
+    },
+    {
+        "id": 555,
+        "name": "fs.realpath.native"
+    },
+    {
+        "id": 556,
+        "name": "fs.realpathSync.native"
+    },
+    {
+        "id": 557,
+        "name": "fs.promises.access"
+    },
+    {
+        "id": 558,
+        "name": "fs.promises.copyFile"
+    },
+    {
+        "id": 559,
+        "name": "fs.promises.open"
+    },
+    {
+        "id": 560,
+        "name": "fs.promises.opendir"
+    },
+    {
+        "id": 561,
+        "name": "fs.promises.rename"
+    },
+    {
+        "id": 562,
+        "name": "fs.promises.truncate"
+    },
+    {
+        "id": 563,
+        "name": "fs.promises.rmdir"
+    },
+    {
+        "id": 564,
+        "name": "fs.promises.mkdir"
+    },
+    {
+        "id": 565,
+        "name": "fs.promises.readdir"
+    },
+    {
+        "id": 566,
+        "name": "fs.promises.readlink"
+    },
+    {
+        "id": 567,
+        "name": "fs.promises.symlink"
+    },
+    {
+        "id": 568,
+        "name": "fs.promises.lstat"
+    },
+    {
+        "id": 569,
+        "name": "fs.promises.stat"
+    },
+    {
+        "id": 570,
+        "name": "fs.promises.link"
+    },
+    {
+        "id": 571,
+        "name": "fs.promises.unlink"
+    },
+    {
+        "id": 572,
+        "name": "fs.promises.chmod"
+    },
+    {
+        "id": 573,
+        "name": "fs.promises.lchmod"
+    },
+    {
+        "id": 574,
+        "name": "fs.promises.lchown"
+    },
+    {
+        "id": 575,
+        "name": "fs.promises.chown"
+    },
+    {
+        "id": 576,
+        "name": "fs.promises.utimes"
+    },
+    {
+        "id": 577,
+        "name": "fs.promises.realpath"
+    },
+    {
+        "id": 578,
+        "name": "fs.promises.mkdtemp"
+    },
+    {
+        "id": 579,
+        "name": "fs.promises.writeFile"
+    },
+    {
+        "id": 580,
+        "name": "fs.promises.appendFile"
+    },
+    {
+        "id": 581,
+        "name": "fs.promises.readFile"
+    },
+    {
+        "id": 582,
+        "name": "inspector.console.debug"
+    },
+    {
+        "id": 583,
+        "name": "inspector.console.error"
+    },
+    {
+        "id": 584,
+        "name": "inspector.console.info"
+    },
+    {
+        "id": 585,
+        "name": "inspector.console.log"
+    },
+    {
+        "id": 586,
+        "name": "inspector.console.warn"
+    },
+    {
+        "id": 587,
+        "name": "inspector.console.dir"
+    },
+    {
+        "id": 588,
+        "name": "inspector.console.dirxml"
+    },
+    {
+        "id": 589,
+        "name": "inspector.console.table"
+    },
+    {
+        "id": 590,
+        "name": "inspector.console.trace"
+    },
+    {
+        "id": 591,
+        "name": "inspector.console.group"
+    },
+    {
+        "id": 592,
+        "name": "inspector.console.groupCollapsed"
+    },
+    {
+        "id": 593,
+        "name": "inspector.console.groupEnd"
+    },
+    {
+        "id": 594,
+        "name": "inspector.console.clear"
+    },
+    {
+        "id": 595,
+        "name": "inspector.console.count"
+    },
+    {
+        "id": 596,
+        "name": "inspector.console.countReset"
+    },
+    {
+        "id": 597,
+        "name": "inspector.console.assert"
+    },
+    {
+        "id": 598,
+        "name": "inspector.console.time"
+    },
+    {
+        "id": 599,
+        "name": "inspector.console.timeLog"
+    },
+    {
+        "id": 600,
+        "name": "inspector.console.timeEnd"
+    },
+    {
+        "id": 601,
+        "name": "module.prototype.load"
+    },
+    {
+        "id": 602,
+        "name": "module.prototype.require"
+    },
+    {
+        "id": 603,
+        "name": "module.prototype._compile"
+    },
+    {
+        "id": 604,
+        "name": "module._extensions..js"
+    },
+    {
+        "id": 605,
+        "name": "module._extensions..json"
+    },
+    {
+        "id": 606,
+        "name": "module._extensions..node"
+    },
+    {
+        "id": 607,
+        "name": "path.win32.resolve"
+    },
+    {
+        "id": 608,
+        "name": "path.win32.normalize"
+    },
+    {
+        "id": 609,
+        "name": "path.win32.isAbsolute"
+    },
+    {
+        "id": 610,
+        "name": "path.win32.join"
+    },
+    {
+        "id": 611,
+        "name": "path.win32.relative"
+    },
+    {
+        "id": 612,
+        "name": "path.win32.toNamespacedPath"
+    },
+    {
+        "id": 613,
+        "name": "path.win32.dirname"
+    },
+    {
+        "id": 614,
+        "name": "path.win32.basename"
+    },
+    {
+        "id": 615,
+        "name": "path.win32.extname"
+    },
+    {
+        "id": 616,
+        "name": "path.win32.format"
+    },
+    {
+        "id": 617,
+        "name": "path.win32.parse"
+    },
+    {
+        "id": 618,
+        "name": "process._events.warning"
+    },
+    {
+        "id": 619,
+        "name": "process.hrtime.bigint"
+    },
+    {
+        "id": 620,
+        "name": "process.allowedNodeEnvironmentFlags.add"
+    },
+    {
+        "id": 621,
+        "name": "punycode.ucs2.decode"
+    },
+    {
+        "id": 622,
+        "name": "punycode.ucs2.encode"
+    },
+    {
+        "id": 623,
+        "name": "stream.prototype.pipe"
+    },
+    {
+        "id": 624,
+        "name": "stream.Readable.ReadableState"
+    },
+    {
+        "id": 625,
+        "name": "stream.Readable._fromList"
+    },
+    {
+        "id": 626,
+        "name": "stream.Readable.from"
+    },
+    {
+        "id": 627,
+        "name": "stream.Writable.WritableState"
+    },
+    {
+        "id": 628,
+        "name": "sys.types.isExternal"
+    },
+    {
+        "id": 629,
+        "name": "sys.types.isArgumentsObject"
+    },
+    {
+        "id": 630,
+        "name": "sys.types.isBigIntObject"
+    },
+    {
+        "id": 631,
+        "name": "sys.types.isBooleanObject"
+    },
+    {
+        "id": 632,
+        "name": "sys.types.isNumberObject"
+    },
+    {
+        "id": 633,
+        "name": "sys.types.isStringObject"
+    },
+    {
+        "id": 634,
+        "name": "sys.types.isSymbolObject"
+    },
+    {
+        "id": 635,
+        "name": "sys.types.isNativeError"
+    },
+    {
+        "id": 636,
+        "name": "sys.types.isAsyncFunction"
+    },
+    {
+        "id": 637,
+        "name": "sys.types.isGeneratorFunction"
+    },
+    {
+        "id": 638,
+        "name": "sys.types.isGeneratorObject"
+    },
+    {
+        "id": 639,
+        "name": "sys.types.isPromise"
+    },
+    {
+        "id": 640,
+        "name": "sys.types.isMap"
+    },
+    {
+        "id": 641,
+        "name": "sys.types.isSet"
+    },
+    {
+        "id": 642,
+        "name": "sys.types.isMapIterator"
+    },
+    {
+        "id": 643,
+        "name": "sys.types.isSetIterator"
+    },
+    {
+        "id": 644,
+        "name": "sys.types.isWeakMap"
+    },
+    {
+        "id": 645,
+        "name": "sys.types.isWeakSet"
+    },
+    {
+        "id": 646,
+        "name": "sys.types.isArrayBuffer"
+    },
+    {
+        "id": 647,
+        "name": "sys.types.isDataView"
+    },
+    {
+        "id": 648,
+        "name": "sys.types.isSharedArrayBuffer"
+    },
+    {
+        "id": 649,
+        "name": "sys.types.isProxy"
+    },
+    {
+        "id": 650,
+        "name": "sys.types.isWebAssemblyCompiledModule"
+    },
+    {
+        "id": 651,
+        "name": "sys.types.isModuleNamespaceObject"
+    },
+    {
+        "id": 652,
+        "name": "sys.types.isAnyArrayBuffer"
+    },
+    {
+        "id": 653,
+        "name": "sys.types.isBoxedPrimitive"
+    },
+    {
+        "id": 654,
+        "name": "sys.types.isArrayBufferView"
+    },
+    {
+        "id": 655,
+        "name": "sys.types.isTypedArray"
+    },
+    {
+        "id": 656,
+        "name": "sys.types.isUint8ClampedArray"
+    },
+    {
+        "id": 657,
+        "name": "sys.types.isUint16Array"
+    },
+    {
+        "id": 658,
+        "name": "sys.types.isUint32Array"
+    },
+    {
+        "id": 659,
+        "name": "sys.types.isInt8Array"
+    },
+    {
+        "id": 660,
+        "name": "sys.types.isInt16Array"
+    },
+    {
+        "id": 661,
+        "name": "sys.types.isInt32Array"
+    },
+    {
+        "id": 662,
+        "name": "sys.types.isFloat32Array"
+    },
+    {
+        "id": 663,
+        "name": "sys.types.isFloat64Array"
+    },
+    {
+        "id": 664,
+        "name": "sys.types.isBigInt64Array"
+    },
+    {
+        "id": 665,
+        "name": "sys.types.isBigUint64Array"
+    },
+    {
+        "id": 666,
+        "name": "assert.AssertionError.prototype.toString"
+    },
+    {
+        "id": 667,
+        "name": "async_hooks.AsyncResource.prototype.runInAsyncScope"
+    },
+    {
+        "id": 668,
+        "name": "async_hooks.AsyncResource.prototype.emitDestroy"
+    },
+    {
+        "id": 669,
+        "name": "async_hooks.AsyncResource.prototype.asyncId"
+    },
+    {
+        "id": 670,
+        "name": "async_hooks.AsyncResource.prototype.triggerAsyncId"
+    },
+    {
+        "id": 671,
+        "name": "buffer.Buffer.prototype.readBigUInt64LE"
+    },
+    {
+        "id": 672,
+        "name": "buffer.Buffer.prototype.readBigUInt64BE"
+    },
+    {
+        "id": 673,
+        "name": "buffer.Buffer.prototype.readBigInt64LE"
+    },
+    {
+        "id": 674,
+        "name": "buffer.Buffer.prototype.readBigInt64BE"
+    },
+    {
+        "id": 675,
+        "name": "buffer.Buffer.prototype.writeBigUInt64LE"
+    },
+    {
+        "id": 676,
+        "name": "buffer.Buffer.prototype.writeBigUInt64BE"
+    },
+    {
+        "id": 677,
+        "name": "buffer.Buffer.prototype.writeBigInt64LE"
+    },
+    {
+        "id": 678,
+        "name": "buffer.Buffer.prototype.writeBigInt64BE"
+    },
+    {
+        "id": 679,
+        "name": "buffer.Buffer.prototype.readUIntLE"
+    },
+    {
+        "id": 680,
+        "name": "buffer.Buffer.prototype.readUInt32LE"
+    },
+    {
+        "id": 681,
+        "name": "buffer.Buffer.prototype.readUInt16LE"
+    },
+    {
+        "id": 682,
+        "name": "buffer.Buffer.prototype.readUInt8"
+    },
+    {
+        "id": 683,
+        "name": "buffer.Buffer.prototype.readUIntBE"
+    },
+    {
+        "id": 684,
+        "name": "buffer.Buffer.prototype.readUInt32BE"
+    },
+    {
+        "id": 685,
+        "name": "buffer.Buffer.prototype.readUInt16BE"
+    },
+    {
+        "id": 686,
+        "name": "buffer.Buffer.prototype.readIntLE"
+    },
+    {
+        "id": 687,
+        "name": "buffer.Buffer.prototype.readInt32LE"
+    },
+    {
+        "id": 688,
+        "name": "buffer.Buffer.prototype.readInt16LE"
+    },
+    {
+        "id": 689,
+        "name": "buffer.Buffer.prototype.readInt8"
+    },
+    {
+        "id": 690,
+        "name": "buffer.Buffer.prototype.readIntBE"
+    },
+    {
+        "id": 691,
+        "name": "buffer.Buffer.prototype.readInt32BE"
+    },
+    {
+        "id": 692,
+        "name": "buffer.Buffer.prototype.readInt16BE"
+    },
+    {
+        "id": 693,
+        "name": "buffer.Buffer.prototype.writeUIntLE"
+    },
+    {
+        "id": 694,
+        "name": "buffer.Buffer.prototype.writeUInt32LE"
+    },
+    {
+        "id": 695,
+        "name": "buffer.Buffer.prototype.writeUInt16LE"
+    },
+    {
+        "id": 696,
+        "name": "buffer.Buffer.prototype.writeUInt8"
+    },
+    {
+        "id": 697,
+        "name": "buffer.Buffer.prototype.writeUIntBE"
+    },
+    {
+        "id": 698,
+        "name": "buffer.Buffer.prototype.writeUInt32BE"
+    },
+    {
+        "id": 699,
+        "name": "buffer.Buffer.prototype.writeUInt16BE"
+    },
+    {
+        "id": 700,
+        "name": "buffer.Buffer.prototype.writeIntLE"
+    },
+    {
+        "id": 701,
+        "name": "buffer.Buffer.prototype.writeInt32LE"
+    },
+    {
+        "id": 702,
+        "name": "buffer.Buffer.prototype.writeInt16LE"
+    },
+    {
+        "id": 703,
+        "name": "buffer.Buffer.prototype.writeInt8"
+    },
+    {
+        "id": 704,
+        "name": "buffer.Buffer.prototype.writeIntBE"
+    },
+    {
+        "id": 705,
+        "name": "buffer.Buffer.prototype.writeInt32BE"
+    },
+    {
+        "id": 706,
+        "name": "buffer.Buffer.prototype.writeInt16BE"
+    },
+    {
+        "id": 707,
+        "name": "buffer.Buffer.prototype.readFloatLE"
+    },
+    {
+        "id": 708,
+        "name": "buffer.Buffer.prototype.readFloatBE"
+    },
+    {
+        "id": 709,
+        "name": "buffer.Buffer.prototype.readDoubleLE"
+    },
+    {
+        "id": 710,
+        "name": "buffer.Buffer.prototype.readDoubleBE"
+    },
+    {
+        "id": 711,
+        "name": "buffer.Buffer.prototype.writeFloatLE"
+    },
+    {
+        "id": 712,
+        "name": "buffer.Buffer.prototype.writeFloatBE"
+    },
+    {
+        "id": 713,
+        "name": "buffer.Buffer.prototype.writeDoubleLE"
+    },
+    {
+        "id": 714,
+        "name": "buffer.Buffer.prototype.writeDoubleBE"
+    },
+    {
+        "id": 715,
+        "name": "buffer.Buffer.prototype.asciiSlice"
+    },
+    {
+        "id": 716,
+        "name": "buffer.Buffer.prototype.base64Slice"
+    },
+    {
+        "id": 717,
+        "name": "buffer.Buffer.prototype.latin1Slice"
+    },
+    {
+        "id": 718,
+        "name": "buffer.Buffer.prototype.hexSlice"
+    },
+    {
+        "id": 719,
+        "name": "buffer.Buffer.prototype.ucs2Slice"
+    },
+    {
+        "id": 720,
+        "name": "buffer.Buffer.prototype.utf8Slice"
+    },
+    {
+        "id": 721,
+        "name": "buffer.Buffer.prototype.asciiWrite"
+    },
+    {
+        "id": 722,
+        "name": "buffer.Buffer.prototype.base64Write"
+    },
+    {
+        "id": 723,
+        "name": "buffer.Buffer.prototype.latin1Write"
+    },
+    {
+        "id": 724,
+        "name": "buffer.Buffer.prototype.hexWrite"
+    },
+    {
+        "id": 725,
+        "name": "buffer.Buffer.prototype.ucs2Write"
+    },
+    {
+        "id": 726,
+        "name": "buffer.Buffer.prototype.utf8Write"
+    },
+    {
+        "id": 727,
+        "name": "buffer.Buffer.prototype.copy"
+    },
+    {
+        "id": 728,
+        "name": "buffer.Buffer.prototype.toString"
+    },
+    {
+        "id": 729,
+        "name": "buffer.Buffer.prototype.equals"
+    },
+    {
+        "id": 730,
+        "name": "buffer.Buffer.prototype.inspect"
+    },
+    {
+        "id": 731,
+        "name": "buffer.Buffer.prototype.compare"
+    },
+    {
+        "id": 732,
+        "name": "buffer.Buffer.prototype.indexOf"
+    },
+    {
+        "id": 733,
+        "name": "buffer.Buffer.prototype.lastIndexOf"
+    },
+    {
+        "id": 734,
+        "name": "buffer.Buffer.prototype.includes"
+    },
+    {
+        "id": 735,
+        "name": "buffer.Buffer.prototype.fill"
+    },
+    {
+        "id": 736,
+        "name": "buffer.Buffer.prototype.write"
+    },
+    {
+        "id": 737,
+        "name": "buffer.Buffer.prototype.toJSON"
+    },
+    {
+        "id": 738,
+        "name": "buffer.Buffer.prototype.slice"
+    },
+    {
+        "id": 739,
+        "name": "buffer.Buffer.prototype.swap16"
+    },
+    {
+        "id": 740,
+        "name": "buffer.Buffer.prototype.swap32"
+    },
+    {
+        "id": 741,
+        "name": "buffer.Buffer.prototype.swap64"
+    },
+    {
+        "id": 742,
+        "name": "child_process.ChildProcess.prototype.spawn"
+    },
+    {
+        "id": 743,
+        "name": "child_process.ChildProcess.prototype.kill"
+    },
+    {
+        "id": 744,
+        "name": "child_process.ChildProcess.prototype.ref"
+    },
+    {
+        "id": 745,
+        "name": "child_process.ChildProcess.prototype.unref"
+    },
+    {
+        "id": 746,
+        "name": "cluster.Worker.prototype.kill"
+    },
+    {
+        "id": 747,
+        "name": "cluster.Worker.prototype.send"
+    },
+    {
+        "id": 748,
+        "name": "cluster.Worker.prototype.isDead"
+    },
+    {
+        "id": 749,
+        "name": "cluster.Worker.prototype.isConnected"
+    },
+    {
+        "id": 750,
+        "name": "cluster.Worker.prototype.disconnect"
+    },
+    {
+        "id": 751,
+        "name": "cluster.Worker.prototype.destroy"
+    },
+    {
+        "id": 752,
+        "name": "console._stdout._events.end"
+    },
+    {
+        "id": 753,
+        "name": "console._stdout._writableState.onwrite"
+    },
+    {
+        "id": 754,
+        "name": "console._stderr._writableState.onwrite"
+    },
+    {
+        "id": 755,
+        "name": "console.Console.prototype.log"
+    },
+    {
+        "id": 756,
+        "name": "console.Console.prototype.warn"
+    },
+    {
+        "id": 757,
+        "name": "console.Console.prototype.dir"
+    },
+    {
+        "id": 758,
+        "name": "console.Console.prototype.time"
+    },
+    {
+        "id": 759,
+        "name": "console.Console.prototype.timeEnd"
+    },
+    {
+        "id": 760,
+        "name": "console.Console.prototype.timeLog"
+    },
+    {
+        "id": 761,
+        "name": "console.Console.prototype.trace"
+    },
+    {
+        "id": 762,
+        "name": "console.Console.prototype.assert"
+    },
+    {
+        "id": 763,
+        "name": "console.Console.prototype.clear"
+    },
+    {
+        "id": 764,
+        "name": "console.Console.prototype.count"
+    },
+    {
+        "id": 765,
+        "name": "console.Console.prototype.countReset"
+    },
+    {
+        "id": 766,
+        "name": "console.Console.prototype.group"
+    },
+    {
+        "id": 767,
+        "name": "console.Console.prototype.groupEnd"
+    },
+    {
+        "id": 768,
+        "name": "console.Console.prototype.table"
+    },
+    {
+        "id": 769,
+        "name": "crypto.Cipher.prototype._transform"
+    },
+    {
+        "id": 770,
+        "name": "crypto.Cipher.prototype._flush"
+    },
+    {
+        "id": 771,
+        "name": "crypto.Cipher.prototype.update"
+    },
+    {
+        "id": 772,
+        "name": "crypto.Cipher.prototype.final"
+    },
+    {
+        "id": 773,
+        "name": "crypto.Cipher.prototype.setAutoPadding"
+    },
+    {
+        "id": 774,
+        "name": "crypto.Cipher.prototype.getAuthTag"
+    },
+    {
+        "id": 775,
+        "name": "crypto.Cipher.prototype.setAAD"
+    },
+    {
+        "id": 776,
+        "name": "crypto.Decipher.prototype.setAuthTag"
+    },
+    {
+        "id": 777,
+        "name": "crypto.DiffieHellman.prototype.generateKeys"
+    },
+    {
+        "id": 778,
+        "name": "crypto.DiffieHellman.prototype.computeSecret"
+    },
+    {
+        "id": 779,
+        "name": "crypto.DiffieHellman.prototype.getPrime"
+    },
+    {
+        "id": 780,
+        "name": "crypto.DiffieHellman.prototype.getGenerator"
+    },
+    {
+        "id": 781,
+        "name": "crypto.DiffieHellman.prototype.getPublicKey"
+    },
+    {
+        "id": 782,
+        "name": "crypto.DiffieHellman.prototype.getPrivateKey"
+    },
+    {
+        "id": 783,
+        "name": "crypto.DiffieHellman.prototype.setPublicKey"
+    },
+    {
+        "id": 784,
+        "name": "crypto.DiffieHellman.prototype.setPrivateKey"
+    },
+    {
+        "id": 785,
+        "name": "crypto.ECDH.prototype.generateKeys"
+    },
+    {
+        "id": 786,
+        "name": "crypto.ECDH.prototype.getPublicKey"
+    },
+    {
+        "id": 787,
+        "name": "crypto.Hash.prototype.copy"
+    },
+    {
+        "id": 788,
+        "name": "crypto.Hash.prototype._transform"
+    },
+    {
+        "id": 789,
+        "name": "crypto.Hash.prototype._flush"
+    },
+    {
+        "id": 790,
+        "name": "crypto.Hash.prototype.update"
+    },
+    {
+        "id": 791,
+        "name": "crypto.Hash.prototype.digest"
+    },
+    {
+        "id": 792,
+        "name": "crypto.Hmac.prototype.digest"
+    },
+    {
+        "id": 793,
+        "name": "crypto.Sign.prototype._write"
+    },
+    {
+        "id": 794,
+        "name": "crypto.Sign.prototype.update"
+    },
+    {
+        "id": 795,
+        "name": "crypto.Sign.prototype.sign"
+    },
+    {
+        "id": 796,
+        "name": "crypto.Verify.prototype.verify"
+    },
+    {
+        "id": 797,
+        "name": "crypto.createCipher.prototype.constructor"
+    },
+    {
+        "id": 798,
+        "name": "crypto.createDecipher.prototype.constructor"
+    },
+    {
+        "id": 799,
+        "name": "dgram._createSocketHandle.prototype.constructor"
+    },
+    {
+        "id": 800,
+        "name": "dgram.Socket.prototype.bind"
+    },
+    {
+        "id": 801,
+        "name": "dgram.Socket.prototype.connect"
+    },
+    {
+        "id": 802,
+        "name": "dgram.Socket.prototype.disconnect"
+    },
+    {
+        "id": 803,
+        "name": "dgram.Socket.prototype.sendto"
+    },
+    {
+        "id": 804,
+        "name": "dgram.Socket.prototype.send"
+    },
+    {
+        "id": 805,
+        "name": "dgram.Socket.prototype.close"
+    },
+    {
+        "id": 806,
+        "name": "dgram.Socket.prototype.address"
+    },
+    {
+        "id": 807,
+        "name": "dgram.Socket.prototype.remoteAddress"
+    },
+    {
+        "id": 808,
+        "name": "dgram.Socket.prototype.setBroadcast"
+    },
+    {
+        "id": 809,
+        "name": "dgram.Socket.prototype.setTTL"
+    },
+    {
+        "id": 810,
+        "name": "dgram.Socket.prototype.setMulticastTTL"
+    },
+    {
+        "id": 811,
+        "name": "dgram.Socket.prototype.setMulticastLoopback"
+    },
+    {
+        "id": 812,
+        "name": "dgram.Socket.prototype.setMulticastInterface"
+    },
+    {
+        "id": 813,
+        "name": "dgram.Socket.prototype.addMembership"
+    },
+    {
+        "id": 814,
+        "name": "dgram.Socket.prototype.dropMembership"
+    },
+    {
+        "id": 815,
+        "name": "dgram.Socket.prototype.addSourceSpecificMembership"
+    },
+    {
+        "id": 816,
+        "name": "dgram.Socket.prototype.dropSourceSpecificMembership"
+    },
+    {
+        "id": 817,
+        "name": "dgram.Socket.prototype.ref"
+    },
+    {
+        "id": 818,
+        "name": "dgram.Socket.prototype.unref"
+    },
+    {
+        "id": 819,
+        "name": "dgram.Socket.prototype.setRecvBufferSize"
+    },
+    {
+        "id": 820,
+        "name": "dgram.Socket.prototype.setSendBufferSize"
+    },
+    {
+        "id": 821,
+        "name": "dgram.Socket.prototype.getRecvBufferSize"
+    },
+    {
+        "id": 822,
+        "name": "dgram.Socket.prototype.getSendBufferSize"
+    },
+    {
+        "id": 823,
+        "name": "dgram.Socket.prototype._healthCheck"
+    },
+    {
+        "id": 824,
+        "name": "dgram.Socket.prototype._stopReceiving"
+    },
+    {
+        "id": 825,
+        "name": "dns.Resolver.prototype.cancel"
+    },
+    {
+        "id": 826,
+        "name": "dns.Resolver.prototype.getServers"
+    },
+    {
+        "id": 827,
+        "name": "dns.Resolver.prototype.setServers"
+    },
+    {
+        "id": 828,
+        "name": "dns.Resolver.prototype.resolveAny"
+    },
+    {
+        "id": 829,
+        "name": "dns.Resolver.prototype.resolve4"
+    },
+    {
+        "id": 830,
+        "name": "dns.Resolver.prototype.resolve6"
+    },
+    {
+        "id": 831,
+        "name": "dns.Resolver.prototype.resolveCname"
+    },
+    {
+        "id": 832,
+        "name": "dns.Resolver.prototype.resolveMx"
+    },
+    {
+        "id": 833,
+        "name": "dns.Resolver.prototype.resolveNs"
+    },
+    {
+        "id": 834,
+        "name": "dns.Resolver.prototype.resolveTxt"
+    },
+    {
+        "id": 835,
+        "name": "dns.Resolver.prototype.resolveSrv"
+    },
+    {
+        "id": 836,
+        "name": "dns.Resolver.prototype.resolvePtr"
+    },
+    {
+        "id": 837,
+        "name": "dns.Resolver.prototype.resolveNaptr"
+    },
+    {
+        "id": 838,
+        "name": "dns.Resolver.prototype.resolveSoa"
+    },
+    {
+        "id": 839,
+        "name": "dns.Resolver.prototype.reverse"
+    },
+    {
+        "id": 840,
+        "name": "dns.Resolver.prototype.resolve"
+    },
+    {
+        "id": 841,
+        "name": "domain.Domain.prototype._errorHandler"
+    },
+    {
+        "id": 842,
+        "name": "domain.Domain.prototype.enter"
+    },
+    {
+        "id": 843,
+        "name": "domain.Domain.prototype.exit"
+    },
+    {
+        "id": 844,
+        "name": "domain.Domain.prototype.add"
+    },
+    {
+        "id": 845,
+        "name": "domain.Domain.prototype.remove"
+    },
+    {
+        "id": 846,
+        "name": "domain.Domain.prototype.run"
+    },
+    {
+        "id": 847,
+        "name": "domain.Domain.prototype.intercept"
+    },
+    {
+        "id": 848,
+        "name": "domain.Domain.prototype.bind"
+    },
+    {
+        "id": 849,
+        "name": "fs.Dir.prototype.read"
+    },
+    {
+        "id": 850,
+        "name": "fs.Dir.prototype.readSync"
+    },
+    {
+        "id": 851,
+        "name": "fs.Dir.prototype.close"
+    },
+    {
+        "id": 852,
+        "name": "fs.Dir.prototype.closeSync"
+    },
+    {
+        "id": 853,
+        "name": "fs.Dir.prototype.entries"
+    },
+    {
+        "id": 854,
+        "name": "fs.Dirent.prototype.isDirectory"
+    },
+    {
+        "id": 855,
+        "name": "fs.Dirent.prototype.isFile"
+    },
+    {
+        "id": 856,
+        "name": "fs.Dirent.prototype.isBlockDevice"
+    },
+    {
+        "id": 857,
+        "name": "fs.Dirent.prototype.isCharacterDevice"
+    },
+    {
+        "id": 858,
+        "name": "fs.Dirent.prototype.isSymbolicLink"
+    },
+    {
+        "id": 859,
+        "name": "fs.Dirent.prototype.isFIFO"
+    },
+    {
+        "id": 860,
+        "name": "fs.Dirent.prototype.isSocket"
+    },
+    {
+        "id": 861,
+        "name": "fs.Stats.prototype.isFile"
+    },
+    {
+        "id": 862,
+        "name": "fs.Stats.prototype._checkModeProperty"
+    },
+    {
+        "id": 863,
+        "name": "fs.ReadStream.prototype.open"
+    },
+    {
+        "id": 864,
+        "name": "fs.ReadStream.prototype._read"
+    },
+    {
+        "id": 865,
+        "name": "fs.ReadStream.prototype._destroy"
+    },
+    {
+        "id": 866,
+        "name": "fs.ReadStream.prototype.close"
+    },
+    {
+        "id": 867,
+        "name": "fs.WriteStream.prototype._final"
+    },
+    {
+        "id": 868,
+        "name": "fs.WriteStream.prototype.open"
+    },
+    {
+        "id": 869,
+        "name": "fs.WriteStream.prototype._write"
+    },
+    {
+        "id": 870,
+        "name": "fs.WriteStream.prototype._writev"
+    },
+    {
+        "id": 871,
+        "name": "fs.WriteStream.prototype.close"
+    },
+    {
+        "id": 872,
+        "name": "fs.WriteStream.prototype.destroySoon"
+    },
+    {
+        "id": 873,
+        "name": "http.Agent.prototype.getName"
+    },
+    {
+        "id": 874,
+        "name": "http.Agent.prototype.addRequest"
+    },
+    {
+        "id": 875,
+        "name": "http.Agent.prototype.createSocket"
+    },
+    {
+        "id": 876,
+        "name": "http.Agent.prototype.removeSocket"
+    },
+    {
+        "id": 877,
+        "name": "http.Agent.prototype.keepSocketAlive"
+    },
+    {
+        "id": 878,
+        "name": "http.Agent.prototype.reuseSocket"
+    },
+    {
+        "id": 879,
+        "name": "http.Agent.prototype.destroy"
+    },
+    {
+        "id": 880,
+        "name": "http.ClientRequest.prototype._finish"
+    },
+    {
+        "id": 881,
+        "name": "http.ClientRequest.prototype._implicitHeader"
+    },
+    {
+        "id": 882,
+        "name": "http.ClientRequest.prototype.abort"
+    },
+    {
+        "id": 883,
+        "name": "http.ClientRequest.prototype.onSocket"
+    },
+    {
+        "id": 884,
+        "name": "http.ClientRequest.prototype._deferToConnect"
+    },
+    {
+        "id": 885,
+        "name": "http.ClientRequest.prototype.setTimeout"
+    },
+    {
+        "id": 886,
+        "name": "http.ClientRequest.prototype.setNoDelay"
+    },
+    {
+        "id": 887,
+        "name": "http.ClientRequest.prototype.setSocketKeepAlive"
+    },
+    {
+        "id": 888,
+        "name": "http.ClientRequest.prototype.clearTimeout"
+    },
+    {
+        "id": 889,
+        "name": "http.IncomingMessage.prototype.setTimeout"
+    },
+    {
+        "id": 890,
+        "name": "http.IncomingMessage.prototype._read"
+    },
+    {
+        "id": 891,
+        "name": "http.IncomingMessage.prototype.destroy"
+    },
+    {
+        "id": 892,
+        "name": "http.IncomingMessage.prototype._addHeaderLines"
+    },
+    {
+        "id": 893,
+        "name": "http.IncomingMessage.prototype._addHeaderLine"
+    },
+    {
+        "id": 894,
+        "name": "http.IncomingMessage.prototype._dump"
+    },
+    {
+        "id": 895,
+        "name": "http.OutgoingMessage.prototype._renderHeaders"
+    },
+    {
+        "id": 896,
+        "name": "http.OutgoingMessage.prototype.cork"
+    },
+    {
+        "id": 897,
+        "name": "http.OutgoingMessage.prototype.uncork"
+    },
+    {
+        "id": 898,
+        "name": "http.OutgoingMessage.prototype.setTimeout"
+    },
+    {
+        "id": 899,
+        "name": "http.OutgoingMessage.prototype.destroy"
+    },
+    {
+        "id": 900,
+        "name": "http.OutgoingMessage.prototype._send"
+    },
+    {
+        "id": 901,
+        "name": "http.OutgoingMessage.prototype._writeRaw"
+    },
+    {
+        "id": 902,
+        "name": "http.OutgoingMessage.prototype._storeHeader"
+    },
+    {
+        "id": 903,
+        "name": "http.OutgoingMessage.prototype.setHeader"
+    },
+    {
+        "id": 904,
+        "name": "http.OutgoingMessage.prototype.getHeader"
+    },
+    {
+        "id": 905,
+        "name": "http.OutgoingMessage.prototype.getHeaderNames"
+    },
+    {
+        "id": 906,
+        "name": "http.OutgoingMessage.prototype.getHeaders"
+    },
+    {
+        "id": 907,
+        "name": "http.OutgoingMessage.prototype.hasHeader"
+    },
+    {
+        "id": 908,
+        "name": "http.OutgoingMessage.prototype.removeHeader"
+    },
+    {
+        "id": 909,
+        "name": "http.OutgoingMessage.prototype._implicitHeader"
+    },
+    {
+        "id": 910,
+        "name": "http.OutgoingMessage.prototype.write"
+    },
+    {
+        "id": 911,
+        "name": "http.OutgoingMessage.prototype.addTrailers"
+    },
+    {
+        "id": 912,
+        "name": "http.OutgoingMessage.prototype.end"
+    },
+    {
+        "id": 913,
+        "name": "http.OutgoingMessage.prototype._finish"
+    },
+    {
+        "id": 914,
+        "name": "http.OutgoingMessage.prototype._flush"
+    },
+    {
+        "id": 915,
+        "name": "http.OutgoingMessage.prototype._flushOutput"
+    },
+    {
+        "id": 916,
+        "name": "http.OutgoingMessage.prototype.flushHeaders"
+    },
+    {
+        "id": 917,
+        "name": "http.OutgoingMessage.prototype.flush"
+    },
+    {
+        "id": 918,
+        "name": "http.OutgoingMessage.prototype.pipe"
+    },
+    {
+        "id": 919,
+        "name": "http.Server.prototype.setTimeout"
+    },
+    {
+        "id": 920,
+        "name": "http.ServerResponse.prototype._finish"
+    },
+    {
+        "id": 921,
+        "name": "http.ServerResponse.prototype.assignSocket"
+    },
+    {
+        "id": 922,
+        "name": "http.ServerResponse.prototype.detachSocket"
+    },
+    {
+        "id": 923,
+        "name": "http.ServerResponse.prototype.writeContinue"
+    },
+    {
+        "id": 924,
+        "name": "http.ServerResponse.prototype.writeProcessing"
+    },
+    {
+        "id": 925,
+        "name": "http.ServerResponse.prototype._implicitHeader"
+    },
+    {
+        "id": 926,
+        "name": "http.ServerResponse.prototype.writeHead"
+    },
+    {
+        "id": 927,
+        "name": "http.globalAgent._events.free"
+    },
+    {
+        "id": 928,
+        "name": "http.globalAgent._events.newListener"
+    },
+    {
+        "id": 929,
+        "name": "http2.Http2ServerRequest.prototype._read"
+    },
+    {
+        "id": 930,
+        "name": "http2.Http2ServerRequest.prototype.setTimeout"
+    },
+    {
+        "id": 931,
+        "name": "http2.Http2ServerResponse.prototype.setTrailer"
+    },
+    {
+        "id": 932,
+        "name": "http2.Http2ServerResponse.prototype.addTrailers"
+    },
+    {
+        "id": 933,
+        "name": "http2.Http2ServerResponse.prototype.getHeader"
+    },
+    {
+        "id": 934,
+        "name": "http2.Http2ServerResponse.prototype.getHeaderNames"
+    },
+    {
+        "id": 935,
+        "name": "http2.Http2ServerResponse.prototype.getHeaders"
+    },
+    {
+        "id": 936,
+        "name": "http2.Http2ServerResponse.prototype.hasHeader"
+    },
+    {
+        "id": 937,
+        "name": "http2.Http2ServerResponse.prototype.removeHeader"
+    },
+    {
+        "id": 938,
+        "name": "http2.Http2ServerResponse.prototype.setHeader"
+    },
+    {
+        "id": 939,
+        "name": "http2.Http2ServerResponse.prototype.flushHeaders"
+    },
+    {
+        "id": 940,
+        "name": "http2.Http2ServerResponse.prototype.writeHead"
+    },
+    {
+        "id": 941,
+        "name": "http2.Http2ServerResponse.prototype.cork"
+    },
+    {
+        "id": 942,
+        "name": "http2.Http2ServerResponse.prototype.uncork"
+    },
+    {
+        "id": 943,
+        "name": "http2.Http2ServerResponse.prototype.write"
+    },
+    {
+        "id": 944,
+        "name": "http2.Http2ServerResponse.prototype.end"
+    },
+    {
+        "id": 945,
+        "name": "http2.Http2ServerResponse.prototype.destroy"
+    },
+    {
+        "id": 946,
+        "name": "http2.Http2ServerResponse.prototype.setTimeout"
+    },
+    {
+        "id": 947,
+        "name": "http2.Http2ServerResponse.prototype.createPushResponse"
+    },
+    {
+        "id": 948,
+        "name": "http2.Http2ServerResponse.prototype.writeContinue"
+    },
+    {
+        "id": 949,
+        "name": "https.Agent.prototype.createConnection"
+    },
+    {
+        "id": 950,
+        "name": "https.Agent.prototype.getName"
+    },
+    {
+        "id": 951,
+        "name": "https.Agent.prototype._getSession"
+    },
+    {
+        "id": 952,
+        "name": "https.Agent.prototype._cacheSession"
+    },
+    {
+        "id": 953,
+        "name": "https.Agent.prototype._evictSession"
+    },
+    {
+        "id": 954,
+        "name": "https.globalAgent._events.free"
+    },
+    {
+        "id": 955,
+        "name": "inspector.Session.prototype.connect"
+    },
+    {
+        "id": 956,
+        "name": "inspector.Session.prototype.connectToMainThread"
+    },
+    {
+        "id": 957,
+        "name": "inspector.Session.prototype.post"
+    },
+    {
+        "id": 958,
+        "name": "inspector.Session.prototype.disconnect"
+    },
+    {
+        "id": 959,
+        "name": "module._debug.prototype.constructor"
+    },
+    {
+        "id": 960,
+        "name": "net.Server.prototype._listen2"
+    },
+    {
+        "id": 961,
+        "name": "net.Server.prototype.listen"
+    },
+    {
+        "id": 962,
+        "name": "net.Server.prototype.address"
+    },
+    {
+        "id": 963,
+        "name": "net.Server.prototype.getConnections"
+    },
+    {
+        "id": 964,
+        "name": "net.Server.prototype.close"
+    },
+    {
+        "id": 965,
+        "name": "net.Server.prototype._emitCloseIfDrained"
+    },
+    {
+        "id": 966,
+        "name": "net.Server.prototype._setupWorker"
+    },
+    {
+        "id": 967,
+        "name": "net.Server.prototype.ref"
+    },
+    {
+        "id": 968,
+        "name": "net.Server.prototype.unref"
+    },
+    {
+        "id": 969,
+        "name": "net.Socket.prototype._unrefTimer"
+    },
+    {
+        "id": 970,
+        "name": "net.Socket.prototype._final"
+    },
+    {
+        "id": 971,
+        "name": "net.Socket.prototype.setTimeout"
+    },
+    {
+        "id": 972,
+        "name": "net.Socket.prototype._onTimeout"
+    },
+    {
+        "id": 973,
+        "name": "net.Socket.prototype.setNoDelay"
+    },
+    {
+        "id": 974,
+        "name": "net.Socket.prototype.setKeepAlive"
+    },
+    {
+        "id": 975,
+        "name": "net.Socket.prototype.address"
+    },
+    {
+        "id": 976,
+        "name": "net.Socket.prototype._read"
+    },
+    {
+        "id": 977,
+        "name": "net.Socket.prototype.end"
+    },
+    {
+        "id": 978,
+        "name": "net.Socket.prototype.pause"
+    },
+    {
+        "id": 979,
+        "name": "net.Socket.prototype.resume"
+    },
+    {
+        "id": 980,
+        "name": "net.Socket.prototype.read"
+    },
+    {
+        "id": 981,
+        "name": "net.Socket.prototype.destroySoon"
+    },
+    {
+        "id": 982,
+        "name": "net.Socket.prototype._destroy"
+    },
+    {
+        "id": 983,
+        "name": "net.Socket.prototype._getpeername"
+    },
+    {
+        "id": 984,
+        "name": "net.Socket.prototype._getsockname"
+    },
+    {
+        "id": 985,
+        "name": "net.Socket.prototype._writeGeneric"
+    },
+    {
+        "id": 986,
+        "name": "net.Socket.prototype._writev"
+    },
+    {
+        "id": 987,
+        "name": "net.Socket.prototype._write"
+    },
+    {
+        "id": 988,
+        "name": "net.Socket.prototype.connect"
+    },
+    {
+        "id": 989,
+        "name": "net.Socket.prototype.ref"
+    },
+    {
+        "id": 990,
+        "name": "net.Socket.prototype.unref"
+    },
+    {
+        "id": 991,
+        "name": "perf_hooks.PerformanceObserver.prototype.disconnect"
+    },
+    {
+        "id": 992,
+        "name": "perf_hooks.PerformanceObserver.prototype.observe"
+    },
+    {
+        "id": 993,
+        "name": "process._events.newListener.0"
+    },
+    {
+        "id": 994,
+        "name": "process._events.newListener.1"
+    },
+    {
+        "id": 995,
+        "name": "process._events.removeListener.0"
+    },
+    {
+        "id": 996,
+        "name": "process._events.removeListener.1"
+    },
+    {
+        "id": 997,
+        "name": "process._events.SIGWINCH.0"
+    },
+    {
+        "id": 998,
+        "name": "process._events.SIGWINCH.1"
+    },
+    {
+        "id": 999,
+        "name": "process.assert.prototype.constructor"
+    },
+    {
+        "id": 1000,
+        "name": "process.stdin._events.pause"
+    },
+    {
+        "id": 1001,
+        "name": "process.stdin._writableState.onwrite"
+    },
+    {
+        "id": 1002,
+        "name": "readline.Interface.prototype.setPrompt"
+    },
+    {
+        "id": 1003,
+        "name": "readline.Interface.prototype._setRawMode"
+    },
+    {
+        "id": 1004,
+        "name": "readline.Interface.prototype.prompt"
+    },
+    {
+        "id": 1005,
+        "name": "readline.Interface.prototype.question"
+    },
+    {
+        "id": 1006,
+        "name": "readline.Interface.prototype._onLine"
+    },
+    {
+        "id": 1007,
+        "name": "readline.Interface.prototype._writeToOutput"
+    },
+    {
+        "id": 1008,
+        "name": "readline.Interface.prototype._addHistory"
+    },
+    {
+        "id": 1009,
+        "name": "readline.Interface.prototype._refreshLine"
+    },
+    {
+        "id": 1010,
+        "name": "readline.Interface.prototype.close"
+    },
+    {
+        "id": 1011,
+        "name": "readline.Interface.prototype.pause"
+    },
+    {
+        "id": 1012,
+        "name": "readline.Interface.prototype.resume"
+    },
+    {
+        "id": 1013,
+        "name": "readline.Interface.prototype.write"
+    },
+    {
+        "id": 1014,
+        "name": "readline.Interface.prototype._normalWrite"
+    },
+    {
+        "id": 1015,
+        "name": "readline.Interface.prototype._insertString"
+    },
+    {
+        "id": 1016,
+        "name": "readline.Interface.prototype._tabComplete"
+    },
+    {
+        "id": 1017,
+        "name": "readline.Interface.prototype._wordLeft"
+    },
+    {
+        "id": 1018,
+        "name": "readline.Interface.prototype._wordRight"
+    },
+    {
+        "id": 1019,
+        "name": "readline.Interface.prototype._deleteLeft"
+    },
+    {
+        "id": 1020,
+        "name": "readline.Interface.prototype._deleteRight"
+    },
+    {
+        "id": 1021,
+        "name": "readline.Interface.prototype._deleteWordLeft"
+    },
+    {
+        "id": 1022,
+        "name": "readline.Interface.prototype._deleteWordRight"
+    },
+    {
+        "id": 1023,
+        "name": "readline.Interface.prototype._deleteLineLeft"
+    },
+    {
+        "id": 1024,
+        "name": "readline.Interface.prototype._deleteLineRight"
+    },
+    {
+        "id": 1025,
+        "name": "readline.Interface.prototype.clearLine"
+    },
+    {
+        "id": 1026,
+        "name": "readline.Interface.prototype._line"
+    },
+    {
+        "id": 1027,
+        "name": "readline.Interface.prototype._historyNext"
+    },
+    {
+        "id": 1028,
+        "name": "readline.Interface.prototype._historyPrev"
+    },
+    {
+        "id": 1029,
+        "name": "readline.Interface.prototype._getDisplayPos"
+    },
+    {
+        "id": 1030,
+        "name": "readline.Interface.prototype.getCursorPos"
+    },
+    {
+        "id": 1031,
+        "name": "readline.Interface.prototype._moveCursor"
+    },
+    {
+        "id": 1032,
+        "name": "readline.Interface.prototype._ttyWrite"
+    },
+    {
+        "id": 1033,
+        "name": "repl.REPLServer.prototype.setupHistory"
+    },
+    {
+        "id": 1034,
+        "name": "repl.REPLServer.prototype.clearBufferedCommand"
+    },
+    {
+        "id": 1035,
+        "name": "repl.REPLServer.prototype.close"
+    },
+    {
+        "id": 1036,
+        "name": "repl.REPLServer.prototype.createContext"
+    },
+    {
+        "id": 1037,
+        "name": "repl.REPLServer.prototype.resetContext"
+    },
+    {
+        "id": 1038,
+        "name": "repl.REPLServer.prototype.displayPrompt"
+    },
+    {
+        "id": 1039,
+        "name": "repl.REPLServer.prototype.setPrompt"
+    },
+    {
+        "id": 1040,
+        "name": "repl.REPLServer.prototype.turnOffEditorMode"
+    },
+    {
+        "id": 1041,
+        "name": "repl.REPLServer.prototype.complete"
+    },
+    {
+        "id": 1042,
+        "name": "repl.REPLServer.prototype.completeOnEditorMode"
+    },
+    {
+        "id": 1043,
+        "name": "repl.REPLServer.prototype.defineCommand"
+    },
+    {
+        "id": 1044,
+        "name": "repl.REPLServer.prototype.memory"
+    },
+    {
+        "id": 1045,
+        "name": "stream.Readable.prototype._undestroy"
+    },
+    {
+        "id": 1046,
+        "name": "stream.Readable.prototype._destroy"
+    },
+    {
+        "id": 1047,
+        "name": "stream.Readable.prototype.push"
+    },
+    {
+        "id": 1048,
+        "name": "stream.Readable.prototype.unshift"
+    },
+    {
+        "id": 1049,
+        "name": "stream.Readable.prototype.isPaused"
+    },
+    {
+        "id": 1050,
+        "name": "stream.Readable.prototype.setEncoding"
+    },
+    {
+        "id": 1051,
+        "name": "stream.Readable.prototype.read"
+    },
+    {
+        "id": 1052,
+        "name": "stream.Readable.prototype._read"
+    },
+    {
+        "id": 1053,
+        "name": "stream.Readable.prototype.pipe"
+    },
+    {
+        "id": 1054,
+        "name": "stream.Readable.prototype.unpipe"
+    },
+    {
+        "id": 1055,
+        "name": "stream.Readable.prototype.on"
+    },
+    {
+        "id": 1056,
+        "name": "stream.Readable.prototype.removeListener"
+    },
+    {
+        "id": 1057,
+        "name": "stream.Readable.prototype.removeAllListeners"
+    },
+    {
+        "id": 1058,
+        "name": "stream.Readable.prototype.resume"
+    },
+    {
+        "id": 1059,
+        "name": "stream.Readable.prototype.pause"
+    },
+    {
+        "id": 1060,
+        "name": "stream.Readable.prototype.wrap"
+    },
+    {
+        "id": 1061,
+        "name": "stream.Writable.prototype.pipe"
+    },
+    {
+        "id": 1062,
+        "name": "stream.Writable.prototype.write"
+    },
+    {
+        "id": 1063,
+        "name": "stream.Writable.prototype.cork"
+    },
+    {
+        "id": 1064,
+        "name": "stream.Writable.prototype.uncork"
+    },
+    {
+        "id": 1065,
+        "name": "stream.Writable.prototype.setDefaultEncoding"
+    },
+    {
+        "id": 1066,
+        "name": "stream.Writable.prototype._write"
+    },
+    {
+        "id": 1067,
+        "name": "stream.Writable.prototype._destroy"
+    },
+    {
+        "id": 1068,
+        "name": "stream.Transform.prototype.push"
+    },
+    {
+        "id": 1069,
+        "name": "stream.Transform.prototype._transform"
+    },
+    {
+        "id": 1070,
+        "name": "stream.Transform.prototype._write"
+    },
+    {
+        "id": 1071,
+        "name": "stream.Transform.prototype._read"
+    },
+    {
+        "id": 1072,
+        "name": "stream.Transform.prototype._destroy"
+    },
+    {
+        "id": 1073,
+        "name": "stream.PassThrough.prototype._transform"
+    },
+    {
+        "id": 1074,
+        "name": "string_decoder.StringDecoder.prototype.write"
+    },
+    {
+        "id": 1075,
+        "name": "string_decoder.StringDecoder.prototype.end"
+    },
+    {
+        "id": 1076,
+        "name": "string_decoder.StringDecoder.prototype.text"
+    },
+    {
+        "id": 1077,
+        "name": "sys.TextDecoder.prototype.decode"
+    },
+    {
+        "id": 1078,
+        "name": "sys.TextEncoder.prototype.encode"
+    },
+    {
+        "id": 1079,
+        "name": "sys.TextEncoder.prototype.encodeInto"
+    },
+    {
+        "id": 1080,
+        "name": "timers._unrefActive.prototype.constructor"
+    },
+    {
+        "id": 1081,
+        "name": "timers.active.prototype.constructor"
+    },
+    {
+        "id": 1082,
+        "name": "timers.unenroll.prototype.constructor"
+    },
+    {
+        "id": 1083,
+        "name": "timers.enroll.prototype.constructor"
+    },
+    {
+        "id": 1084,
+        "name": "tls.parseCertString.prototype.constructor"
+    },
+    {
+        "id": 1085,
+        "name": "tls.TLSSocket.prototype.disableRenegotiation"
+    },
+    {
+        "id": 1086,
+        "name": "tls.TLSSocket.prototype._wrapHandle"
+    },
+    {
+        "id": 1087,
+        "name": "tls.TLSSocket.prototype._destroySSL"
+    },
+    {
+        "id": 1088,
+        "name": "tls.TLSSocket.prototype._init"
+    },
+    {
+        "id": 1089,
+        "name": "tls.TLSSocket.prototype.renegotiate"
+    },
+    {
+        "id": 1090,
+        "name": "tls.TLSSocket.prototype.setMaxSendFragment"
+    },
+    {
+        "id": 1091,
+        "name": "tls.TLSSocket.prototype._handleTimeout"
+    },
+    {
+        "id": 1092,
+        "name": "tls.TLSSocket.prototype._emitTLSError"
+    },
+    {
+        "id": 1093,
+        "name": "tls.TLSSocket.prototype._tlsError"
+    },
+    {
+        "id": 1094,
+        "name": "tls.TLSSocket.prototype._releaseControl"
+    },
+    {
+        "id": 1095,
+        "name": "tls.TLSSocket.prototype._finishInit"
+    },
+    {
+        "id": 1096,
+        "name": "tls.TLSSocket.prototype._start"
+    },
+    {
+        "id": 1097,
+        "name": "tls.TLSSocket.prototype.setServername"
+    },
+    {
+        "id": 1098,
+        "name": "tls.TLSSocket.prototype.setSession"
+    },
+    {
+        "id": 1099,
+        "name": "tls.TLSSocket.prototype.getPeerCertificate"
+    },
+    {
+        "id": 1100,
+        "name": "tls.TLSSocket.prototype.getCertificate"
+    },
+    {
+        "id": 1101,
+        "name": "tls.TLSSocket.prototype.getCipher"
+    },
+    {
+        "id": 1102,
+        "name": "tls.TLSSocket.prototype.getSharedSigalgs"
+    },
+    {
+        "id": 1103,
+        "name": "tls.TLSSocket.prototype.getEphemeralKeyInfo"
+    },
+    {
+        "id": 1104,
+        "name": "tls.TLSSocket.prototype.getFinished"
+    },
+    {
+        "id": 1105,
+        "name": "tls.TLSSocket.prototype.getPeerFinished"
+    },
+    {
+        "id": 1106,
+        "name": "tls.TLSSocket.prototype.getProtocol"
+    },
+    {
+        "id": 1107,
+        "name": "tls.TLSSocket.prototype.getSession"
+    },
+    {
+        "id": 1108,
+        "name": "tls.TLSSocket.prototype.getTLSTicket"
+    },
+    {
+        "id": 1109,
+        "name": "tls.TLSSocket.prototype.isSessionReused"
+    },
+    {
+        "id": 1110,
+        "name": "tls.TLSSocket.prototype.enableTrace"
+    },
+    {
+        "id": 1111,
+        "name": "tls.Server.prototype.setSecureContext"
+    },
+    {
+        "id": 1112,
+        "name": "tls.Server.prototype._getServerData"
+    },
+    {
+        "id": 1113,
+        "name": "tls.Server.prototype._setServerData"
+    },
+    {
+        "id": 1114,
+        "name": "tls.Server.prototype.getTicketKeys"
+    },
+    {
+        "id": 1115,
+        "name": "tls.Server.prototype.setTicketKeys"
+    },
+    {
+        "id": 1116,
+        "name": "tls.Server.prototype.setOptions"
+    },
+    {
+        "id": 1117,
+        "name": "tls.Server.prototype.addContext"
+    },
+    {
+        "id": 1118,
+        "name": "tls.createSecurePair.prototype.constructor"
+    },
+    {
+        "id": 1119,
+        "name": "tty.ReadStream.prototype.setRawMode"
+    },
+    {
+        "id": 1120,
+        "name": "tty.WriteStream.prototype.getColorDepth"
+    },
+    {
+        "id": 1121,
+        "name": "tty.WriteStream.prototype.hasColors"
+    },
+    {
+        "id": 1122,
+        "name": "tty.WriteStream.prototype._refreshSize"
+    },
+    {
+        "id": 1123,
+        "name": "tty.WriteStream.prototype.cursorTo"
+    },
+    {
+        "id": 1124,
+        "name": "tty.WriteStream.prototype.moveCursor"
+    },
+    {
+        "id": 1125,
+        "name": "tty.WriteStream.prototype.clearLine"
+    },
+    {
+        "id": 1126,
+        "name": "tty.WriteStream.prototype.clearScreenDown"
+    },
+    {
+        "id": 1127,
+        "name": "tty.WriteStream.prototype.getWindowSize"
+    },
+    {
+        "id": 1128,
+        "name": "url.Url.prototype.parse"
+    },
+    {
+        "id": 1129,
+        "name": "url.Url.prototype.format"
+    },
+    {
+        "id": 1130,
+        "name": "url.Url.prototype.resolve"
+    },
+    {
+        "id": 1131,
+        "name": "url.Url.prototype.resolveObject"
+    },
+    {
+        "id": 1132,
+        "name": "url.Url.prototype.parseHost"
+    },
+    {
+        "id": 1133,
+        "name": "url.URL.prototype.toString"
+    },
+    {
+        "id": 1134,
+        "name": "url.URL.prototype.toJSON"
+    },
+    {
+        "id": 1135,
+        "name": "url.URLSearchParams.prototype.append"
+    },
+    {
+        "id": 1136,
+        "name": "url.URLSearchParams.prototype.delete"
+    },
+    {
+        "id": 1137,
+        "name": "url.URLSearchParams.prototype.get"
+    },
+    {
+        "id": 1138,
+        "name": "url.URLSearchParams.prototype.getAll"
+    },
+    {
+        "id": 1139,
+        "name": "url.URLSearchParams.prototype.has"
+    },
+    {
+        "id": 1140,
+        "name": "url.URLSearchParams.prototype.set"
+    },
+    {
+        "id": 1141,
+        "name": "url.URLSearchParams.prototype.sort"
+    },
+    {
+        "id": 1142,
+        "name": "url.URLSearchParams.prototype.entries"
+    },
+    {
+        "id": 1143,
+        "name": "url.URLSearchParams.prototype.forEach"
+    },
+    {
+        "id": 1144,
+        "name": "url.URLSearchParams.prototype.keys"
+    },
+    {
+        "id": 1145,
+        "name": "url.URLSearchParams.prototype.values"
+    },
+    {
+        "id": 1146,
+        "name": "url.URLSearchParams.prototype.toString"
+    },
+    {
+        "id": 1147,
+        "name": "v8.Serializer.prototype._getDataCloneError"
+    },
+    {
+        "id": 1148,
+        "name": "v8.Deserializer.prototype.readRawBytes"
+    },
+    {
+        "id": 1149,
+        "name": "v8.DefaultSerializer.prototype._writeHostObject"
+    },
+    {
+        "id": 1150,
+        "name": "v8.DefaultDeserializer.prototype._readHostObject"
+    },
+    {
+        "id": 1151,
+        "name": "vm.Script.prototype.runInThisContext"
+    },
+    {
+        "id": 1152,
+        "name": "vm.Script.prototype.runInContext"
+    },
+    {
+        "id": 1153,
+        "name": "vm.Script.prototype.runInNewContext"
+    },
+    {
+        "id": 1154,
+        "name": "worker_threads.MessagePort.prototype.postMessage"
+    },
+    {
+        "id": 1155,
+        "name": "worker_threads.MessagePort.prototype.start"
+    },
+    {
+        "id": 1156,
+        "name": "worker_threads.MessagePort.prototype.ref"
+    },
+    {
+        "id": 1157,
+        "name": "worker_threads.MessagePort.prototype.unref"
+    },
+    {
+        "id": 1158,
+        "name": "worker_threads.MessagePort.prototype.onmessage"
+    },
+    {
+        "id": 1159,
+        "name": "worker_threads.MessagePort.prototype.close"
+    },
+    {
+        "id": 1160,
+        "name": "worker_threads.Worker.prototype.postMessage"
+    },
+    {
+        "id": 1161,
+        "name": "worker_threads.Worker.prototype.terminate"
+    },
+    {
+        "id": 1162,
+        "name": "worker_threads.Worker.prototype.ref"
+    },
+    {
+        "id": 1163,
+        "name": "worker_threads.Worker.prototype.unref"
+    },
+    {
+        "id": 1164,
+        "name": "console._stdout._writableState.corkedRequestsFree.finish"
+    },
+    {
+        "id": 1165,
+        "name": "console._stderr._writableState.corkedRequestsFree.finish"
+    },
+    {
+        "id": 1166,
+        "name": "dns.promises.Resolver.prototype.resolveAny"
+    },
+    {
+        "id": 1167,
+        "name": "dns.promises.Resolver.prototype.resolve4"
+    },
+    {
+        "id": 1168,
+        "name": "dns.promises.Resolver.prototype.resolve6"
+    },
+    {
+        "id": 1169,
+        "name": "dns.promises.Resolver.prototype.resolveCname"
+    },
+    {
+        "id": 1170,
+        "name": "dns.promises.Resolver.prototype.resolveMx"
+    },
+    {
+        "id": 1171,
+        "name": "dns.promises.Resolver.prototype.resolveNs"
+    },
+    {
+        "id": 1172,
+        "name": "dns.promises.Resolver.prototype.resolveTxt"
+    },
+    {
+        "id": 1173,
+        "name": "dns.promises.Resolver.prototype.resolveSrv"
+    },
+    {
+        "id": 1174,
+        "name": "dns.promises.Resolver.prototype.resolvePtr"
+    },
+    {
+        "id": 1175,
+        "name": "dns.promises.Resolver.prototype.resolveNaptr"
+    },
+    {
+        "id": 1176,
+        "name": "dns.promises.Resolver.prototype.resolveSoa"
+    },
+    {
+        "id": 1177,
+        "name": "dns.promises.Resolver.prototype.reverse"
+    },
+    {
+        "id": 1178,
+        "name": "dns.promises.Resolver.prototype.resolve"
+    },
+    {
+        "id": 1179,
+        "name": "process.stdin._writableState.corkedRequestsFree.finish"
+    },
+    {
+        "id": 1180,
+        "name": "stream.Writable.WritableState.prototype.getBuffer"
+    },
+    {
+        "id": 1181,
+        "name": "v8.Serializer.prototype._getDataCloneError.captureStackTrace"
+    },
+    {
+        "id": 1182,
+        "name": "dgram.Socket.prototype._healthCheck.prototype.constructor"
+    },
+    {
+        "id": 1183,
+        "name": "dgram.Socket.prototype._stopReceiving.prototype.constructor"
+    },
+    {
+        "id": 1184,
+        "name": "http.OutgoingMessage.prototype.flush.prototype.constructor"
+    },
+    {
+        "id": 1185,
+        "name": "repl.REPLServer.prototype.turnOffEditorMode.prototype.constructor"
+    },
+    {
+        "id": 1186,
+        "name": "repl.REPLServer.prototype.memory.prototype.constructor"
+    },
+    {
+        "id": 1187,
+        "name": "tls.Server.prototype.setOptions.prototype.constructor"
+    },
+    {
+        "id": 1188,
+        "name": "v8.Serializer.prototype._getDataCloneError.prototype.toString"
+    }
+]

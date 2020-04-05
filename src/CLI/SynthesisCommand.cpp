@@ -3,6 +3,7 @@
 #include "RegisterCommand.h"
 
 #include "Infrastructure/Stream.h"
+#include "Infrastructure/Memory.h"
 
 #include "Basic/CAFStore.h"
 #include "Fuzzer/TestCase.h"
@@ -24,17 +25,17 @@ public:
   explicit SynthesisCommand() = default;
 
   void SetupArgs(CLI::App &app) override {
-    app.add_option("-s", _opts.CAFStorePath, "Path to the cafstore.json file");
+    app.add_option("-s", _opts.CAFStorePath, "Path to the cafstore.json file")
+        ->required();
     app.add_option("-t,--target", _opts.Target, "Name of the target. Available targets: js, nodejs")
         ->default_val("js");
-    app.add_option("tc", _opts.TestCasePath, "Path to the test case file");
-
-    InitializeSynthesisers();
+    app.add_option("tc", _opts.TestCasePath, "Path to the test case file")
+        ->required();
   }
 
   int Execute(CLI::App &app) override {
     // Check target name.
-    if (Synthesisers.find(_opts.Target) != Synthesisers.end()) {
+    if (_opts.Target != "js" && _opts.Target != "nodejs") {
       PRINT_ERR_AND_EXIT_FMT("invalid target: %s", _opts.Target.c_str());
     }
 
@@ -57,8 +58,15 @@ public:
     TestCaseDeserializer de { *pool, fileStream };
     auto tc = de.Deserialize();
 
-    auto& builder = *Synthesisers[_opts.Target];
-    TestCaseSynthesiser syn { *store, builder };
+    std::unique_ptr<SynthesisBuilder> synthesisBuilder;
+    if (_opts.Target == "js") {
+      synthesisBuilder = caf::make_unique<JavaScriptSynthesisBuilder>(*store);
+    } else {
+      // Target is nodejs.
+      synthesisBuilder = caf::make_unique<NodejsSynthesisBuilder>(*store);
+    }
+
+    TestCaseSynthesiser syn { *store, *synthesisBuilder };
     syn.Synthesis(tc);
 
     auto code = syn.GetCode();
@@ -68,12 +76,6 @@ public:
   }
 
 private:
-  static void InitializeSynthesisers() {
-
-  }
-
-  static std::unordered_map<std::string, std::unique_ptr<SynthesisBuilder>> Synthesisers;
-
   struct Opts {
     std::string CAFStorePath;
     std::string Target;
@@ -82,8 +84,6 @@ private:
 
   Opts _opts;
 };
-
-std::unordered_map<std::string, std::unique_ptr<SynthesisBuilder>> SynthesisCommand::Synthesisers;
 
 static RegisterCommand<SynthesisCommand> X {
     "synthesis", "Synthesis a test case to script form" };

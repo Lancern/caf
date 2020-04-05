@@ -48,7 +48,7 @@ void JavaScriptSynthesisBuilder::WriteLiteralValue(const Value* value) {
       output << value->GetFloatValue();
       break;
     case ValueKind::String:
-      output << EscapeString(value->GetStringValue());
+      output << "\'" << EscapeString(value->GetStringValue()) << "\'";
       break;
     case ValueKind::Function:
       output << _store.GetFunction(value->GetFunctionId()).name();
@@ -64,6 +64,7 @@ void JavaScriptSynthesisBuilder::WriteVariableDef(
   auto& output = GetOutput();
   output << "let " << varName << " = ";
   WriteLiteralValue(value);
+  output << ";";
 }
 
 void JavaScriptSynthesisBuilder::WriteEmptyArrayVariableDef(const std::string& varName) {

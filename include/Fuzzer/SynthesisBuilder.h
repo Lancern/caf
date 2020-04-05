@@ -199,9 +199,9 @@ public:
   /**
    * @brief Get the synthesised code.
    *
-   * @return const std::string& the synthesised code.
+   * @return std::string the synthesised code.
    */
-  virtual const std::string& GetCode() = 0;
+  std::string GetCode() const;
 
 protected:
   /**

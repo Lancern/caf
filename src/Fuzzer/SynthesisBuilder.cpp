@@ -52,6 +52,10 @@ SynthesisVariable& SynthesisBuilder::SynthesisFunctionCall(
   return AddVariable(SynthesisVariable::Named(retValName));
 }
 
+std::string SynthesisBuilder::GetCode() const {
+  return _output.str();
+}
+
 std::string SynthesisBuilder::GetNextVariableName() {
   std::string name = "_";
   name.append(std::to_string(_varId++));

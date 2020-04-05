@@ -42,9 +42,9 @@ public:
   /**
    * @brief Get the synthesised code.
    *
-   * @return const std::string& the synthesised code.
+   * @return std::string the synthesised code.
    */
-  const std::string& GetCode() const;
+  std::string GetCode() const;
 
 private:
   const CAFStore& _store;

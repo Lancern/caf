@@ -31,7 +31,7 @@ void TestCaseSynthesiser::Synthesis(const TestCase &tc) {
   _builder.LeaveFunction();
 }
 
-const std::string& TestCaseSynthesiser::GetCode() const {
+std::string TestCaseSynthesiser::GetCode() const {
   return _builder.GetCode();
 }
 

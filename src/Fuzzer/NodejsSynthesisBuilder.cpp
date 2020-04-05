@@ -3,10 +3,53 @@
 #include "Fuzzer/Value.h"
 
 #include <cctype>
+#include <unordered_set>
 
 namespace caf {
 
 namespace {
+
+static const std::unordered_set<std::string> NativeModuleNames = {
+  "async_hooks",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "fs",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "module",
+  "net",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "stream",
+  "string_decoder",
+  "sys",
+  "timers",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib"
+};
 
 bool IsInModule(const std::string& name) {
   if (name.empty()) {
@@ -17,11 +60,13 @@ bool IsInModule(const std::string& name) {
     return false;
   }
 
-  if (name.find('.') == std::string::npos) {
+  auto sepIndex = name.find('.');
+  if (sepIndex == std::string::npos) {
     return false;
   }
 
-  return true;
+  auto moduleName = name.substr(0, sepIndex);
+  return NativeModuleNames.find(moduleName) != NativeModuleNames.end();
 }
 
 std::string GetModuleName(const std::string& name) {

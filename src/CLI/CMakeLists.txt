@@ -11,6 +11,7 @@ add_executable(CAFCLI
     RegisterCommand.h
     ShowCommand.cpp
     StatCommand.cpp
+    SynthesisCommand.cpp
     TestCaseDumper.cpp
     TestCaseDumper.h)
 

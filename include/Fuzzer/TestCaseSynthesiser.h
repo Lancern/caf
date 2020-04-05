@@ -40,9 +40,9 @@ public:
   void Synthesis(const TestCase& tc);
 
   /**
-   * @brief Get the JavaScript code.
+   * @brief Get the synthesised code.
    *
-   * @return const std::string& the JavaScript code.
+   * @return const std::string& the synthesised code.
    */
   const std::string& GetCode() const;
 

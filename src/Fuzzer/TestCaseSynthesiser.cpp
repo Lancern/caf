@@ -8,24 +8,22 @@ namespace caf {
 void TestCaseSynthesiser::Synthesis(const TestCase &tc) {
   _builder.EnterMainFunction();
 
-  std::vector<SynthesisVariable> retVars;
-  retVars.reserve(tc.GetFunctionCallsCount());
-
+  _retValVars.reserve(tc.GetFunctionCallsCount());
   for (const auto& call : tc) {
     auto receiver = SynthesisVariable::Empty();
     if (call.HasThis()) {
-      receiver = _builder.SynthesisConstant(call.GetThis());
+      receiver = SynthesisValue(call.GetThis());
     }
 
     std::vector<SynthesisVariable> args;
     args.reserve(call.GetArgsCount());
 
     for (auto arg : call) {
-      args.push_back(_builder.SynthesisConstant(arg));
+      args.push_back(SynthesisValue(arg));
     }
 
     const auto& functionName = _store.GetFunction(call.funcId()).name();
-    retVars.push_back(_builder.SynthesisFunctionCall(functionName, receiver, args));
+    _retValVars.push_back(_builder.SynthesisFunctionCall(functionName, receiver, args));
   }
 
   _builder.LeaveFunction();
@@ -33,6 +31,14 @@ void TestCaseSynthesiser::Synthesis(const TestCase &tc) {
 
 std::string TestCaseSynthesiser::GetCode() const {
   return _builder.GetCode();
+}
+
+SynthesisVariable TestCaseSynthesiser::SynthesisValue(const Value* value) {
+  if (value->IsPlaceholder()) {
+    return _retValVars.at(value->GetPlaceholderIndex());
+  } else {
+    return _builder.SynthesisConstant(value);
+  }
 }
 
 } // namespace caf

@@ -1,13 +1,14 @@
 #ifndef CAF_TEST_CASE_SYNTHESISER_H
 #define CAF_TEST_CASE_SYNTHESISER_H
 
+#include "Fuzzer/SynthesisBuilder.h"
+
 #include <string>
 
 namespace caf {
 
 class CAFStore;
 class TestCase;
-class SynthesisBuilder;
 
 /**
  * @brief Synthesis test cases to equivalent JavaScript code.
@@ -22,7 +23,8 @@ public:
    * @param builder the synthesis builder.
    */
   explicit TestCaseSynthesiser(const CAFStore& store, SynthesisBuilder& builder)
-    : _store(store), _builder(builder)
+    : _store(store), _builder(builder),
+      _retValVars()
   { }
 
   /**
@@ -49,6 +51,16 @@ public:
 private:
   const CAFStore& _store;
   SynthesisBuilder& _builder;
+
+  std::vector<SynthesisVariable> _retValVars;
+
+  /**
+   * @brief Synthesis the given constant value.
+   *
+   * @param value the value to synthesis.
+   * @return SynthesisVariable the synthesised variable.
+   */
+  SynthesisVariable SynthesisValue(const Value* value);
 }; // class TestCaseSynthesiser
 
 } // namespace caf

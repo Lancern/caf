@@ -9,9 +9,8 @@ CAFStore::CAFStore(std::vector<Function> functions)
 { }
 
 CAFStore::CAFStore(const nlohmann::json& json) {
-  auto funcsJson = json.at("funcs");
-  _funcs.reserve(funcsJson.size());
-  for (const auto& funcJson : funcsJson) {
+  _funcs.reserve(json.size());
+  for (const auto& funcJson : json) {
     _funcs.emplace_back(funcJson);
   }
 }

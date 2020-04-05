@@ -82,12 +82,18 @@ void JavaScriptSynthesisBuilder::WriteArrayPushStatement(
 void JavaScriptSynthesisBuilder::WriteFunctionCallStatement(
     const std::string& retVarName,
     const std::string& functionName,
+    bool isCtorCall,
     const std::string& receiverVarName,
     const std::vector<std::string>& argVarNames) {
   auto& output = GetOutput();
-  output << "let " << retVarName << " = " << functionName;
+  output << "let " << retVarName << " = ";
 
-  if (!receiverVarName.empty()) {
+  if (isCtorCall) {
+    output << "new ";
+  }
+  output << functionName;
+
+  if (!isCtorCall && !receiverVarName.empty()) {
     // Special receiver is specified.
     output << ".apply";
   }
@@ -95,7 +101,7 @@ void JavaScriptSynthesisBuilder::WriteFunctionCallStatement(
   output << "(";
 
   auto firstArg = true;
-  if (!receiverVarName.empty()) {
+  if (!isCtorCall && !receiverVarName.empty()) {
     output << receiverVarName;
     firstArg = false;
   }

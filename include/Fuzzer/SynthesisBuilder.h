@@ -185,6 +185,7 @@ public:
    * @brief Synthesis a function call.
    *
    * @param functionName name of the function to be called.
+   * @param isCtorCall true to make a constructor call rather a normal call.
    * @param receiver the receiver. This argument can be an empty SynthesisVariable object to
    * indicate that no special receiver is specified.
    * @param args arguments to the function call.
@@ -193,6 +194,7 @@ public:
    */
   SynthesisVariable& SynthesisFunctionCall(
       const std::string& functionName,
+      bool isCtorCall,
       const SynthesisVariable& receiver,
       const std::vector<SynthesisVariable>& args);
 
@@ -331,13 +333,15 @@ protected:
    *
    * @param retVarName the name of the variable holding the return value.
    * @param functionName the name of the function to be called.
-   * @param receiverVarname name of the variable holding the receiver. This argument can be an empty
+   * @param isCtorCall true to make a constructor call rather than a normal call.
+   * @param receiverVarName name of the variable holding the receiver. This argument can be an empty
    * string to indicate that no special receiver is specified.
    * @param argVarNames names of the variables holding the arguments.
    */
   virtual void WriteFunctionCallStatement(
       const std::string& retVarName,
       const std::string& functionName,
+      bool isCtorCall,
       const std::string& receiverVarName,
       const std::vector<std::string>& argVarNames) = 0;
 

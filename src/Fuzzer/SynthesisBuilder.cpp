@@ -34,6 +34,7 @@ SynthesisVariable& SynthesisBuilder::SynthesisConstant(const Value *value) {
 
 SynthesisVariable& SynthesisBuilder::SynthesisFunctionCall(
     const std::string &functionName,
+    bool isCtorCall,
     const SynthesisVariable &receiver,
     const std::vector<SynthesisVariable> &args) {
   std::string receiverVarName;
@@ -48,7 +49,7 @@ SynthesisVariable& SynthesisBuilder::SynthesisFunctionCall(
   }
 
   auto retValName = GetNextVariableName();
-  WriteFunctionCallStatement(retValName, functionName, receiverVarName, argVarNames);
+  WriteFunctionCallStatement(retValName, functionName, isCtorCall, receiverVarName, argVarNames);
   return AddVariable(SynthesisVariable::Named(retValName));
 }
 

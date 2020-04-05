@@ -30,6 +30,7 @@ protected:
   void WriteFunctionCallStatement(
       const std::string& retVarName,
       const std::string& functionName,
+      bool isCtorCall,
       const std::string& receiverVarName,
       const std::vector<std::string>& argVarNames) override;
 

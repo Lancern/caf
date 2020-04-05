@@ -23,7 +23,8 @@ void TestCaseSynthesiser::Synthesis(const TestCase &tc) {
     }
 
     const auto& functionName = _store.GetFunction(call.funcId()).name();
-    _retValVars.push_back(_builder.SynthesisFunctionCall(functionName, receiver, args));
+    _retValVars.push_back(_builder.SynthesisFunctionCall(
+        functionName, call.IsConstructorCall(), receiver, args));
   }
 
   _builder.LeaveFunction();

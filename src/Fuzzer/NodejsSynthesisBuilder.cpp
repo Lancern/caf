@@ -102,6 +102,7 @@ void NodejsSynthesisBuilder::WriteVariableDef(const std::string &varName, const 
 void NodejsSynthesisBuilder::WriteFunctionCallStatement(
     const std::string& retVarName,
     const std::string& functionName,
+    bool isCtorCall,
     const std::string& receiverVarName,
     const std::vector<std::string>& argVarNames) {
   if (IsInModule(functionName)) {
@@ -109,7 +110,7 @@ void NodejsSynthesisBuilder::WriteFunctionCallStatement(
   }
 
   JavaScriptSynthesisBuilder::WriteFunctionCallStatement(
-      retVarName, functionName, receiverVarName, argVarNames);
+      retVarName, functionName, isCtorCall, receiverVarName, argVarNames);
 }
 
 } // namespace caf

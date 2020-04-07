@@ -1,8 +1,6 @@
 #ifndef CAF_FUNCTION_H
 #define CAF_FUNCTION_H
 
-#include "json/json.hpp"
-
 #include <string>
 
 namespace caf {
@@ -36,13 +34,6 @@ public:
   Function& operator=(Function &&) = default;
 
   /**
-   * @brief Deserialize a Function object from the given JSON container.
-   *
-   * @param json the JSON container.
-   */
-  explicit Function(const nlohmann::json& json);
-
-  /**
    * @brief Get the ID of this function.
    *
    * @return FunctionIdType ID of this function.
@@ -55,13 +46,6 @@ public:
    * @return const std::string& name of this function.
    */
   const std::string& name() const { return _name; }
-
-  /**
-   * @brief Serialize this Function object into JSON form.
-   *
-   * @return nlohmann::json the JSON form of this Function object.
-   */
-  nlohmann::json ToJson() const;
 
 private:
   FunctionIdType _id;

@@ -1,6 +1,5 @@
 add_library(CAFBasic STATIC
     CAFStore.cpp
-    Function.cpp
     ${CAF_INCLUDE_DIR}/Basic/CAFStore.h
     ${CAF_INCLUDE_DIR}/Basic/Function.h)
 

@@ -72,11 +72,13 @@ v8::Local<v8::Object> CreateCallbackData(
 std::unique_ptr<CAFStore> GetCAFStore() {
   auto filePath = std::getenv("CAF_STORE");
   if (!filePath) {
+    PRINT_ERR_AND_EXIT("CAF_STORE not set.\n");
     return nullptr;
   }
 
   std::ifstream file { filePath };
   if (file.fail()) {
+    PRINT_ERR_AND_EXIT("failed to load CAF metadata store.\n");
     return nullptr;
   }
 
@@ -108,11 +110,6 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
       std::move(valueFactory), std::move(executor), std::move(resolver), global };
 
   auto store = GetCAFStore();
-  if (!store) {
-    fprintf(stderr, "error: failed to load CAF metadata store.\n");
-    std::exit(1);
-  }
-
   target.functions().Populate(*store);
 
 #ifdef CAF_ENABLE_AFL_DEFER

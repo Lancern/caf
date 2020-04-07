@@ -88,6 +88,10 @@ std::unique_ptr<CAFStore> GetCAFStore() {
   return caf::make_unique<CAFStore>(json);
 }
 
+bool IsInAFL() {
+  return getenv("__AFL_SHM_ID") || getenv("__AFL_CMPLOG_SHM_ID");
+}
+
 void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   SetupAbortHandler();
 
@@ -121,6 +125,10 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
 #endif
 
   target.Run();
+
+  if (IsInAFL()) {
+    std::exit(0);
+  }
 
 #ifdef CAF_ENABLE_AFL_PERSIST
   }

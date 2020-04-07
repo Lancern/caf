@@ -117,7 +117,7 @@ FloatValue* ObjectPool::GetOrCreateFloatValue(double value) {
 }
 
 PlaceholderValue* ObjectPool::GetPlaceholderValue(size_t index) {
-  if (index > _placeholderValues.size()) {
+  if (index >= _placeholderValues.size()) {
     _placeholderValues.resize(index + 1);
   }
 

@@ -103,6 +103,7 @@ public:
         std::cout << "Generating test case #" << tci << std::endl;
       }
 
+      pool->clear();
       auto tc = gen.GenerateTestCase();
 
       std::string outputFileName = "seed";

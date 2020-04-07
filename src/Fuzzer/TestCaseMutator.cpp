@@ -407,8 +407,9 @@ ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, size_t callIndex, in
   return (this->*mutator)(value, callIndex, depth);
 }
 
-ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t, int) {
-  auto element = _gen.GenerateValue();
+ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t callIndex, int) {
+  auto element = _gen.GenerateValue(
+      TestCaseGenerator::GeneratePlaceholderValueParams { callIndex });
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() + 1);
   for (size_t i = 0; i < value->size(); ++i) {

@@ -80,6 +80,18 @@ private:
   const TestCase* _spliceCandidate;
 
   /**
+   * @brief Fix all placeholder values that appears in the function calls whose index is not less
+   * than the given index, using the given placeholder fixer.
+   *
+   * @tparam Fixer the type of the placeholder fixer. Fixer should be callable.
+   * @param testCase the test case.
+   * @param startCallIndex the start function call index.
+   * @param fixer the fixer.
+   */
+  template <typename Fixer>
+  void FixPlaceholderValues(TestCase& testCase, size_t startCallIndex, Fixer fixer);
+
+  /**
    * @brief Mutate the given test case by adding a function call to the tail of the function call
    * sequence.
    *

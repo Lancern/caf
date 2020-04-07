@@ -73,6 +73,25 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
   (this->*mutator)(testCase);
 }
 
+template <typename Fixer>
+void TestCaseMutator::FixPlaceholderValues(TestCase& testCase, size_t startCallIndex, Fixer fixer) {
+  for (size_t i = startCallIndex; i < testCase.GetFunctionCallsCount(); ++i) {
+    auto& call = testCase.GetFunctionCall(i);
+    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
+      auto newValue = fixer(i, call.GetThis()->GetPlaceholderIndex());
+      call.SetThis(newValue);
+    }
+    for (size_t ai = 0; ai < call.GetArgsCount(); ++ai) {
+      auto arg = call.GetArg(ai);
+      if (!arg->IsPlaceholder()) {
+        continue;
+      }
+      auto newArg = fixer(i, arg->GetPlaceholderIndex());
+      call.SetArg(ai, newArg);
+    }
+  }
+}
+
 void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
   auto call = _gen.GenerateFunctionCall(index);
@@ -80,45 +99,31 @@ void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
 
   // Fix all placeholder values that reference to functions whose index is greater than or equal to
   // the inserted index.
-  auto mapIndex = [] (size_t oldIndex) -> size_t { return oldIndex + 1; };
-
-  for (size_t i = index + 1; i < testCase.GetFunctionCallsCount(); ++i) {
-    auto& call = testCase.GetFunctionCall(i);
-    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
-      auto newIndex = mapIndex(call.GetThis()->GetPlaceholderIndex());
-      call.SetThis(_pool.GetPlaceholderValue(newIndex));
-    }
-    for (size_t ai = 0; ai < call.GetArgsCount(); ++ai) {
-      auto arg = call.GetArg(ai);
-      if (!arg->IsPlaceholder()) {
-        continue;
-      }
-      auto newIndex = mapIndex(call.GetThis()->GetPlaceholderIndex());
-      call.SetArg(ai, _pool.GetPlaceholderValue(ai));
-    }
-  }
+  FixPlaceholderValues(testCase, index + 1,
+      [index, this] (size_t, size_t placeholderIndex) -> Value * {
+        if (placeholderIndex >= index) {
+          ++placeholderIndex;
+        }
+        return _pool.GetPlaceholderValue(placeholderIndex);
+      });
 }
 
 void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
-  auto callIndex = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
-  testCase.RemoveFunctionCall(callIndex);
+  auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
+  testCase.RemoveFunctionCall(index);
 
   // Fix all placeholder values that references to functions whose index is greater than or equal to
   // the removed index.
-  auto mapIndex = [] (size_t oldIndex) -> size_t { return oldIndex - 1; };
-
-  for (size_t i = callIndex; i < testCase.GetFunctionCallsCount(); ++i) {
-    auto& call = testCase.GetFunctionCall(i);
-    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
-      auto oldIndex = call.GetThis()->GetPlaceholderIndex();
-      if (oldIndex == callIndex) {
-        call.SetThis(_gen.GenerateValue(TestCaseGenerator::GeneratePlaceholderValueParams { i }));
-      } else {
-        auto newIndex = mapIndex(oldIndex);
-        call.SetThis(_pool.GetPlaceholderValue(newIndex));
-      }
-    }
-  }
+  FixPlaceholderValues(testCase, index,
+      [index, this] (size_t callIndex, size_t placeholderIndex) -> Value * {
+        if (placeholderIndex == index) {
+          return _gen.GenerateValue(
+              TestCaseGenerator::GeneratePlaceholderValueParams { callIndex });
+        } else if (placeholderIndex > index) {
+          --placeholderIndex;
+        }
+        return _pool.GetPlaceholderValue(placeholderIndex);
+      });
 }
 
 void TestCaseMutator::Splice(TestCase& testCase) {

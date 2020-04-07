@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 
 namespace caf {
 
@@ -130,6 +131,8 @@ PlaceholderValue* ObjectPool::GetPlaceholderValue(size_t index) {
 
 void ObjectPool::clear() {
   _values.clear();
+  _strToValue.clear();
+  std::fill(_intTable.get(), _intTable.get() + INTEGER_TABLE_SIZE, nullptr);
 }
 
 } // namespace caf

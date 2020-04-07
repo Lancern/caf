@@ -1,9 +1,13 @@
+#include "Targets/Common/Diagnostics.h"
 #include "Targets/Common/Target.h"
 #include "Targets/V8/V8Traits.h"
 #include "Targets/V8/V8ValueFactory.h"
 #include "Targets/V8/V8ArrayBuilder.h"
 
 #include "v8.h"
+
+#include <cstdio>
+#include <cstdlib>
 
 
 namespace caf {
@@ -37,8 +41,11 @@ V8ValueFactory::CreateBoolean(bool value) {
 
 typename V8Traits::FunctionType
 V8ValueFactory::CreateFunction(uint32_t funcId) {
-  return Target<V8Traits>::GetSingleton()->functions().GetFunction(funcId).take()
-    .As<v8::Function>();
+  auto function = Target<V8Traits>::GetSingleton()->functions().GetFunction(funcId);
+  if (!function) {
+    PRINT_ERR_AND_EXIT_FMT("executor: Cannot find function: %u\n", funcId);
+  }
+  return function.take().As<v8::Function>();
 }
 
 typename V8Traits::StringType

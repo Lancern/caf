@@ -15,7 +15,8 @@
             ],
             "libraries": [
                 "-L<!(pwd)/../../../build/lib",
-                "-lCAFV8Target"
+                "-lCAFV8Target",
+                "-lCAFBasic"
             ]
         }
     ]

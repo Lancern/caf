@@ -1,3 +1,5 @@
+let global = this;
+
 // Initialize all native modules.
 builtinModules = [
     "assert",
@@ -41,10 +43,17 @@ builtinModules = [
     "worker_threads",
     "zlib"
 ]
-builtinModules.map(require)
+builtinModules.forEach(name => {
+    let module = require(name);
+    Object.defineProperty(global, name, {
+        enumerable: true,
+        value: module,
+        writable: false
+    });
+});
 
 try {
-    require('./caf').run()
+    require('./caf').run(global)
 } catch (e) {
     // Do nothing.
 }

@@ -4,6 +4,7 @@
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Optional.h"
 #include "Basic/CAFStore.h"
+#include "Targets/Common/Diagnostics.h"
 #include "Targets/Common/PropertyResolver.h"
 
 #include <cassert>
@@ -50,6 +51,10 @@ public:
    */
   void AddFunction(uint32_t funcId, const std::string& name) {
     auto node = GetNode(name);
+    if (!node) {
+      PRINT_ERR_AND_EXIT_FMT("funcdb: Cannot find function \"%s\"\n", name.c_str());
+    }
+
     _funcIdToNode[funcId] = node;
   }
 

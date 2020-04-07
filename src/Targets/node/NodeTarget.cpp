@@ -1,5 +1,6 @@
 #include "Infrastructure/Memory.h"
 #include "Basic/CAFStore.h"
+#include "Targets/Common/Diagnostics.h"
 #include "Targets/Common/Target.h"
 #include "Targets/V8/V8Traits.h"
 #include "Targets/V8/V8ArrayBuilder.h"
@@ -95,10 +96,14 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   auto env = node::Environment::GetCurrent(context);
   auto callbackData = CreateCallbackData(isolate, context, env);
 
+  if (args.Length() < 1) {
+    PRINT_ERR_AND_EXIT("caf.run should be given at least 1 argument.\n");
+  }
+
   auto valueFactory = caf::make_unique<V8ValueFactory>(isolate, context, callbackData);
   auto executor = caf::make_unique<V8Executor>(isolate, context, callbackData);
   auto resolver = caf::make_unique<V8PropertyResolver>(context);
-  auto global = context->Global();
+  auto global = args[0];
   Target<V8Traits> target {
       std::move(valueFactory), std::move(executor), std::move(resolver), global };
 

@@ -1,7 +1,9 @@
+#include "Targets/Common/Diagnostics.h"
 #include "Targets/V8/V8Executor.h"
 
 #include "v8.h"
 
+#include <cstdio>
 #include <utility>
 
 namespace caf {
@@ -25,6 +27,10 @@ V8Executor::Invoke(
     typename V8Traits::ValueType receiver,
     bool isCtorCall,
     std::vector<typename V8Traits::ValueType> &args) {
+  if (!function->IsFunction()) {
+    PRINT_ERR_AND_EXIT("Attempting to call a non-function object.\n");
+  }
+
   v8::EscapableHandleScope handleScope { _isolate };
   v8::TryCatch tryBlock { _isolate };
 

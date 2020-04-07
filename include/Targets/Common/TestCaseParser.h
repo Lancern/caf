@@ -5,9 +5,12 @@
 #include "Infrastructure/Intrinsic.h"
 #include "Infrastructure/Memory.h"
 #include "Infrastructure/Stream.h"
+#include "Targets/Common/Diagnostics.h"
 
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <vector>
 #include <type_traits>
@@ -98,8 +101,12 @@ private:
       args.push_back(ParseValue());
     }
 
-    auto function = _target.functions().GetFunction(funcId).take();
-    auto ret = _target.executor().Invoke(function, thisValue, isCtorCall, args);
+    auto function = _target.functions().GetFunction(funcId);
+    if (!function) {
+      PRINT_ERR_AND_EXIT_FMT("parser: Cannot find function #%u\n", funcId);
+    }
+
+    auto ret = _target.executor().Invoke(function.take(), thisValue, isCtorCall, args);
     _pool.push_back(ret);
   }
 

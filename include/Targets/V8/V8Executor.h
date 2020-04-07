@@ -30,7 +30,7 @@ public:
   { }
 
   typename V8Traits::ValueType Invoke(
-      v8::Local<v8::Function> function,
+      v8::Local<v8::Value> function,
       typename V8Traits::ValueType receiver,
       bool isCtorCall,
       std::vector<typename V8Traits::ValueType>& args) override;

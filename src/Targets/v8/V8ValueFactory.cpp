@@ -37,7 +37,8 @@ V8ValueFactory::CreateBoolean(bool value) {
 
 typename V8Traits::FunctionType
 V8ValueFactory::CreateFunction(uint32_t funcId) {
-  return Target<V8Traits>::GetSingleton()->functions().GetFunction(funcId);
+  return Target<V8Traits>::GetSingleton()->functions().GetFunction(funcId).take()
+    .As<v8::Function>();
 }
 
 typename V8Traits::StringType

@@ -1,11 +1,13 @@
 #include "Infrastructure/Memory.h"
-
+#include "Basic/CAFStore.h"
 #include "Targets/Common/Target.h"
 #include "Targets/V8/V8Traits.h"
 #include "Targets/V8/V8ArrayBuilder.h"
 #include "Targets/V8/V8ValueFactory.h"
 #include "Targets/V8/V8Executor.h"
-#include "Targets/V8/V8Target.h"
+#include "Targets/V8/V8PropertyResolver.h"
+
+#include "json/json.hpp"
 
 #include "node.h"
 #include "env.h"
@@ -17,6 +19,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <memory>
 
 #ifdef CAF_ENABLE_AFL_PERSIST
@@ -65,6 +68,23 @@ v8::Local<v8::Object> CreateCallbackData(
   return handleScope.Escape(ret);
 }
 
+std::unique_ptr<CAFStore> GetCAFStore() {
+  auto filePath = std::getenv("CAF_STORE");
+  if (!filePath) {
+    return nullptr;
+  }
+
+  std::ifstream file { filePath };
+  if (file.fail()) {
+    return nullptr;
+  }
+
+  nlohmann::json json;
+  file >> json;
+
+  return caf::make_unique<CAFStore>(json);
+}
+
 void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
   SetupAbortHandler();
 
@@ -77,9 +97,18 @@ void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
   auto valueFactory = caf::make_unique<V8ValueFactory>(isolate, context, callbackData);
   auto executor = caf::make_unique<V8Executor>(isolate, context, callbackData);
-  Target<V8Traits> target { std::move(valueFactory), std::move(executor) };
+  auto resolver = caf::make_unique<V8PropertyResolver>(context);
+  auto global = context->Global();
+  Target<V8Traits> target {
+      std::move(valueFactory), std::move(executor), std::move(resolver), global };
 
-  V8Target::PopulateFunctionDatabase(target, args);
+  auto store = GetCAFStore();
+  if (!store) {
+    fprintf(stderr, "error: failed to load CAF metadata store.\n");
+    std::exit(1);
+  }
+
+  target.functions().Populate(*store);
 
 #ifdef CAF_ENABLE_AFL_DEFER
   __afl_manual_init();

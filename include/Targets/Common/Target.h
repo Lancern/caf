@@ -4,6 +4,7 @@
 #include "Targets/Common/ValueFactory.h"
 #include "Targets/Common/AbstractExecutor.h"
 #include "Targets/Common/FunctionDatabase.h"
+#include "Targets/Common/PropertyResolver.h"
 #include "Targets/Common/TestCaseParser.h"
 
 #include <cassert>
@@ -26,16 +27,22 @@ public:
    *
    * @param factory the target-specific value factory.
    * @param executor the target-specific executor.
+   * @param resolver the resolver.
+   * @param global the global object.
    */
   explicit Target(
       std::unique_ptr<ValueFactory<TargetTraits>> factory,
-      std::unique_ptr<AbstractExecutor<TargetTraits>> executor)
+      std::unique_ptr<AbstractExecutor<TargetTraits>> executor,
+      std::unique_ptr<PropertyResolver<TargetTraits>> resolver,
+      typename TargetTraits::ValueType global)
     : _factory(std::move(factory)),
       _executor(std::move(executor)),
-      _funcs(caf::make_unique<FunctionDatabase<TargetTraits>>())
+      _resolver(std::move(resolver)),
+      _funcs(caf::make_unique<FunctionDatabase<TargetTraits>>(*_resolver, global))
   {
     assert(_factory && "factory cannot be null.");
     assert(_executor && "executor cannot be null.");
+    assert(_resolver && "resolver cannot be null.");
     assert(!Singleton && "Duplicate Target instance.");
     Singleton = this;
   }
@@ -53,6 +60,13 @@ public:
    * @return AbstractExecutor<TargetTraits>& the target-specific executor.
    */
   AbstractExecutor<TargetTraits>& executor() const { return *_executor; }
+
+  /**
+   * @brief Get the target-specific property resolver.
+   *
+   * @return PropertyResolver<TargetTraits>& the target-specific property resolver.
+   */
+  PropertyResolver<TargetTraits>& resolver() const { return *_resolver; }
 
   /**
    * @brief Get the function database.
@@ -82,6 +96,7 @@ public:
 private:
   std::unique_ptr<ValueFactory<TargetTraits>> _factory;
   std::unique_ptr<AbstractExecutor<TargetTraits>> _executor;
+  std::unique_ptr<PropertyResolver<TargetTraits>> _resolver;
   std::unique_ptr<FunctionDatabase<TargetTraits>> _funcs;
 
   static Target<TargetTraits>* Singleton;

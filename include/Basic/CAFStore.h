@@ -25,6 +25,9 @@ public:
     size_t ApiFunctionsCount;
   }; // struct Statistics
 
+  using iterator = typename std::vector<Function>::iterator;
+  using const_iterator = typename std::vector<Function>::const_iterator;
+
   /**
    * @brief Construct a new CAFStore object.
    *
@@ -113,6 +116,12 @@ public:
    * @return nlohmann::json the JSON form.
    */
   nlohmann::json ToJson() const;
+
+  iterator begin() { return _funcs.begin(); }
+  iterator end() { return _funcs.end(); }
+
+  const_iterator begin() const { return _funcs.begin(); }
+  const_iterator end() const { return _funcs.end(); }
 
 private:
   std::vector<Function> _funcs;

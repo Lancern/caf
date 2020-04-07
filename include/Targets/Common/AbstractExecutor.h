@@ -15,7 +15,6 @@ template <typename TargetTraits>
 class AbstractExecutor {
 public:
   using ValueType = typename TargetTraits::ValueType;
-  using FunctionType = typename TargetTraits::FunctionType;
 
   /**
    * @brief Destroy the AbstractExecutor object.
@@ -33,7 +32,7 @@ public:
    * @return ValueType the return value of the API function.
    */
   virtual ValueType Invoke(
-      FunctionType function, ValueType receiver, bool isCtorCall, std::vector<ValueType>& args) = 0;
+      ValueType function, ValueType receiver, bool isCtorCall, std::vector<ValueType>& args) = 0;
 
 protected:
   /**

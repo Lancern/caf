@@ -98,7 +98,7 @@ private:
       args.push_back(ParseValue());
     }
 
-    auto function = _target.functions().GetFunction(funcId);
+    auto function = _target.functions().GetFunction(funcId).take();
     auto ret = _target.executor().Invoke(function, thisValue, isCtorCall, args);
     _pool.push_back(ret);
   }

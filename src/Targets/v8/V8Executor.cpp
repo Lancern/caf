@@ -21,18 +21,19 @@ inline v8::Local<v8::Value> TryUnwrapMaybe(v8::Isolate* isolate, v8::MaybeLocal<
 
 typename V8Traits::ValueType
 V8Executor::Invoke(
-    v8::Local<v8::Function> function,
+    v8::Local<v8::Value> function,
     typename V8Traits::ValueType receiver,
     bool isCtorCall,
     std::vector<typename V8Traits::ValueType> &args) {
   v8::EscapableHandleScope handleScope { _isolate };
   v8::TryCatch tryBlock { _isolate };
 
+  auto func = function.As<v8::Function>();
   v8::Local<v8::Value> ret;
   if (isCtorCall) {
-    ret = TryUnwrapMaybe(_isolate, function->NewInstance(_context, args.size(), args.data()));
+    ret = TryUnwrapMaybe(_isolate, func->NewInstance(_context, args.size(), args.data()));
   } else {
-    ret = TryUnwrapMaybe(_isolate, function->Call(_context, receiver, args.size(), args.data()));
+    ret = TryUnwrapMaybe(_isolate, func->Call(_context, receiver, args.size(), args.data()));
   }
 
   if (tryBlock.HasCaught()) {

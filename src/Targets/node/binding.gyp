@@ -6,7 +6,8 @@
                 "NodeTarget.cpp"
             ],
             "include_dirs": [
-                "../../../include"
+                "../../../include",
+                "../../../deps"
             ],
             "defines": [
                 "NODE_WANT_INTERNALS=1",

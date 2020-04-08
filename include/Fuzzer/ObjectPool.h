@@ -109,9 +109,7 @@ public:
    *
    * @return ArrayValue* the created array value object.
    */
-  ArrayValue* CreateArrayValue() {
-    return CreateValue<ArrayValue>();
-  }
+  ArrayValue* CreateArrayValue();
 
   /**
    * @brief Get a PlaceholderValue representing the given index reference.
@@ -183,6 +181,7 @@ private:
   std::unique_ptr<FloatValue> _nan; // NaN value.
   std::unique_ptr<FloatValue> _inf; // +infinity value.
   std::unique_ptr<FloatValue> _negInf; // -infinity value.
+  std::vector<std::unique_ptr<ArrayValue>> _arrayValues;
   std::vector<std::unique_ptr<PlaceholderValue>> _placeholderValues;
 }; // class ObjectPool
 

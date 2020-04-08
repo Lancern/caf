@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 #include <algorithm>
 
 namespace caf {
@@ -35,6 +36,7 @@ ObjectPool::ObjectPool()
     _nan(nullptr),
     _inf(nullptr),
     _negInf(nullptr),
+    _arrayValues(),
     _placeholderValues(PLACEHOLDER_TABLE_INIT_SIZE)
 { }
 
@@ -115,6 +117,13 @@ FloatValue* ObjectPool::GetOrCreateFloatValue(double value) {
     default:
       return CreateValue<FloatValue>(value);
   }
+}
+
+ArrayValue* ObjectPool::CreateArrayValue() {
+  auto value = caf::make_unique<ArrayValue>();
+  auto ret = value.get();
+  _arrayValues.push_back(std::move(value));
+  return ret;
 }
 
 PlaceholderValue* ObjectPool::GetPlaceholderValue(size_t index) {

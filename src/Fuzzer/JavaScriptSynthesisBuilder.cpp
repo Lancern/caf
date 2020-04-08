@@ -145,6 +145,8 @@ std::string JavaScriptSynthesisBuilder::EscapeString(const std::string& s) const
         ret.append("\\\"");
       } else if (ch == '\'') {
         ret.append("\\\'");
+      } else if (ch == '\\') {
+        ret.append("\\\\");
       } else {
         ret.push_back(ch);
       }

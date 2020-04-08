@@ -12,7 +12,9 @@ SynthesisVariable SynthesisBuilder::SynthesisConstant(const Value *value) {
     return GetSynthesisedVariable(value);
   }
 
-  assert(value->kind() != ValueKind::Placeholder && "Cannot synthesis a placeholder value.");
+  if (value->IsPlaceholder()) {
+    return GetRetValueVariable(value->GetPlaceholderIndex());
+  }
 
   auto varName = GetNextVariableName();
   auto var = CreateVariable(varName);
@@ -50,7 +52,10 @@ SynthesisVariable SynthesisBuilder::SynthesisFunctionCall(
 
   auto retValName = GetNextVariableName();
   WriteFunctionCallStatement(retValName, functionName, isCtorCall, receiverVarName, argVarNames);
-  return CreateVariable(std::move(retValName));
+
+  auto var = CreateVariable(std::move(retValName));
+  _funcRetVariables.push_back(_variables.size() - 1);
+  return var;
 }
 
 std::string SynthesisBuilder::GetCode() const {

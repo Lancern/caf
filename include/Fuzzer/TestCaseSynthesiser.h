@@ -23,8 +23,7 @@ public:
    * @param builder the synthesis builder.
    */
   explicit TestCaseSynthesiser(const CAFStore& store, SynthesisBuilder& builder)
-    : _store(store), _builder(builder),
-      _retValVars()
+    : _store(store), _builder(builder)
   { }
 
   /**
@@ -51,16 +50,6 @@ public:
 private:
   const CAFStore& _store;
   SynthesisBuilder& _builder;
-
-  std::vector<SynthesisVariable> _retValVars;
-
-  /**
-   * @brief Synthesis the given constant value.
-   *
-   * @param value the value to synthesis.
-   * @return SynthesisVariable the synthesised variable.
-   */
-  SynthesisVariable SynthesisValue(const Value* value);
 }; // class TestCaseSynthesiser
 
 } // namespace caf

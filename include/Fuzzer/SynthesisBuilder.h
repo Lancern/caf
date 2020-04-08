@@ -129,6 +129,7 @@ protected:
     : _variables(),
       _output(),
       _synthesisedVariables(),
+      _funcRetVariables(),
       _varId(0)
   { }
 
@@ -207,6 +208,17 @@ protected:
   }
 
   /**
+   * @brief Get the variable holding the return value of the given function call.
+   *
+   * @param functionCallIndex the index of the function call.
+   * @return SynthesisVariable the variable holding the return value.
+   */
+  SynthesisVariable GetRetValueVariable(size_t functionCallIndex) const {
+    auto varIndex = _funcRetVariables.at(functionCallIndex);
+    return _variables.at(varIndex);
+  }
+
+  /**
    * @brief When overridden in derived classes, write a variable reference expression to the
    * synthesised code that references the given variable in a language-specific manner.
    *
@@ -264,6 +276,7 @@ private:
   std::vector<SynthesisVariable> _variables;
   std::ostringstream _output;
   std::unordered_map<const Value *, size_t> _synthesisedVariables;
+  std::vector<size_t> _funcRetVariables;
   int _varId;
 }; // class SynthesisBuilder
 

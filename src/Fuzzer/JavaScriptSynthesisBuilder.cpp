@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <cctype>
+#include <cmath>
 
 namespace caf {
 
@@ -44,9 +45,20 @@ void JavaScriptSynthesisBuilder::WriteLiteralValue(const Value* value) {
     case ValueKind::Integer:
       output << value->GetIntegerValue();
       break;
-    case ValueKind::Float:
-      output << value->GetFloatValue();
+    case ValueKind::Float: {
+      auto number = value->GetFloatValue();
+      if (std::isnan(number)) {
+        output << "NaN";
+      } else if (std::isinf(number)) {
+        if (number < 0) {
+          output << "-";
+        }
+        output << "Infinity";
+      } else {
+        output << number;
+      }
       break;
+    }
     case ValueKind::String:
       output << "\'" << EscapeString(value->GetStringValue()) << "\'";
       break;

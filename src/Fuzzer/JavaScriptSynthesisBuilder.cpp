@@ -98,8 +98,11 @@ void JavaScriptSynthesisBuilder::WriteFunctionCallStatement(
     const std::string& receiverVarName,
     const std::vector<std::string>& argVarNames) {
   auto& output = GetOutput();
-  output << "let " << retVarName << " = ";
+  output << "let " << retVarName << ";";
 
+  output << "try { ";
+
+  output << retVarName << " = ";
   if (isCtorCall) {
     output << "new ";
   }
@@ -128,6 +131,8 @@ void JavaScriptSynthesisBuilder::WriteFunctionCallStatement(
   }
 
   output << ");";
+
+  output << " } catch (e) { }";
 }
 
 std::string JavaScriptSynthesisBuilder::EscapeString(const std::string& s) const {

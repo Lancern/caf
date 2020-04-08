@@ -6,7 +6,7 @@
 
 namespace caf {
 
-SynthesisVariable& SynthesisBuilder::SynthesisConstant(const Value *value) {
+SynthesisVariable SynthesisBuilder::SynthesisConstant(const Value *value) {
   assert(value && "value cannot be nullptr.");
   if (HasSynthesised(value)) {
     return GetSynthesisedVariable(value);
@@ -15,14 +15,14 @@ SynthesisVariable& SynthesisBuilder::SynthesisConstant(const Value *value) {
   assert(value->kind() != ValueKind::Placeholder && "Cannot synthesis a placeholder value.");
 
   auto varName = GetNextVariableName();
-  auto& var = AddVariable(SynthesisVariable::NamedConstant(varName, value));
+  auto var = CreateVariable(varName);
   SetLastSynthesisedValue(value);
 
   if (value->kind() == ValueKind::Array) {
     auto arrayValue = caf::dyn_cast<ArrayValue>(value);
     WriteEmptyArrayVariableDef(varName);
     for (size_t i = 0; i < arrayValue->size(); ++i) {
-      auto& elementVar = SynthesisConstant(arrayValue->GetElement(i));
+      auto elementVar = SynthesisConstant(arrayValue->GetElement(i));
       WriteArrayPushStatement(varName, elementVar.GetName());
     }
   } else {
@@ -32,7 +32,7 @@ SynthesisVariable& SynthesisBuilder::SynthesisConstant(const Value *value) {
   return var;
 }
 
-SynthesisVariable& SynthesisBuilder::SynthesisFunctionCall(
+SynthesisVariable SynthesisBuilder::SynthesisFunctionCall(
     const std::string &functionName,
     bool isCtorCall,
     const SynthesisVariable &receiver,
@@ -50,7 +50,7 @@ SynthesisVariable& SynthesisBuilder::SynthesisFunctionCall(
 
   auto retValName = GetNextVariableName();
   WriteFunctionCallStatement(retValName, functionName, isCtorCall, receiverVarName, argVarNames);
-  return AddVariable(SynthesisVariable::Named(retValName));
+  return CreateVariable(std::move(retValName));
 }
 
 std::string SynthesisBuilder::GetCode() const {

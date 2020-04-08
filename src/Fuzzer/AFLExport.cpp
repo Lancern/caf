@@ -6,6 +6,9 @@
 #include "Fuzzer/TestCaseMutator.h"
 #include "Fuzzer/TestCaseSerializer.h"
 #include "Fuzzer/TestCaseDeserializer.h"
+#include "Fuzzer/TestCaseSynthesiser.h"
+#include "Fuzzer/JavaScriptSynthesisBuilder.h"
+#include "Fuzzer/NodejsSynthesisBuilder.h"
 
 #include "json/json.hpp"
 
@@ -13,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -88,6 +92,29 @@ size_t afl_custom_mutator(
   std::memcpy(mutated_out, Buffer.data(), mutatedSize);
 
   return mutatedSize;
+}
+
+size_t afl_pre_save_handler(uint8_t* data, size_t size, uint8_t** new_data) {
+  if (!Store) {
+    LoadCAFStore();
+  }
+
+  caf::ObjectPool pool { };
+  caf::MemoryInputStream stream { data, size };
+  caf::TestCaseDeserializer de { pool, stream };
+  auto tc = de.Deserialize();
+
+  caf::NodejsSynthesisBuilder synthesisBuilder { *Store };
+  caf::TestCaseSynthesiser synthesiser { *Store, synthesisBuilder };
+  synthesiser.Synthesis(tc);
+
+  auto code = synthesiser.GetCode();
+  auto codeSize = code.length() * sizeof(typename std::string::value_type);
+  Buffer.resize(codeSize);
+  std::memcpy(Buffer.data(), code.data(), codeSize);
+
+  *new_data = Buffer.data();
+  return codeSize;
 }
 
 }

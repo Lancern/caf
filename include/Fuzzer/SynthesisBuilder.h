@@ -1,6 +1,8 @@
 #ifndef CAF_SYNTHESIS_BUILDER_H
 #define CAF_SYNTHESIS_BUILDER_H
 
+#include "Infrastructure/Memory.h"
+
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -21,28 +23,31 @@ class Value;
 class SynthesisVariable {
 public:
   /**
+   * @brief Construct an empty SynthesisVariable object.
+   *
+   */
+  explicit SynthesisVariable()
+    : _name()
+  { }
+
+  /**
+   * @brief Construct a new SynthesisVariable object.
+   *
+   * @param name name of the variable.
+   */
+  explicit SynthesisVariable(std::string name)
+    : _name(std::move(name))
+  {
+    assert(!_name.empty() && "name cannot be empty.");
+  }
+
+  /**
    * @brief Determine whether this object is empty.
    *
    * @return true if this object is empty.
    * @return false if this object is not empty.
    */
-  bool IsEmpty() const { return _name.empty() && _value == nullptr; }
-
-  /**
-   * @brief Determine whether this variable is bound to a name.
-   *
-   * @return true if this variable is bound to a name.
-   * @return false if this variable is not bound to a name.
-   */
-  bool IsNamed() const { return _name.length() > 0; }
-
-  /**
-   * @brief Determine whether this variable has a known constant value.
-   *
-   * @return true if this variable has a known constant value.
-   * @return false if this variable does not have a known constant value.
-   */
-  bool IsKnownConstant() const { return _value != nullptr; }
+  bool IsEmpty() const { return _name.empty(); }
 
   /**
    * @brief Get the name of this variable.
@@ -52,98 +57,8 @@ public:
    */
   const std::string& GetName() const { return _name; }
 
-  /**
-   * @brief Get the value of this variable.
-   *
-   * @return const Value* value of this variable. Returns nullptr if this variable does not have a
-   * known constant value.
-   */
-  const Value* GetValue() const { return _value; }
-
-  /**
-   * @brief Create an empty SynthesisVariable object.
-   *
-   * @return SynthesisVariable the created object.
-   */
-  static SynthesisVariable Empty() {
-    return SynthesisVariable { };
-  }
-
-  /**
-   * @brief Create a new SynthesisVariable object that represent a named variable with a known
-   * constant value.
-   *
-   * @param name name of the variable.
-   * @param value value of the variable.
-   * @return SynthesisVariable the created object.
-   */
-  static SynthesisVariable NamedConstant(std::string name, const Value* value) {
-    return SynthesisVariable { std::move(name), value };
-  }
-
-  /**
-   * @brief Create a new SynthesisVariable object that represent a named variable.
-   *
-   * @param name name of the variable.
-   * @return SynthesisVariable the created object.
-   */
-  static SynthesisVariable Named(std::string name) {
-    return SynthesisVariable { std::move(name) };
-  }
-
-  /**
-   * @brief Create a new SynthesisVariable object that represent a literal value (i.e. a known
-   * constant value that is not bound to a name).
-   *
-   * @param value value of the variable.
-   * @return SynthesisVariable the created object.
-   */
-  static SynthesisVariable Literal(const Value* value) {
-    return SynthesisVariable { value };
-  }
-
 private:
-  /**
-   * @brief Construct an empty SynthesisVariable object.
-   *
-   */
-  explicit SynthesisVariable()
-    : _name(), _value(nullptr)
-  { }
-
-  /**
-   * @brief Construct a new SynthesisVariable object.
-   *
-   * @param name name of the variable.
-   * @param value value of the variable.
-   */
-  explicit SynthesisVariable(std::string name, const Value* value)
-    : _name(std::move(name)),
-      _value(value)
-  { }
-
-  /**
-   * @brief Construct a new SynthesisVariable object.
-   *
-   * @param name name of the variable.
-   */
-  explicit SynthesisVariable(std::string name)
-    : _name(std::move(name)),
-      _value(nullptr)
-  { }
-
-  /**
-   * @brief Construct a new SynthesisVariable object.
-   *
-   * @param value value of the variable.
-   */
-  explicit SynthesisVariable(const Value* value)
-    : _name(),
-      _value(value)
-  { }
-
   std::string _name;
-  const Value* _value;
 }; // class SynthesisVariable
 
 /**
@@ -179,7 +94,7 @@ public:
    * @return SynthesisVariable& a SynthesisVariable object that can be used to refer to the
    * synthesised constant value.
    */
-  SynthesisVariable& SynthesisConstant(const Value* value);
+  SynthesisVariable SynthesisConstant(const Value* value);
 
   /**
    * @brief Synthesis a function call.
@@ -192,7 +107,7 @@ public:
    * @return SynthesisVariable& a SynthesisVariable object that can be used to refer to the return
    * value of the function call.
    */
-  SynthesisVariable& SynthesisFunctionCall(
+  SynthesisVariable SynthesisFunctionCall(
       const std::string& functionName,
       bool isCtorCall,
       const SynthesisVariable& receiver,
@@ -220,11 +135,11 @@ protected:
   /**
    * @brief Construct a new SynthesisVariable object managed by this SynthesisBuilder object.
    *
-   * @param var the stack-allocated SynthesisVariable that will be moved into this SynthesisBuilder.
+   * @param name name of the variable.
    * @return SynthesisVariable& the SynthesisVariable object managed by this SynthesisBuilder.
    */
-  SynthesisVariable& AddVariable(SynthesisVariable var) {
-    _variables.push_back(std::move(var));
+  SynthesisVariable CreateVariable(std::string name) {
+    _variables.emplace_back(std::move(name));
     return _variables.back();
   }
 
@@ -266,7 +181,7 @@ protected:
    * @param value the value.
    * @return SynthesisVariable& the synthesised variable corresponding to the given value.
    */
-  SynthesisVariable& GetSynthesisedVariable(const Value* value) {
+  SynthesisVariable GetSynthesisedVariable(const Value* value) {
     auto variableIndex = _synthesisedVariables.at(value);
     return _variables.at(variableIndex);
   }

@@ -10,7 +10,7 @@ void TestCaseSynthesiser::Synthesis(const TestCase &tc) {
 
   _retValVars.reserve(tc.GetFunctionCallsCount());
   for (const auto& call : tc) {
-    auto receiver = SynthesisVariable::Empty();
+    SynthesisVariable receiver { };
     if (call.HasThis()) {
       receiver = SynthesisValue(call.GetThis());
     }

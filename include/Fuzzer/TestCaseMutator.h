@@ -29,8 +29,7 @@ public:
     : _store(store),
       _pool(pool),
       _rnd(rnd),
-      _gen { store, pool, rnd },
-      _spliceCandidate(nullptr)
+      _gen { store, pool, rnd }
   { }
 
   TestCaseMutator(const TestCaseMutator &) = delete;
@@ -51,21 +50,6 @@ public:
   const Options& options() const { return _gen.options(); }
 
   /**
-   * @brief Determine whether this mutator has a splice candidate.
-   *
-   * @return true if this mutator has a splice candidate.
-   * @return false if this mutator does not have a splice candidate.
-   */
-  bool HasSpliceCandidate() const { return _spliceCandidate != nullptr; }
-
-  /**
-   * @brief Set the splice candidate of this mutator.
-   *
-   * @param candidate the splice candidate of this mutator.
-   */
-  void SetSpliceCandidate(const TestCase* candidate) { _spliceCandidate = candidate; }
-
-  /**
    * @brief Mutate the given test case.
    *
    * @param testCase the test case to mutate.
@@ -77,19 +61,6 @@ private:
   ObjectPool& _pool;
   Random<>& _rnd;
   TestCaseGenerator _gen;
-  const TestCase* _spliceCandidate;
-
-  /**
-   * @brief Fix all placeholder values that appears in the function calls whose index is not less
-   * than the given index, using the given placeholder fixer.
-   *
-   * @tparam Fixer the type of the placeholder fixer. Fixer should be callable.
-   * @param testCase the test case.
-   * @param startCallIndex the start function call index.
-   * @param fixer the fixer.
-   */
-  template <typename Fixer>
-  void FixPlaceholderValues(TestCase& testCase, size_t startCallIndex, Fixer fixer);
 
   /**
    * @brief Mutate the given test case by adding a function call to the tail of the function call
@@ -105,14 +76,6 @@ private:
    * @param testCase the test case to mutate.
    */
   void RemoveFunctionCall(TestCase& testCase);
-
-  /**
-   * @brief Mutate the given test case by splicing it with a randomly chosen test case from the
-   * corpus.
-   *
-   * @param testCase the test case to mutate.
-   */
-  void Splice(TestCase& testCase);
 
   /**
    * @brief Mutate the given test case by choosing a function call and mutating `this` object of

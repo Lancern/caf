@@ -1,3 +1,4 @@
+#include "Infrastructure/Casting.h"
 #include "Infrastructure/Intrinsic.h"
 #include "Fuzzer/TestCaseMutator.h"
 #include "Fuzzer/ObjectPool.h"
@@ -7,9 +8,55 @@
 
 #include <utility>
 #include <iterator>
+#include <unordered_set>
 #include <algorithm>
 
 namespace caf {
+
+namespace {
+
+class PlaceholderFixer {
+public:
+  explicit PlaceholderFixer()
+    : _fixedValues()
+  { }
+
+  template <typename Fixer>
+  void Fix(TestCase& testCase, size_t startCallIndex, Fixer fixer) {
+    _fixedValues.clear();
+    for (size_t i = startCallIndex; i < testCase.GetFunctionCallsCount(); ++i) {
+      auto& call = testCase.GetFunctionCall(i);
+      if (call.HasThis()) {
+        call.SetThis(FixValue(call.GetThis(), i, fixer));
+      }
+      for (size_t ai = 0; ai < call.GetArgsCount(); ++ai) {
+        call.SetArg(ai, FixValue(call.GetArg(ai), i, fixer));
+      }
+    }
+  }
+
+private:
+  std::unordered_set<Value *> _fixedValues;
+
+  template <typename Fixer>
+  Value* FixValue(Value* oldValue, size_t callIndex, Fixer& fixer) {
+    if (_fixedValues.find(oldValue) != _fixedValues.end()) {
+      return oldValue;
+    }
+    if (oldValue->IsPlaceholder()) {
+      return fixer(callIndex, oldValue->GetPlaceholderIndex());
+    } else if (oldValue->IsArray()) {
+      _fixedValues.insert(oldValue);
+      auto oldArrayValue = caf::dyn_cast<ArrayValue>(oldValue);
+      for (size_t i = 0; i < oldArrayValue->size(); ++i) {
+        oldArrayValue->SetElement(i, FixValue(oldArrayValue->GetElement(i), callIndex, fixer));
+      }
+    }
+    return oldValue;
+  }
+}; // class PlaceholderFixer
+
+} // namespace <anonymous>
 
 constexpr static const double GENERATE_NEW_VALUE_PROB = 0.1;
 constexpr static const double MUTATE_TYPE_PROB = 0.2;
@@ -22,7 +69,7 @@ constexpr static const double FLOAT_MIN_INCREMENT = -100;
 
 void TestCaseMutator::Mutate(TestCase& testCase) {
   using Mutator = void (TestCaseMutator::*)(TestCase &);
-  Mutator mutators[8];
+  Mutator mutators[7];
   Mutator* head = mutators;
 
   // Can we mutate the test case by `AddFunctionCall`?
@@ -33,11 +80,6 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
   // Can we mutate the test case by `RemoveFunctionCall`?
   if (testCase.GetFunctionCallsCount() > 1) {
     *head++ = &TestCaseMutator::RemoveFunctionCall;
-  }
-
-  // Can we mutate the test case by `Splice`?
-  if (HasSpliceCandidate()) {
-    *head++ = &TestCaseMutator::Splice;
   }
 
   // We can always mutate the test case by `MutateThis` and `MutateCtor`.
@@ -73,25 +115,6 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
   (this->*mutator)(testCase);
 }
 
-template <typename Fixer>
-void TestCaseMutator::FixPlaceholderValues(TestCase& testCase, size_t startCallIndex, Fixer fixer) {
-  for (size_t i = startCallIndex; i < testCase.GetFunctionCallsCount(); ++i) {
-    auto& call = testCase.GetFunctionCall(i);
-    if (call.HasThis() && call.GetThis()->IsPlaceholder()) {
-      auto newValue = fixer(i, call.GetThis()->GetPlaceholderIndex());
-      call.SetThis(newValue);
-    }
-    for (size_t ai = 0; ai < call.GetArgsCount(); ++ai) {
-      auto arg = call.GetArg(ai);
-      if (!arg->IsPlaceholder()) {
-        continue;
-      }
-      auto newArg = fixer(i, arg->GetPlaceholderIndex());
-      call.SetArg(ai, newArg);
-    }
-  }
-}
-
 void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
   auto call = _gen.GenerateFunctionCall(index);
@@ -99,7 +122,8 @@ void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
 
   // Fix all placeholder values that reference to functions whose index is greater than or equal to
   // the inserted index.
-  FixPlaceholderValues(testCase, index + 1,
+  PlaceholderFixer fixer;
+  fixer.Fix(testCase, index + 1,
       [index, this] (size_t, size_t placeholderIndex) -> Value * {
         if (placeholderIndex >= index) {
           ++placeholderIndex;
@@ -114,7 +138,8 @@ void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
 
   // Fix all placeholder values that references to functions whose index is greater than or equal to
   // the removed index.
-  FixPlaceholderValues(testCase, index,
+  PlaceholderFixer fixer;
+  fixer.Fix(testCase, index,
       [index, this] (size_t callIndex, size_t placeholderIndex) -> Value * {
         if (placeholderIndex == index) {
           return _gen.GenerateValue(
@@ -124,28 +149,6 @@ void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
         }
         return _pool.GetPlaceholderValue(placeholderIndex);
       });
-}
-
-void TestCaseMutator::Splice(TestCase& testCase) {
-  assert(_spliceCandidate && "No splice candidate set.");
-
-  auto prefixLen = _rnd.Next<size_t>(
-      0, std::min(options().MaxCalls, testCase.GetFunctionCallsCount()));
-  auto suffixLen = _rnd.Next<size_t>(
-      0, std::min(options().MaxCalls - prefixLen, _spliceCandidate->GetFunctionCallsCount()));
-
-  std::vector<FunctionCall> calls;
-  calls.reserve(suffixLen);
-  for (size_t i = _spliceCandidate->GetFunctionCallsCount() - suffixLen;
-       i < _spliceCandidate->GetFunctionCallsCount(); ++i) {
-    calls.push_back(_spliceCandidate->GetFunctionCall(i));
-  }
-
-  testCase.RemoveTailCalls(prefixLen);
-  testCase.AppendFunctionCalls(std::move(calls));
-
-  // TODO: Fix all placeholder values that reference to function calls whose index is greater than
-  // TODO: or equal to prefixLen.
 }
 
 void TestCaseMutator::MutateThis(TestCase& testCase) {

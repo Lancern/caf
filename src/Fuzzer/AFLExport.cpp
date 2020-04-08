@@ -76,13 +76,6 @@ size_t afl_custom_mutator(
   caf::TestCaseMutator mutator { *Store, pool, rng };
   caf::TestCase addTestCase;
 
-  // if (add_buf) {
-  //   caf::MemoryInputStream addBufStream { add_buf, add_buf_size };
-  //   caf::TestCaseDeserializer addDe { pool, addBufStream };
-  //   addTestCase = addDe.Deserialize();
-  //   mutator.SetSpliceCandidate(&addTestCase);
-  // }
-
   mutator.Mutate(primaryTestCase);
 
   Buffer.clear();

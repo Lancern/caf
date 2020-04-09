@@ -1,4 +1,5 @@
 add_executable(CAFCLI
+    CalibrateCommand.cpp
     Command.h
     CommandManager.cpp
     CommandManager.h

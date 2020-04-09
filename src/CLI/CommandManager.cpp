@@ -4,13 +4,13 @@
 
 #include "CLI11/CLI11.hpp"
 
-#include <mutex>
+#include <memory>
 
 namespace caf {
 
 namespace {
 
-CommandManager _singleton;
+std::unique_ptr<CommandManager> _singleton;
 
 } // namepace <anonymous>
 
@@ -42,7 +42,10 @@ Command* CommandManager::GetCommandOfApp(const CLI::App* app) const {
 }
 
 CommandManager* CommandManager::GetSingleton() {
-  return &_singleton;
+  if (!_singleton) {
+    _singleton = caf::make_unique<CommandManager>();
+  }
+  return _singleton.get();
 }
 
 } // namespace caf

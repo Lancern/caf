@@ -11,6 +11,9 @@
 #include <string>
 #include <vector>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <ftw.h>
 
@@ -81,6 +84,41 @@ char* DuplicateString(const char* s) {
   return buffer;
 }
 
+pid_t ExecuteCommand(
+    const std::vector<char *>& args,
+    const std::vector<char *>& envs,
+    bool noOutput = false) {
+  auto pid = fork();
+  if (pid < 0) {
+    PRINT_LAST_OS_ERR_AND_EXIT("fork failed");
+  }
+
+  if (pid > 0) {
+    return pid;
+  }
+
+  if (noOutput) {
+    auto devNull = open("/dev/null", O_WRONLY);
+    if (devNull == -1) {
+      PRINT_LAST_OS_ERR_AND_EXIT("open /dev/null failed");
+    }
+
+    if (dup2(devNull, STDOUT_FILENO) == -1) {
+      PRINT_LAST_OS_ERR_AND_EXIT("dup2 failed");
+    }
+    if (dup2(devNull, STDERR_FILENO) == -1) {
+      PRINT_LAST_OS_ERR_AND_EXIT("dup2 failed");
+    }
+  }
+
+  // We're in child process.
+  execve(args[0], args.data(), envs.data());
+  PRINT_LAST_OS_ERR_AND_EXIT("exec failed");
+
+  // Make some old compiler happy.
+  return 0;
+}
+
 } // namespace <anonymous>
 
 class FuzzCommand : public Command {
@@ -97,6 +135,11 @@ public:
     app.add_option("--afl", _opts.AflExecutable, "Path to the AFLplusplus executable")
         ->check(CLI::ExistingFile);
     app.add_flag("--resume", _opts.Resume, "Enable AFLplusplus auto resume");
+    app.add_option("-n", _opts.Parallelization, "Number of parallel afl-fuzz instances to run")
+        ->check(CLI::PositiveNumber)
+        ->default_val(1);
+    app.add_flag("--dry", _opts.DryRun, "Only construct arguments to AFL, do not actually run AFL");
+    app.add_flag("--quiet", _opts.Quiet, "Redirect AFL's output to /dev/null");
     app.add_option("-X", _opts.AFLArgs, "Arguments passed to AFL executable");
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
     app.add_option("target", _opts.Target, "The target executable and its params")
@@ -104,6 +147,9 @@ public:
   }
 
   int Execute(CLI::App &app) override {
+    _opts.Verbose = _opts.Verbose || _opts.DryRun;
+    _opts.Quiet = _opts.Quiet || (_opts.Parallelization > 1);
+
     if (_opts.AflExecutable.empty()) {
       _opts.AflExecutable = LookupAflExecutable();
       if (_opts.AflExecutable.empty()) {
@@ -125,7 +171,9 @@ public:
     mutatorLibVar.append(CAF_LIB_DIR);
     mutatorLibVar.append("/libCAFMutator.so");
     if (_opts.Verbose) {
-      std::cout << "export AFL_CUSTOM_MUTATOR_LIBRARY=" << CAF_LIB_DIR << "/libCAFMutator.so";
+      std::cout << "export AFL_CUSTOM_MUTATOR_LIBRARY="
+                << CAF_LIB_DIR << "/libCAFMutator.so"
+                << std::endl;
     }
 
     std::vector<char *> aflEnv;
@@ -151,6 +199,14 @@ public:
     } else {
       aflArgs.push_back(DuplicateString(_opts.SeedDir.c_str()));
     }
+
+    int parallelArg = -1;
+    if (_opts.Parallelization > 1) {
+      parallelArg = static_cast<int>(aflArgs.size());
+      aflArgs.push_back(nullptr);
+      aflArgs.push_back(nullptr);
+    }
+
     for (const auto& arg : _opts.AFLArgs) {
       aflArgs.push_back(DuplicateString(arg.c_str()));
     }
@@ -159,29 +215,62 @@ public:
     }
     aflArgs.push_back(nullptr);
 
-    if (_opts.Verbose) {
-      std::cout << "Launching AFLplusplus:" << std::endl << "\t";
-      for (auto arg : aflArgs) {
-        if (std::strpbrk(arg, " ")) {
-          std::cout << std::quoted(arg) << ' ';
-        } else {
-          std::cout << arg << ' ';
-        }
+    std::vector<pid_t> children;
+    children.reserve(_opts.Parallelization);
+    for (auto i = 0; i < _opts.Parallelization; ++i) {
+      if (parallelArg != -1) {
+        aflArgs[parallelArg] = (i == 0)
+            ? DuplicateString("-M")
+            : DuplicateString("-S");
+        std::string fuzzerName = "fuzzer";
+        fuzzerName.append(std::to_string(i));
+        aflArgs[parallelArg + 1] = DuplicateString(fuzzerName.c_str());
       }
-      std::cout << std::endl;
+
+      if (_opts.Verbose) {
+        std::cout << "Launching AFLplusplus:" << std::endl << "\t";
+        for (auto arg : aflArgs) {
+          if (!arg) {
+            break;
+          }
+          if (std::strpbrk(arg, " ")) {
+            std::cout << std::quoted(arg) << ' ';
+          } else {
+            std::cout << arg << ' ';
+          }
+        }
+        if (_opts.Quiet) {
+          std::cout << "1>/dev/null 2>/dev/null";
+        }
+        std::cout << std::endl;
+      }
+
+      if (!_opts.DryRun) {
+        children.push_back(ExecuteCommand(aflArgs, aflEnv, _opts.Quiet));
+      }
     }
 
-    execve(aflArgs[0], aflArgs.data(), aflEnv.data());
-    PRINT_LAST_OS_ERR_AND_EXIT("execve failed");
+    if (_opts.DryRun) {
+      return 0;
+    }
 
-    return 1;
+    auto ok = true;
+    for (auto childId : children) {
+      int status;
+      if (waitpid(childId, &status, 0) == -1) {
+        PRINT_LAST_OS_ERR("waitpid failed");
+        ok = false;
+      }
+    }
+
+    return static_cast<int>(!ok);
   }
 
 private:
   struct Opts {
     explicit Opts()
-      : StoreFileName(), SeedDir(), FindingsDir(), AflExecutable(), Target(),
-        AFLArgs(), Resume(false), Verbose(false)
+      : StoreFileName(), SeedDir(), FindingsDir(), AflExecutable(), Target(), AFLArgs(),
+        Parallelization(1), Resume(false), DryRun(false), Verbose(false), Quiet(false)
     { }
 
     std::string StoreFileName;
@@ -190,8 +279,11 @@ private:
     std::string AflExecutable;
     std::vector<std::string> Target;
     std::vector<std::string> AFLArgs;
+    int Parallelization;
     bool Resume;
+    bool DryRun;
     bool Verbose;
+    bool Quiet;
   }; // struct Opts
 
   Opts _opts;

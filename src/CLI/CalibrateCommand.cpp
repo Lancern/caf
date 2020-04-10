@@ -27,6 +27,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 namespace caf {
@@ -72,6 +73,10 @@ public:
 
     std::unordered_map<int, int> signalCounter;
     for (const auto& tcFile : _opt.TestCaseFiles) {
+      if (tcFile.find("README.txt") != std::string::npos) {
+        continue;
+      }
+
       std::unique_ptr<SynthesisBuilder> synthesisBuilder;
       if (_opt.TargetName == "js") {
         synthesisBuilder = caf::make_unique<JavaScriptSynthesisBuilder>(*store);
@@ -185,6 +190,19 @@ private:
       }
 
       nativeArgs.push_back(nullptr);
+
+      auto devNull = open("/dev/null", O_WRONLY);
+      if (devNull == -1) {
+        PRINT_LAST_OS_ERR_AND_EXIT("open failed");
+      }
+
+      if (dup2(devNull, STDOUT_FILENO) == -1) {
+        PRINT_LAST_OS_ERR_AND_EXIT("dup2 failed");
+      }
+      if (dup2(devNull, STDERR_FILENO) == -1) {
+        PRINT_LAST_OS_ERR_AND_EXIT("dup2 failed");
+      }
+
       execvp(nativeArgs[0], nativeArgs.data());
 
       PRINT_LAST_OS_ERR_AND_EXIT("execvp failed");

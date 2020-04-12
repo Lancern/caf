@@ -36,19 +36,19 @@ public:
     emplace(std::move(value));
   }
 
-  template <typename std::enable_if<std::is_copy_constructible<T>::value, int>::type = 0>
   Optional(const Optional<T>& another)
     : _hasValue(false)
   {
+    static_assert(std::is_copy_constructible<T>::value, "T is not copy constructible.");
     if (another.hasValue()) {
       emplace(another.value());
     }
   }
 
-  template <typename std::enable_if<std::is_move_constructible<T>::value, int>::type = 0>
   Optional(Optional<T>&& another) noexcept
     : _hasValue(false)
   {
+    static_assert(std::is_move_constructible<T>::value, "T is not move constructible.");
     if (another.hasValue()) {
       emplace(another.take());
     }
@@ -58,8 +58,8 @@ public:
     drain();
   }
 
-  template <typename std::enable_if<std::is_copy_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(const Optional<T>& another) {
+    static_assert(std::is_copy_assignable<T>::value, "T is not copy assignable.");
     drain();
     if (another.hasValue()) {
       emplace(another.value());
@@ -67,8 +67,8 @@ public:
     return *this;
   }
 
-  template <typename std::enable_if<std::is_move_assignable<T>::value, int>::type = 0>
   Optional<T>& operator=(Optional<T>&& another) {
+    static_assert(std::is_move_assignable<T>::value, "T is not move assignable.");
     drain();
     if (another.hasValue()) {
       emplace(another.take());

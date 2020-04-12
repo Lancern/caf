@@ -24,7 +24,27 @@ public:
    * @brief Construct a new TestCase object.
    *
    */
-  explicit TestCase() = default;
+  explicit TestCase()
+    : _storeRootEntryIndex(0),
+      _calls()
+  { }
+
+  /**
+   * @brief Get the index of the root entry in the CAF metadata store from which the function calls
+   * in this test case are selected.
+   *
+   * @return size_t the index of the root entry.
+   */
+  size_t storeRootEntryIndex() const { return _storeRootEntryIndex; }
+
+  /**
+   * @brief Set the index of the root entry.
+   *
+   * @param storeRootEntryIndex the index of the root entry.
+   */
+  void SetStoreRootEntryIndex(size_t storeRootEntryIndex) {
+    _storeRootEntryIndex = storeRootEntryIndex;
+  }
 
   /**
    * @brief Get function calls included in this test case.
@@ -148,6 +168,7 @@ public:
   ConstIterator end() const { return _calls.end(); }
 
 private:
+  size_t _storeRootEntryIndex;
   std::vector<FunctionCall> _calls;
 }; // class TestCase
 

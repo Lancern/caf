@@ -2,7 +2,7 @@ CAF Test Case Binary Format
 ===========================
 
 TestCase ->
-    <callsCount: u32> <calls: [callsCount x Call]>
+    <rootEntryIndex: u32> <callsCount: u32> <calls: [callsCount x Call]>
 Call ->
     <funcId: u32> <this: Value> <isCtor: u8 = 0 | 1> <argsCount: u32> <args: [argsCount x Value]>
 Value ->

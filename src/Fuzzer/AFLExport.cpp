@@ -52,7 +52,8 @@ void LoadCAFStore() {
   nlohmann::json json;
   file >> json;
 
-  Store = caf::make_unique<caf::CAFStore>(json);
+  Store = caf::make_unique<caf::CAFStore>();
+  Store->Load(json);
 }
 
 } // namespace <anonymous>

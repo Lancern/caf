@@ -45,19 +45,22 @@ namespace caf {
 
 TestCase TestCaseGenerator::GenerateTestCase() {
   TestCase tc { };
+  tc.SetStoreRootEntryIndex(_rnd.Next<size_t>(0, _store.GetEntriesCount() - 1));
 
   // Decide how many function calls should be included.
   auto callsCount = _rnd.Next<size_t>(1, _opt.MaxCalls);
   tc.ReserveFunctionCalls(callsCount);
   for (size_t i = 0; i < callsCount; ++i) {
-    tc.PushFunctionCall(GenerateFunctionCall(i));
+    tc.PushFunctionCall(GenerateFunctionCall(i, tc.storeRootEntryIndex()));
   }
 
   return tc;
 }
 
-FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index) {
-  auto calleeId = _store.SelectFunction(_rnd).id();
+FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index, size_t rootEntryIndex) {
+  auto entry = _store.GetEntry(rootEntryIndex);
+  printf("number of descendents: %lu\n", entry->GetDescendentsCount());
+  auto calleeId = entry->SelectDescendent(_rnd)->GetFunction().id();
   FunctionCall call { calleeId };
 
   GeneratePlaceholderValueParams params;
@@ -68,7 +71,7 @@ FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index) {
   // Decide whether to generate the `this` object.
   if (_rnd.WithProbability(GENERATE_THIS_PROB)) {
     // Generate `this` object.
-    call.SetThis(GenerateValue(params));
+    call.SetThis(GenerateValue(rootEntryIndex, params));
   }
 
   // Decide whether to generate a constructor call.
@@ -80,14 +83,15 @@ FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index) {
   auto argsCount = GenerateArgumentsCount();
   call.ReserveArgs(argsCount);
   for (size_t i = 0; i < argsCount; ++i) {
-    call.PushArg(GenerateValue(params));
+    call.PushArg(GenerateValue(rootEntryIndex, params));
   }
 
   return call;
 }
 
-FunctionValue* TestCaseGenerator::GenerateFunctionValue() {
-  auto funcId = _store.SelectFunction(_rnd).id();
+FunctionValue* TestCaseGenerator::GenerateFunctionValue(size_t rootEntryIndex) {
+  auto entry = _store.GetEntry(rootEntryIndex);
+  auto funcId = entry->SelectDescendent(_rnd)->GetFunction().id();
   return _pool.GetFunctionValue(funcId);
 }
 
@@ -120,7 +124,8 @@ ValueKind TestCaseGenerator::GenerateValueKind(
   return _rnd.Select(candidates, last);
 }
 
-Value* TestCaseGenerator::GenerateValue(GeneratePlaceholderValueParams params, size_t depth) {
+Value* TestCaseGenerator::GenerateValue(
+    size_t rootEntryIndex, GeneratePlaceholderValueParams params, size_t depth) {
   // Decide whether to select an already-existing object.
   auto& pool = _pool;
   if (!pool.empty() && _rnd.WithProbability(CHOOSE_EXISTING_PROB)) {
@@ -135,7 +140,8 @@ Value* TestCaseGenerator::GenerateValue(GeneratePlaceholderValueParams params, s
     case ValueKind::Null:
       return pool.GetNullValue();
     case ValueKind::Function: {
-      auto funcId = _store.SelectFunction(_rnd).id();
+      auto entry = _store.GetEntry(rootEntryIndex);
+      auto funcId = entry->SelectDescendent(_rnd)->GetFunction().id();
       return pool.GetFunctionValue(funcId);
     }
     case ValueKind::Boolean: {
@@ -169,7 +175,7 @@ Value* TestCaseGenerator::GenerateValue(GeneratePlaceholderValueParams params, s
       auto value = pool.CreateArrayValue();
       value->reserve(size);
       for (size_t i = 0; i < size; ++i) {
-        value->Push(GenerateValue(params, depth + 1));
+        value->Push(GenerateValue(rootEntryIndex, params, depth + 1));
       }
       return value;
     }

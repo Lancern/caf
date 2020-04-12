@@ -1,13 +1,17 @@
 #ifndef CAF_CAF_STORE_H
 #define CAF_CAF_STORE_H
 
+#include "Infrastructure/Optional.h"
 #include "Infrastructure/Random.h"
 #include "Basic/Function.h"
 
 #include "json/json.hpp"
 
 #include <cassert>
+#include <memory>
+#include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace caf {
 
@@ -25,51 +29,157 @@ public:
     size_t ApiFunctionsCount;
   }; // struct Statistics
 
-  using iterator = typename std::vector<Function>::iterator;
-  using const_iterator = typename std::vector<Function>::const_iterator;
+  /**
+   * @brief An entry in the database.
+   *
+   */
+  class Entry {
+  public:
+    /**
+     * @brief Construct a new Entry object.
+     *
+     * The constructed entry does not contain any functions.
+     *
+     */
+    explicit Entry() = default;
+
+    Entry(const Entry &) = delete;
+    Entry(Entry &&) noexcept = default;
+
+    Entry& operator=(const Entry &) = delete;
+    Entry& operator=(Entry &&) = default;
+
+    /**
+     * @brief Determine whether this entry contains a function.
+     *
+     * @return true if this entry contains a function.
+     * @return false if this entry does not contain a function.
+     */
+    bool HasFunction() const { return static_cast<bool>(_func); }
+
+    /**
+     * @brief Get the function contained on this entry.
+     *
+     * @return const Function& the function contained on this entry.
+     */
+    const Function& GetFunction() const { return _func.value(); }
+
+    /**
+     * @brief Set the function contained in this entry.
+     *
+     * @param func the function.
+     */
+    void SetFunction(Function func) { _func.set(std::move(func)); }
+
+    /**
+     * @brief Get the number of descendents.
+     *
+     * @return size_t the number of descendents.
+     */
+    size_t GetDescendentsCount() const {
+      return _descendents.size();
+    }
+
+    /**
+     * @brief Randomly select a descendent that contains a function.
+     *
+     * The selected entry is guaranteed to contain a function.
+     *
+     * @param rnd the random number generator to use.
+     * @return Entry* the selected descendent entry.
+     */
+    Entry* SelectDescendent(Random<>& rnd) const {
+      return rnd.Select(_descendents);
+    }
+
+    friend class CAFStore;
+
+  private:
+    Optional<Function> _func;
+    std::unordered_map<std::string, std::unique_ptr<Entry>> _children;
+    std::vector<Entry *> _descendents;
+
+    bool HasChild(const std::string& name) const;
+
+    void AddChild(const std::string& name, std::unique_ptr<Entry> entry);
+
+    Entry* GetChild(const std::string& name) const;
+
+    void AddDescendent(Entry* entry);
+  }; // class Entry
+
+  /**
+   * @brief Iterator that iterates all functions contained in a CAFStore.
+   *
+   */
+  class FunctionIterator {
+  public:
+    explicit FunctionIterator(
+        typename std::unordered_map<FunctionIdType, Entry *>::const_iterator inner)
+      : _inner(inner)
+    { }
+
+    const Function& operator*() const {
+      return _inner->second->GetFunction();
+    }
+
+    const Function* operator->() const {
+      return &_inner->second->GetFunction();
+    }
+
+    FunctionIterator& operator++() {
+      ++_inner;
+      return *this;
+    }
+
+    FunctionIterator operator++(int) {
+      auto dup = *this;
+      ++_inner;
+      return dup;
+    }
+
+    bool operator==(const FunctionIterator& another) const {
+      return _inner == another._inner;
+    }
+
+    bool operator!=(const FunctionIterator& another) const {
+      return _inner != another._inner;
+    }
+
+  private:
+    typename std::unordered_map<FunctionIdType, Entry *>::const_iterator _inner;
+  }; // class FunctionIterator
+
+  using iterator = FunctionIterator;
+  using const_iterator = FunctionIterator;
 
   /**
    * @brief Construct a new CAFStore object.
    *
    */
-  explicit CAFStore() = default;
+  explicit CAFStore();
+
+  CAFStore(const CAFStore &) = delete;
+  CAFStore(CAFStore &&) noexcept;
+
+  CAFStore& operator=(const CAFStore &) = delete;
+  CAFStore& operator=(CAFStore &&);
+
+  ~CAFStore();
 
   /**
-   * @brief Construct a new CAFStore object.
-   *
-   * This constructor will trigger an assertion failure if some of the function IDs do not equal to
-   * the corresponding indexes.
-   *
-   * @param functions the API functions.
-   */
-  explicit CAFStore(std::vector<Function> functions);
-
-  /**
-   * @brief Deserialize a CAFStore object from the given JSON container.
+   * @brief Load data from the given JSON container.
    *
    * @param json the JSON container.
    */
-  explicit CAFStore(const nlohmann::json& json);
-
-  CAFStore(const CAFStore &) = delete;
-  CAFStore(CAFStore &&) noexcept = default;
-
-  CAFStore& operator=(const CAFStore &) = delete;
-  CAFStore& operator=(CAFStore &&) = default;
-
-  /**
-   * @brief Get all API functions.
-   *
-   * @return const std::vector<Function>& all API functions.
-   */
-  const std::vector<Function>& funcs() const { return _funcs; }
+  void Load(const nlohmann::json& json);
 
   /**
    * @brief Get the number of API functions.
    *
    * @return size_t the number of API functions.
    */
-  size_t GetFunctionsCount() const { return _funcs.size(); }
+  size_t GetFunctionsCount() const;
 
   /**
    * @brief Add the given API function to the store.
@@ -79,10 +189,7 @@ public:
    *
    * @param func the function to register.
    */
-  void AddFunction(Function func) {
-    assert(func.id() == _funcs.size() && "ID of the function is not valid.");
-    _funcs.push_back(std::move(func));
-  }
+  void AddFunction(Function func);
 
   /**
    * @brief Get the API function with the given ID.
@@ -92,16 +199,36 @@ public:
    * @param id ID of the function.
    * @return const Function& the function.
    */
-  const Function& GetFunction(FunctionIdType id) const { return _funcs.at(id); }
+  const Function& GetFunction(FunctionIdType id) const {
+    return _funcIdToEntry.at(id)->GetFunction();
+  }
 
   /**
-   * @brief Randomly select a function from this metadata store, using the given random number
-   * generator.
+   * @brief Get the number of entries.
    *
-   * @param rnd the random number generator.
-   * @return const Function& the function selected.
+   * @return size_t the number of entries.
    */
-  const Function& SelectFunction(Random<>& rnd) const { return rnd.Select(_funcs); }
+  size_t GetEntriesCount() const { return _entries.size(); }
+
+  /**
+   * @brief Randomly select an entry from this CAFStore object.
+   *
+   * @param rnd the random number generator to use.
+   * @return Entry* the selected entry.
+   */
+  Entry* SelectEntry(Random<>& rnd) const {
+    return rnd.Select(_entries);
+  }
+
+  /**
+   * @brief Get the entry at the given index.
+   *
+   * @param index the index.
+   * @return Entry* the entry at the given index.
+   */
+  Entry* GetEntry(size_t index) const {
+    return _entries.at(index);
+  }
 
   /**
    * @brief Get the statistics about the current store.
@@ -117,14 +244,20 @@ public:
    */
   nlohmann::json ToJson() const;
 
-  iterator begin() { return _funcs.begin(); }
-  iterator end() { return _funcs.end(); }
+  const_iterator begin() const {
+    return FunctionIterator { _funcIdToEntry.begin() };
+  }
 
-  const_iterator begin() const { return _funcs.begin(); }
-  const_iterator end() const { return _funcs.end(); }
+  const_iterator end() const {
+    return FunctionIterator { _funcIdToEntry.end() };
+  }
 
 private:
-  std::vector<Function> _funcs;
+  std::unique_ptr<Entry> _root;
+  std::vector<Entry *> _entries;
+  std::unordered_map<FunctionIdType, Entry *> _funcIdToEntry;
+
+  std::unique_ptr<Entry> CreateEntry();
 }; // class CAFStore
 
 } // namespace caf

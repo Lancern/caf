@@ -85,7 +85,8 @@ std::unique_ptr<CAFStore> GetCAFStore() {
   nlohmann::json json;
   file >> json;
 
-  return caf::make_unique<CAFStore>(json);
+  auto store = caf::make_unique<CAFStore>();
+  store->Load(json);
 }
 
 bool IsInAFL() {

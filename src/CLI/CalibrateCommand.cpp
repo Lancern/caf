@@ -169,7 +169,9 @@ private:
     nlohmann::json json;
     stream >> json;
 
-    return caf::make_unique<CAFStore>(json);
+    auto store = caf::make_unique<CAFStore>();
+    store->Load(json);
+    return store;
   }
 
   int ExecuteProgram(const std::vector<std::string>& args) const {

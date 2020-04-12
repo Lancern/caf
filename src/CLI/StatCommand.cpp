@@ -37,7 +37,8 @@ public:
 
     nlohmann::json json;
     file >> json;
-    auto store = caf::make_unique<CAFStore>(json);
+    auto store = caf::make_unique<CAFStore>();
+    store->Load(json);
     file.close();
 
     auto stat = store->GetStatistics();

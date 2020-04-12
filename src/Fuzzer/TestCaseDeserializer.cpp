@@ -73,6 +73,9 @@ TestCase TestCaseDeserializer::Deserialize() {
   DeserializationContext context { };
 
   TestCase tc { };
+  auto storeRootEntryIndex = ReadInt<4, size_t>(_in);
+  tc.SetStoreRootEntryIndex(storeRootEntryIndex);
+
   auto callsCount = ReadInt<4, size_t>(_in);
   tc.ReserveFunctionCalls(callsCount);
   for (size_t i = 0; i < callsCount; ++i) {

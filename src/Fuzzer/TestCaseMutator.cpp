@@ -117,7 +117,7 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
 
 void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
-  auto call = _gen.GenerateFunctionCall(index);
+  auto call = _gen.GenerateFunctionCall(index, testCase.storeRootEntryIndex());
   testCase.InsertFunctionCall(index, std::move(call));
 
   // Fix all placeholder values that reference to functions whose index is greater than or equal to
@@ -140,9 +140,10 @@ void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
   // the removed index.
   PlaceholderFixer fixer;
   fixer.Fix(testCase, index,
-      [index, this] (size_t callIndex, size_t placeholderIndex) -> Value * {
+      [index, &testCase, this] (size_t callIndex, size_t placeholderIndex) -> Value * {
         if (placeholderIndex == index) {
           return _gen.GenerateValue(
+              testCase.storeRootEntryIndex(),
               TestCaseGenerator::GeneratePlaceholderValueParams { callIndex });
         } else if (placeholderIndex > index) {
           --placeholderIndex;
@@ -157,9 +158,10 @@ void TestCaseMutator::MutateThis(TestCase& testCase) {
   auto& call = testCase.GetFunctionCall(callIndex);
   if (call.HasThis()) {
     auto thisValue = call.GetThis();
-    call.SetThis(Mutate(thisValue, callIndex));
+    call.SetThis(Mutate(thisValue, testCase.storeRootEntryIndex(), callIndex));
   } else {
     call.SetThis(_gen.GenerateValue(
+        testCase.storeRootEntryIndex(),
         TestCaseGenerator::GeneratePlaceholderValueParams { callIndex }));
   }
 }
@@ -185,6 +187,7 @@ void TestCaseMutator::AddArgument(TestCase& testCase) {
   auto callIndex = _rnd.Select(candidates);
   auto& call = testCase.GetFunctionCall(callIndex);
   call.PushArg(_gen.GenerateValue(
+    testCase.storeRootEntryIndex(),
     TestCaseGenerator::GeneratePlaceholderValueParams { callIndex }));
 }
 
@@ -221,26 +224,27 @@ void TestCaseMutator::MutateArgument(TestCase& testCase) {
   auto& call = testCase.GetFunctionCall(callIndex);
 
   auto mutateIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
-  call.SetArg(mutateIndex, Mutate(call.GetArg(mutateIndex), callIndex));
+  call.SetArg(mutateIndex,
+      Mutate(call.GetArg(mutateIndex), testCase.storeRootEntryIndex(), callIndex));
 }
 
-Value* TestCaseMutator::Mutate(Value* value, size_t callIndex, int depth) {
+Value* TestCaseMutator::Mutate(Value* value, size_t rootEntryIndex, size_t callIndex, int depth) {
   TestCaseGenerator::GeneratePlaceholderValueParams params { callIndex };
 
   if (depth > options().MaxDepth || _rnd.WithProbability(GENERATE_NEW_VALUE_PROB)) {
-    return _gen.GenerateValue(params);
+    return _gen.GenerateValue(rootEntryIndex, params);
   }
 
   switch (value->kind()) {
     case ValueKind::Undefined:
     case ValueKind::Null:
-      return _gen.GenerateValue(params);
+      return _gen.GenerateValue(rootEntryIndex, params);
     default:
       CAF_NO_OP;
   }
 
   if (_rnd.WithProbability(MUTATE_TYPE_PROB)) {
-    return _gen.GenerateValue(params);
+    return _gen.GenerateValue(rootEntryIndex, params);
   }
 
   switch (value->kind()) {
@@ -248,7 +252,7 @@ Value* TestCaseMutator::Mutate(Value* value, size_t callIndex, int depth) {
     case ValueKind::Null:
       CAF_UNREACHABLE;
     case ValueKind::Function:
-      return _gen.GenerateFunctionValue();
+      return _gen.GenerateFunctionValue(rootEntryIndex);
     case ValueKind::Boolean:
       return _pool.GetBooleanValue(!value->GetBooleanValue());
     case ValueKind::String:
@@ -258,9 +262,9 @@ Value* TestCaseMutator::Mutate(Value* value, size_t callIndex, int depth) {
     case ValueKind::Float:
       return MutateFloat(caf::dyn_cast<FloatValue>(value));
     case ValueKind::Array:
-      return MutateArray(caf::dyn_cast<ArrayValue>(value), callIndex, depth);
+      return MutateArray(caf::dyn_cast<ArrayValue>(value), rootEntryIndex, callIndex, depth);
     case ValueKind::Placeholder:
-      return _gen.GenerateValue(params);
+      return _gen.GenerateValue(rootEntryIndex, params);
     default:
       CAF_UNREACHABLE;
   }
@@ -385,8 +389,9 @@ FloatValue* TestCaseMutator::Negate(FloatValue* value) {
   return _pool.GetOrCreateFloatValue(newValue);
 }
 
-ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, size_t callIndex, int depth) {
-  using ArrayMutator = ArrayValue* (TestCaseMutator::*)(ArrayValue *, size_t, int);
+ArrayValue* TestCaseMutator::MutateArray(
+    ArrayValue* value, size_t rootEntryIndex, size_t callIndex, int depth) {
+  using ArrayMutator = ArrayValue* (TestCaseMutator::*)(ArrayValue *, size_t, size_t, int);
   ArrayMutator mutators[4];
   ArrayMutator *head = mutators;
 
@@ -412,11 +417,12 @@ ArrayValue* TestCaseMutator::MutateArray(ArrayValue* value, size_t callIndex, in
 
   assert(head != mutators && "No viable array mutators.");
   auto mutator = _rnd.Select(mutators, head);
-  return (this->*mutator)(value, callIndex, depth);
+  return (this->*mutator)(value, rootEntryIndex, callIndex, depth);
 }
 
-ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t callIndex, int) {
+ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t rootEntryIndex, size_t callIndex, int) {
   auto element = _gen.GenerateValue(
+      rootEntryIndex,
       TestCaseGenerator::GeneratePlaceholderValueParams { callIndex });
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() + 1);
@@ -427,7 +433,7 @@ ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t callIndex, in
   return newValue;
 }
 
-ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, int) {
+ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, size_t, int) {
   auto pos = _rnd.Next<size_t>(0, value->size() - 1);
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() - 1);
@@ -440,7 +446,8 @@ ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, int) {
   return newValue;
 }
 
-ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, size_t callIndex, int depth) {
+ArrayValue* TestCaseMutator::MutateElement(
+    ArrayValue* value, size_t rootEntryIndex, size_t callIndex, int depth) {
   auto pos = _rnd.Next<size_t>(0, value->size() - 1);
   auto mutatedElement = Mutate(value->GetElement(pos), callIndex, depth + 1);
   auto newValue = _pool.CreateArrayValue();
@@ -455,7 +462,7 @@ ArrayValue* TestCaseMutator::MutateElement(ArrayValue* value, size_t callIndex, 
   return newValue;
 }
 
-ArrayValue* TestCaseMutator::ExchangeElements(ArrayValue* value, size_t, int) {
+ArrayValue* TestCaseMutator::ExchangeElements(ArrayValue* value, size_t, size_t, int) {
   auto pos1 = _rnd.Next<size_t>(0, value->size() - 2);
   auto pos2 = _rnd.Next<size_t>(pos1 + 1, value->size() - 1);
   auto newValue = _pool.CreateArrayValue();

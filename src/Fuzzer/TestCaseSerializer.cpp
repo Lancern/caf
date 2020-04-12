@@ -70,6 +70,7 @@ private:
 void TestCaseSerializer::Serialize(const TestCase& testCase) {
   SerializationContext context { };
 
+  WriteInt<4>(_out, testCase.storeRootEntryIndex());
   WriteInt<4>(_out, testCase.GetFunctionCallsCount());
   for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
     const auto& call = testCase.GetFunctionCall(i);

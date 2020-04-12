@@ -132,26 +132,34 @@ public:
    * @brief Generate a new function call.
    *
    * @param index the index of the function call to be generated.
+   * @param rootEntryIndex the index of the root entry from which the callee function will be
+   * selected.
    * @return FunctionCall the function call generated.
    */
-  FunctionCall GenerateFunctionCall(size_t index);
+  FunctionCall GenerateFunctionCall(size_t index, size_t rootEntryIndex);
 
   /**
    * @brief Generate a new value.
    *
+   * @param rootEntryIndex the index of the root entry from which callee functions of function
+   * values will be selected.
    * @param params the parameters for generating placeholder values.
    * @return Value* the value generated.
    */
-  Value* GenerateValue(GeneratePlaceholderValueParams params = GeneratePlaceholderValueParams()) {
-    return GenerateValue(params, 1);
+  Value* GenerateValue(
+      size_t rootEntryIndex,
+      GeneratePlaceholderValueParams params = GeneratePlaceholderValueParams()) {
+    return GenerateValue(rootEntryIndex, params, 1);
   }
 
   /**
    * @brief Generate a function value.
    *
+   * @param rootEntryIndex the index of the root entry from which the callee function will be
+   * selected.
    * @return FunctionValue* the generated function value.
    */
-  FunctionValue* GenerateFunctionValue();
+  FunctionValue* GenerateFunctionValue(size_t rootEntryIndex);
 
   /**
    * @brief Generate a char that can be added to a string value.
@@ -186,11 +194,13 @@ private:
   /**
    * @brief Generate a new value.
    *
+   * @param rootEntryIndex the index of the root entry from which callee functions of function
+   * values will be selected.
    * @param params the parameters for generating placeholder values.
    * @param depth depth of the current genreation process.
    * @return Value* the generated value.
    */
-  Value* GenerateValue(GeneratePlaceholderValueParams params, size_t depth);
+  Value* GenerateValue(size_t rootEntryIndex, GeneratePlaceholderValueParams params, size_t depth);
 }; // class TestCaseGenerator
 
 } // namespace caf

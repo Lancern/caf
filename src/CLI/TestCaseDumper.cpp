@@ -74,6 +74,9 @@ private:
 void TestCaseDumper::Dump(const TestCase& tc) {
   DumpContext context;
 
+  _printer.PrintWithColor(KeywordColor, "ROOT ");
+  _printer << "*" << tc.storeRootEntryIndex() << Printer::endl;
+
   for (size_t callId = 0; callId < tc.GetFunctionCallsCount(); ++callId) {
     const auto& call = tc.GetFunctionCall(callId);
 

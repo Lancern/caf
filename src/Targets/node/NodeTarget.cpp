@@ -87,10 +87,16 @@ std::unique_ptr<CAFStore> GetCAFStore() {
 
   auto store = caf::make_unique<CAFStore>();
   store->Load(json);
+
+  return store;
 }
 
 bool IsInAFL() {
   return getenv("__AFL_SHM_ID") || getenv("__AFL_CMPLOG_SHM_ID");
+}
+
+void SetupAbortHandler(const v8::FunctionCallbackInfo<v8::Value>& args) {
+  SetupAbortHandler();
 }
 
 void RunCAF(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -147,4 +153,5 @@ NODE_MODULE_INITIALIZER(
     v8::Local<v8::Context> context) {
   auto env = node::Environment::GetCurrent(context);
   env->SetMethod(exports, "run", &caf::RunCAF);
+  env->SetMethod(exports, "setupAbortHandler", &caf::SetupAbortHandler);
 }

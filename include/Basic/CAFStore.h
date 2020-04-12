@@ -231,6 +231,13 @@ public:
   }
 
   /**
+   * @brief Get all entries contained in this CAFStore.
+   *
+   * @return const std::vector<Entry *> all entries.
+   */
+  const std::vector<Entry *> entries() const { return _entries; }
+
+  /**
    * @brief Get the statistics about the current store.
    *
    * @return Statistics the statistics about the current store.

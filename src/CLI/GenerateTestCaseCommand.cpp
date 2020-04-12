@@ -61,6 +61,7 @@ public:
     app.add_option("-c", _opts.maxCalls, "Maximum number of calls to generate in each test case")
         ->default_val(5)
         ->check(CLI::PositiveNumber);
+    app.add_flag("--full", _opts.full, "Use full mode to generate a complete set of test cases");
     app.add_option("--seed", _opts.seed, "Initial seed for the random number generator")
         ->check(CLI::Number);
     app.add_flag("--silence", _opts.silence, "Silent all informative log output");
@@ -99,13 +100,16 @@ public:
     TestCaseGenerator gen { *store, *pool, rnd };
     gen.options().MaxCalls = _opts.maxCalls;
 
-    for (auto tci = 0; tci < _opts.n; ++tci) {
+    auto tcCount = _opts.full ? store->GetEntriesCount() : _opts.n;
+    for (auto tci = 0; tci < tcCount; ++tci) {
       if (!_opts.silence) {
         std::cout << "Generating test case #" << tci << std::endl;
       }
 
       pool->clear();
-      auto tc = gen.GenerateTestCase();
+      auto tc = _opts.full
+          ? gen.GenerateTestCase(tci)
+          : gen.GenerateTestCase();
 
       std::string outputFileName = "seed";
       outputFileName.append(std::to_string(tci));
@@ -136,6 +140,7 @@ private:
     int n;                  // Number of test cases to generate
     int maxCalls;           // Maximum number of API calls generated in each test case
     int seed;               // Initial seed for the random number generator
+    bool full;
     bool silence;           // Silent all informative output.
   }; // struct Opts
 

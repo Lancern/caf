@@ -44,8 +44,12 @@ static const std::string CharacterSet =
 namespace caf {
 
 TestCase TestCaseGenerator::GenerateTestCase() {
+  return GenerateTestCase(_rnd.Next<size_t>(0, _store.GetEntriesCount() - 1));
+}
+
+TestCase TestCaseGenerator::GenerateTestCase(size_t rootEntryIndex) {
   TestCase tc { };
-  tc.SetStoreRootEntryIndex(_rnd.Next<size_t>(0, _store.GetEntriesCount() - 1));
+  tc.SetStoreRootEntryIndex(rootEntryIndex);
 
   // Decide how many function calls should be included.
   auto callsCount = _rnd.Next<size_t>(1, _opt.MaxCalls);
@@ -59,7 +63,6 @@ TestCase TestCaseGenerator::GenerateTestCase() {
 
 FunctionCall TestCaseGenerator::GenerateFunctionCall(size_t index, size_t rootEntryIndex) {
   auto entry = _store.GetEntry(rootEntryIndex);
-  printf("number of descendents: %lu\n", entry->GetDescendentsCount());
   auto calleeId = entry->SelectDescendent(_rnd)->GetFunction().id();
   FunctionCall call { calleeId };
 

@@ -27,7 +27,7 @@ void CAFStore::Entry::AddDescendent(Entry* entry) {
 
 CAFStore::CAFStore()
   : _root(caf::make_unique<Entry>()),
-    _entries(),
+    _entries { _root.get() },
     _funcIdToEntry()
 { }
 

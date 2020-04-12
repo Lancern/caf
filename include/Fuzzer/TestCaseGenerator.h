@@ -129,6 +129,15 @@ public:
   TestCase GenerateTestCase();
 
   /**
+   * @brief Generate a new test case. Function calls and function values of the test case will be
+   * selected from the entry with the given index.
+   *
+   * @param rootEntryIndex index of the entry.
+   * @return TestCase the generated test case.
+   */
+  TestCase GenerateTestCase(size_t rootEntryIndex);
+
+  /**
    * @brief Generate a new function call.
    *
    * @param index the index of the function call to be generated.

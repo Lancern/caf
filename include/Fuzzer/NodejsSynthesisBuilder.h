@@ -17,6 +17,8 @@ public:
       _imported()
   { }
 
+  void EnterMainFunction() override;
+
 protected:
   /**
    * @brief Write a require statement to the synthesised code.

@@ -75,6 +75,11 @@ std::string GetModuleName(const std::string& name) {
 
 } // namespace <anonymous>
 
+void NodejsSynthesisBuilder::EnterMainFunction() {
+  auto& output = GetOutput();
+  output << "require('caf').init();";
+}
+
 void NodejsSynthesisBuilder::WriteRequireStatement(const std::string& moduleName) {
   if (_imported.find(moduleName) != _imported.end()) {
     // The same module has already been imported.

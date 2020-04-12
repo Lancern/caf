@@ -21,5 +21,5 @@ add_library(CAFNodeTarget STATIC
     NodeTarget.cpp)
 target_include_directories(CAFNodeTarget PRIVATE "${NODE_DIR}/src")
 target_compile_options(CAFNodeTarget PRIVATE "-fPIC" "-DNODE_WANT_INTERNALS=1")
-# target_link_libraries(CAFNodeTarget
-#     PRIVATE CAFV8Target CAFInfrastructure CAFBasic NLOHMANN_JSON)
+target_link_libraries(CAFNodeTarget
+    PRIVATE CAFV8Target)

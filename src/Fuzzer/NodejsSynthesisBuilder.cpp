@@ -1,6 +1,7 @@
 #include "Basic/CAFStore.h"
 #include "Fuzzer/NodejsSynthesisBuilder.h"
 #include "Fuzzer/Value.h"
+#include "CAFConfig.h"
 
 #include <cctype>
 #include <unordered_set>
@@ -77,7 +78,7 @@ std::string GetModuleName(const std::string& name) {
 
 void NodejsSynthesisBuilder::EnterMainFunction() {
   auto& output = GetOutput();
-  output << "require('caf').init();";
+  output << "require('" CAF_LIB_DIR "/caf').init();";
 }
 
 void NodejsSynthesisBuilder::WriteRequireStatement(const std::string& moduleName) {

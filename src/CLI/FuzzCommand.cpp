@@ -254,6 +254,7 @@ public:
 
       if (!_opts.DryRun) {
         children.push_back(ExecuteCommand(aflArgs, aflEnv, _opts.Quiet));
+        std::cout << "Fuzzer #" << i << " has started, pid = " << children.back() << std::endl;
       }
 
       if (i == 0 && !_opts.SanitizedTarget.empty()) {
@@ -271,6 +272,15 @@ public:
       if (waitpid(childId, &status, 0) == -1) {
         PRINT_LAST_OS_ERR("waitpid failed");
         ok = false;
+      }
+      if (WIFEXITED(status)) {
+        std::cout << "Fuzzer " << childId << " has exited. Exit status = "
+                  << WEXITSTATUS(status) << std::endl;
+      } else if (WIFSIGNALED(status)) {
+        std::cerr << "Fuzzer " << childId << " has terminated. Signal is "
+                  << strsignal(WTERMSIG(status))
+                  << " (" << WTERMSIG(status) << ")"
+                  << std::endl;
       }
     }
 

@@ -40,12 +40,12 @@ private:
 
   template <typename Fixer>
   Value* FixValue(Value* oldValue, size_t callIndex, Fixer& fixer) {
-    if (_fixedValues.find(oldValue) != _fixedValues.end()) {
-      return oldValue;
-    }
     if (oldValue->IsPlaceholder()) {
       return fixer(callIndex, oldValue->GetPlaceholderIndex());
     } else if (oldValue->IsArray()) {
+      if (_fixedValues.find(oldValue) != _fixedValues.end()) {
+        return oldValue;
+      }
       _fixedValues.insert(oldValue);
       auto oldArrayValue = caf::dyn_cast<ArrayValue>(oldValue);
       for (size_t i = 0; i < oldArrayValue->size(); ++i) {

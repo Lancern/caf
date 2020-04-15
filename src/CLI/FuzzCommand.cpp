@@ -139,6 +139,7 @@ public:
         ->check(CLI::PositiveNumber)
         ->default_val(1);
     app.add_flag("--dry", _opts.DryRun, "Only construct arguments to AFL, do not actually run AFL");
+    app.add_option("--san-exec", _opts.SanitizedTarget, "Path to the sanitized executable file");
     app.add_flag("--quiet", _opts.Quiet, "Redirect AFL's output to /dev/null");
     app.add_option("-X", _opts.AFLArgs, "Arguments passed to AFL executable");
     app.add_flag("--verbose", _opts.Verbose, "Enable verbose output");
@@ -149,6 +150,9 @@ public:
   int Execute(CLI::App &app) override {
     _opts.Verbose = _opts.Verbose || _opts.DryRun;
     _opts.Quiet = _opts.Quiet || (_opts.Parallelization > 1);
+    if (_opts.SanitizedTarget.empty()) {
+      _opts.SanitizedTarget = _opts.Target.at(0);
+    }
 
     if (_opts.AflExecutable.empty()) {
       _opts.AflExecutable = LookupAflExecutable();
@@ -210,7 +214,10 @@ public:
     for (const auto& arg : _opts.AFLArgs) {
       aflArgs.push_back(DuplicateString(arg.c_str()));
     }
-    for (const auto& arg : _opts.Target) {
+    int execArg = aflArgs.size();
+    aflArgs.push_back(DuplicateString(_opts.SanitizedTarget.c_str()));
+    for (size_t i = 1; i < _opts.Target.size(); ++i) {
+      const auto& arg = _opts.Target.at(i);
       aflArgs.push_back(DuplicateString(arg.c_str()));
     }
     aflArgs.push_back(nullptr);
@@ -248,6 +255,10 @@ public:
       if (!_opts.DryRun) {
         children.push_back(ExecuteCommand(aflArgs, aflEnv, _opts.Quiet));
       }
+
+      if (i == 0 && !_opts.SanitizedTarget.empty()) {
+        aflArgs[execArg] = DuplicateString(_opts.Target[0].c_str());
+      }
     }
 
     if (_opts.DryRun) {
@@ -278,6 +289,7 @@ private:
     std::string FindingsDir;
     std::string AflExecutable;
     std::vector<std::string> Target;
+    std::string SanitizedTarget;
     std::vector<std::string> AFLArgs;
     int Parallelization;
     bool Resume;

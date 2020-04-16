@@ -1,4 +1,5 @@
 add_library(CAFFuzzer STATIC
+    BrowserSynthesisBuilder.cpp
     JavaScriptSynthesisBuilder.cpp
     NodejsSynthesisBuilder.cpp
     ObjectPool.cpp

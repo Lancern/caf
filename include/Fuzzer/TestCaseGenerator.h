@@ -155,9 +155,7 @@ public:
    * @param params the parameters for generating placeholder values.
    * @return Value* the value generated.
    */
-  Value* GenerateValue(
-      size_t rootEntryIndex,
-      GeneratePlaceholderValueParams params = GeneratePlaceholderValueParams()) {
+  Value* GenerateValue(size_t rootEntryIndex, GeneratePlaceholderValueParams params) {
     return GenerateValue(rootEntryIndex, params, 1);
   }
 

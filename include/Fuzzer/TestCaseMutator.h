@@ -29,7 +29,8 @@ public:
     : _store(store),
       _pool(pool),
       _rnd(rnd),
-      _gen { store, pool, rnd }
+      _gen { store, pool, rnd },
+      _lastMutator("")
   { }
 
   TestCaseMutator(const TestCaseMutator &) = delete;
@@ -56,11 +57,19 @@ public:
    */
   void Mutate(TestCase& testCase);
 
+  /**
+   * @brief Get the name of the last used mutator.
+   *
+   * @return const char* name of the last used mutator.
+   */
+  const char* GetLastMutatorName() const { return _lastMutator; }
+
 private:
   CAFStore& _store;
   ObjectPool& _pool;
   Random<>& _rnd;
   TestCaseGenerator _gen;
+  const char* _lastMutator;
 
   /**
    * @brief Mutate the given test case by adding a function call to the tail of the function call
@@ -125,7 +134,7 @@ private:
    * @param depth the current depth.
    * @return Value* the mutated value.
    */
-  Value* Mutate(Value* value, size_t rootEntryIndex, size_t callIndex, int depth = 1);
+  Value* Mutate(Value* value, size_t rootEntryIndex, size_t callIndex, int depth);
 
   /**
    * @brief Mutate the given string value.

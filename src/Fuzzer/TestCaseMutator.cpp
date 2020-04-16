@@ -58,6 +58,11 @@ private:
 
 } // namespace <anonymous>
 
+#define SET_LAST_MUTATOR_NAME \
+    _lastMutator = __func__
+
+#define DEPTH_TOP 1
+
 constexpr static const double GENERATE_NEW_VALUE_PROB = 0.1;
 constexpr static const double MUTATE_TYPE_PROB = 0.2;
 
@@ -116,6 +121,8 @@ void TestCaseMutator::Mutate(TestCase& testCase) {
 }
 
 void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
+  SET_LAST_MUTATOR_NAME;
+
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount());
   auto call = _gen.GenerateFunctionCall(index, testCase.storeRootEntryIndex());
   testCase.InsertFunctionCall(index, std::move(call));
@@ -133,6 +140,8 @@ void TestCaseMutator::AddFunctionCall(TestCase& testCase) {
 }
 
 void TestCaseMutator::RemoveFunctionCall(TestCase& testCase) {
+  SET_LAST_MUTATOR_NAME;
+
   auto index = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
   testCase.RemoveFunctionCall(index);
 
@@ -158,7 +167,7 @@ void TestCaseMutator::MutateThis(TestCase& testCase) {
   auto& call = testCase.GetFunctionCall(callIndex);
   if (call.HasThis()) {
     auto thisValue = call.GetThis();
-    call.SetThis(Mutate(thisValue, testCase.storeRootEntryIndex(), callIndex));
+    call.SetThis(Mutate(thisValue, testCase.storeRootEntryIndex(), callIndex, DEPTH_TOP));
   } else {
     call.SetThis(_gen.GenerateValue(
         testCase.storeRootEntryIndex(),
@@ -167,6 +176,8 @@ void TestCaseMutator::MutateThis(TestCase& testCase) {
 }
 
 void TestCaseMutator::MutateCtor(TestCase& testCase) {
+  SET_LAST_MUTATOR_NAME;
+
   // Choose a function call.
   auto callIndex = _rnd.Next<size_t>(0, testCase.GetFunctionCallsCount() - 1);
   auto& call = testCase.GetFunctionCall(callIndex);
@@ -174,6 +185,8 @@ void TestCaseMutator::MutateCtor(TestCase& testCase) {
 }
 
 void TestCaseMutator::AddArgument(TestCase& testCase) {
+  SET_LAST_MUTATOR_NAME;
+
   // Collect all function calls that can accept an additional argument.
   std::vector<size_t> candidates;
   for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
@@ -192,6 +205,8 @@ void TestCaseMutator::AddArgument(TestCase& testCase) {
 }
 
 void TestCaseMutator::RemoveArgument(TestCase& testCase) {
+  SET_LAST_MUTATOR_NAME;
+
   // Collect all function calls that can remove an argument.
   std::vector<size_t> candidates;
   for (size_t i = 0; i < testCase.GetFunctionCallsCount(); ++i) {
@@ -225,7 +240,7 @@ void TestCaseMutator::MutateArgument(TestCase& testCase) {
 
   auto mutateIndex = _rnd.Next<size_t>(0, call.GetArgsCount() - 1);
   call.SetArg(mutateIndex,
-      Mutate(call.GetArg(mutateIndex), testCase.storeRootEntryIndex(), callIndex));
+      Mutate(call.GetArg(mutateIndex), testCase.storeRootEntryIndex(), callIndex, DEPTH_TOP));
 }
 
 Value* TestCaseMutator::Mutate(Value* value, size_t rootEntryIndex, size_t callIndex, int depth) {
@@ -303,6 +318,8 @@ StringValue* TestCaseMutator::MutateString(StringValue* value) {
 }
 
 StringValue* TestCaseMutator::InsertCharacter(StringValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto s = value->value();
   auto pos = _rnd.Next<size_t>(0, s.length());
   auto ch = _gen.GenerateStringCharacter();
@@ -311,6 +328,8 @@ StringValue* TestCaseMutator::InsertCharacter(StringValue* value) {
 }
 
 StringValue* TestCaseMutator::RemoveCharacter(StringValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto s = value->value();
   auto pos = _rnd.Index(s);
   s.erase(pos, 1);
@@ -318,6 +337,8 @@ StringValue* TestCaseMutator::RemoveCharacter(StringValue* value) {
 }
 
 StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto s = value->value();
   auto pos = _rnd.Index(s);
   auto ch = _gen.GenerateStringCharacter();
@@ -326,6 +347,8 @@ StringValue* TestCaseMutator::ChangeCharacter(StringValue* value) {
 }
 
 StringValue* TestCaseMutator::ExchangeCharacters(StringValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto s = value->value();
   auto pos1 = _rnd.Next<size_t>(0, s.length() - 2);
   auto pos2 = _rnd.Next<size_t>(pos1 + 1, s.length() - 1);
@@ -345,6 +368,8 @@ IntegerValue* TestCaseMutator::MutateInteger(IntegerValue* value) {
 }
 
 IntegerValue* TestCaseMutator::Increment(IntegerValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto inc = _rnd.Next<int32_t>(INTEGER_MIN_INCREMENT, INTEGER_MAX_INCREMENT);
   auto newValue = static_cast<int32_t>(
       static_cast<uint32_t>(value->value()) + static_cast<uint32_t>(inc));
@@ -352,11 +377,15 @@ IntegerValue* TestCaseMutator::Increment(IntegerValue* value) {
 }
 
 IntegerValue* TestCaseMutator::Negate(IntegerValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto newValue = -value->value();
   return _pool.GetOrCreateIntegerValue(newValue);
 }
 
 IntegerValue* TestCaseMutator::Bitflip(IntegerValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   constexpr static const size_t MaskLengths[] = { 1, 2, 4, 8, 16, 32 };
   auto maskLen = _rnd.Select(MaskLengths);
   auto startOffset = _rnd.Next<size_t>(0, IntegerValue::BitLength - maskLen);
@@ -379,12 +408,16 @@ FloatValue* TestCaseMutator::MutateFloat(FloatValue* value) {
 }
 
 FloatValue* TestCaseMutator::Increment(FloatValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto inc = _rnd.Next(FLOAT_MIN_INCREMENT, FLOAT_MAX_INCREMENT);
   auto newValue = value->value() + inc;
   return _pool.GetOrCreateFloatValue(newValue);
 }
 
 FloatValue* TestCaseMutator::Negate(FloatValue* value) {
+  SET_LAST_MUTATOR_NAME;
+
   auto newValue = -value->value();
   return _pool.GetOrCreateFloatValue(newValue);
 }
@@ -421,6 +454,8 @@ ArrayValue* TestCaseMutator::MutateArray(
 }
 
 ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t rootEntryIndex, size_t callIndex, int) {
+  SET_LAST_MUTATOR_NAME;
+
   auto element = _gen.GenerateValue(
       rootEntryIndex,
       TestCaseGenerator::GeneratePlaceholderValueParams { callIndex });
@@ -434,6 +469,8 @@ ArrayValue* TestCaseMutator::PushElement(ArrayValue* value, size_t rootEntryInde
 }
 
 ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, size_t, int) {
+  SET_LAST_MUTATOR_NAME;
+
   auto pos = _rnd.Next<size_t>(0, value->size() - 1);
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size() - 1);
@@ -448,8 +485,10 @@ ArrayValue* TestCaseMutator::RemoveElement(ArrayValue* value, size_t, size_t, in
 
 ArrayValue* TestCaseMutator::MutateElement(
     ArrayValue* value, size_t rootEntryIndex, size_t callIndex, int depth) {
+  SET_LAST_MUTATOR_NAME;
+
   auto pos = _rnd.Next<size_t>(0, value->size() - 1);
-  auto mutatedElement = Mutate(value->GetElement(pos), callIndex, depth + 1);
+  auto mutatedElement = Mutate(value->GetElement(pos), rootEntryIndex, callIndex, depth + 1);
   auto newValue = _pool.CreateArrayValue();
   newValue->reserve(value->size());
   for (size_t i = 0; i < pos; ++i) {
@@ -463,6 +502,8 @@ ArrayValue* TestCaseMutator::MutateElement(
 }
 
 ArrayValue* TestCaseMutator::ExchangeElements(ArrayValue* value, size_t, size_t, int) {
+  SET_LAST_MUTATOR_NAME;
+
   auto pos1 = _rnd.Next<size_t>(0, value->size() - 2);
   auto pos2 = _rnd.Next<size_t>(pos1 + 1, value->size() - 1);
   auto newValue = _pool.CreateArrayValue();

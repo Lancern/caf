@@ -86,11 +86,11 @@ int main(int argc, char* argv[]) {
       printf("Started: %d\n", pid);
     } else {
       if (IS_CLONE_PTRACE(wstatus) || IS_FORK_PTRACE(wstatus) || IS_VFORK_PTRACE(wstatus)) {
-        pid_t newPid;
+        unsigned long newPid;
         call_ptrace(PTRACE_GETEVENTMSG, pid, 0, &newPid);
         pendingChildren.insert(newPid);
         call_ptrace(PTRACE_CONT, pid, 0, 0);
-        printf("New process: %d\n", newPid);
+        printf("New process: %d\n", (int)newPid);
       } else if (WIFEXITED(wstatus) || WIFSIGNALED(wstatus)) {
         if (WIFEXITED(wstatus)) {
           printf("Exited: %d\n", pid);

@@ -173,10 +173,10 @@ public:
 
     std::string mutatorLibVar = "AFL_CUSTOM_MUTATOR_LIBRARY=";
     mutatorLibVar.append(CAF_LIB_DIR);
-    mutatorLibVar.append("/libCAFMutator.so");
+    mutatorLibVar.append("/libCAFMutatorForChrome.so");
     if (_opts.Verbose) {
       std::cout << "export AFL_CUSTOM_MUTATOR_LIBRARY="
-                << CAF_LIB_DIR << "/libCAFMutator.so"
+                << CAF_LIB_DIR << "/libCAFMutatorForChrome.so"
                 << std::endl;
     }
 

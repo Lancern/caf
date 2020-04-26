@@ -16,7 +16,7 @@ namespace caf {
 namespace {
 
 void AbortHandler(int) {
-  std::fprintf(stderr, "aborted.\n");
+  std::fprintf(stderr, "aborted (hooked).\n");
   std::exit(0);
 }
 

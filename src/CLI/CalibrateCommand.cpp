@@ -11,6 +11,7 @@
 #include "Fuzzer/SynthesisBuilder.h"
 #include "Fuzzer/JavaScriptSynthesisBuilder.h"
 #include "Fuzzer/NodejsSynthesisBuilder.h"
+#include "Fuzzer/ChromeSynthesisBuilder.h"
 
 #include "json/json.hpp"
 
@@ -49,7 +50,7 @@ public:
         ->required()
         ->check(CLI::ExistingFile);
     app.add_option("-t,--target", _opt.TargetName,
-        "The synthesis target. Available targets: js, nodejs")
+        "The synthesis target. Available targets: js, nodejs, chrome")
         ->default_val("js");
     app.add_option("-e,--exec", _opt.ExecutableName, "Path to the executable file")
         ->required()
@@ -80,8 +81,10 @@ public:
       std::unique_ptr<SynthesisBuilder> synthesisBuilder;
       if (_opt.TargetName == "js") {
         synthesisBuilder = caf::make_unique<JavaScriptSynthesisBuilder>(*store);
-      } else {
+      } else if(_opt.TargetName == "nodejs") {
         synthesisBuilder = caf::make_unique<NodejsSynthesisBuilder>(*store);
+      } else if(_opt.TargetName == "chrome") {
+        synthesisBuilder = caf::make_unique<ChromeSynthesisBuilder>(*store);
       }
 
       TestCaseSynthesiser synthesiser { *store, *synthesisBuilder };

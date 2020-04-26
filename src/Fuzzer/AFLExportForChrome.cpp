@@ -8,7 +8,6 @@
 #include "Fuzzer/TestCaseDeserializer.h"
 #include "Fuzzer/TestCaseSynthesiser.h"
 #include "Fuzzer/JavaScriptSynthesisBuilder.h"
-#include "Fuzzer/NodejsSynthesisBuilder.h"
 #include "Fuzzer/ChromeSynthesisBuilder.h"
 
 #include "json/json.hpp"
@@ -106,7 +105,7 @@ size_t afl_pre_save_handler(uint8_t* data, size_t size, uint8_t** new_data) {
   caf::TestCaseDeserializer de { pool, stream };
   auto tc = de.Deserialize();
 
-  caf::NodejsSynthesisBuilder synthesisBuilder { *Store };
+  caf::ChromeSynthesisBuilder synthesisBuilder { *Store };
   caf::TestCaseSynthesiser synthesiser { *Store, synthesisBuilder };
   synthesiser.Synthesis(tc);
 

@@ -13,6 +13,7 @@
 #include "Fuzzer/SynthesisBuilder.h"
 #include "Fuzzer/JavaScriptSynthesisBuilder.h"
 #include "Fuzzer/NodejsSynthesisBuilder.h"
+#include "Fuzzer/ChromeSynthesisBuilder.h"
 
 #include "json/json.hpp"
 
@@ -62,7 +63,7 @@ public:
   void SetupArgs(CLI::App &app) override {
     app.add_option("-s", _opts.CAFStorePath, "Path to the cafstore.json file")
         ->required();
-    app.add_option("-t,--target", _opts.Target, "Name of the target. Available targets: js, nodejs")
+    app.add_option("-t,--target", _opts.Target, "Name of the target. Available targets: js, nodejs, chrome")
         ->default_val("js");
     app.add_option("-o,--out", _opts.Output, "Path to the output directory or file");
     app.add_option("tc", _opts.TestCasePaths, "Paths to the test case files")
@@ -71,7 +72,9 @@ public:
 
   int Execute(CLI::App &app) override {
     // Check target name.
-    if (_opts.Target != "js" && _opts.Target != "nodejs") {
+    if (_opts.Target != "js" 
+        && _opts.Target != "nodejs" 
+        && _opts.Target != "chrome") {
       PRINT_ERR_AND_EXIT_FMT("invalid target: %s", _opts.Target.c_str());
     }
 
@@ -103,10 +106,13 @@ public:
       std::unique_ptr<SynthesisBuilder> synthesisBuilder;
       if (_opts.Target == "js") {
         synthesisBuilder = caf::make_unique<JavaScriptSynthesisBuilder>(*store);
-      } else {
+      } else if (_opts.Target == "nodejs"){
         // Target is nodejs.
         synthesisBuilder = caf::make_unique<NodejsSynthesisBuilder>(*store);
-      }
+      } else if (_opts.Target == "chrome"){
+        // Target is chrome.
+        synthesisBuilder = caf::make_unique<ChromeSynthesisBuilder>(*store);
+      } 
 
       TestCaseSynthesiser syn { *store, *synthesisBuilder };
       syn.Synthesis(tc);

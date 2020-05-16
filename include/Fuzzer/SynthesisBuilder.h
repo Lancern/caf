@@ -107,7 +107,7 @@ public:
    * @return SynthesisVariable& a SynthesisVariable object that can be used to refer to the return
    * value of the function call.
    */
-  virtual SynthesisVariable SynthesisFunctionCall(
+  SynthesisVariable SynthesisFunctionCall(
       const std::string& functionName,
       bool isCtorCall,
       const SynthesisVariable& receiver,

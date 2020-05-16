@@ -33,7 +33,8 @@ void ChromeSynthesisBuilder::EnterMainFunction() {
 
 void ChromeSynthesisBuilder::LeaveFunction() {
   auto& output = GetOutput();
-  // output << "window.close()\n";
+  output << "\n.cafcheck\n";
+  output << "window.close();";
   output << "\n.quit\n";
 }
 

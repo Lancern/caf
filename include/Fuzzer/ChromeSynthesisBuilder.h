@@ -22,7 +22,7 @@ public:
       const std::string& functionName,
       bool isCtorCall,
       const SynthesisVariable& receiver,
-      const std::vector<SynthesisVariable>& args) override;
+      const std::vector<SynthesisVariable>& args);
   
   void EnterMainFunction() override;
 

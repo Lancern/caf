@@ -89,9 +89,9 @@ function findFunctions() {
     return funcs;
 }
 
-global = this;
+let global = this;
 
-if (require) {
+if (this.require) {
     // We're fuzzing nodejs.
     // Import all native modules and mount their module objects onto the global object.
     const moduleList = [
@@ -144,31 +144,106 @@ if (require) {
             writable: false,
         });
     }
+} else if(this.DOMString) {
+    // We're fuzzing DOM.
+    // Import all native modules and mount their module objects onto the global object.
+    const moduleList = [
+        // "chrome",
+        "AbortController",
+        "AbortSignal",
+        "AbstractRange",
+        "Attr",
+        "ByteString",
+        "CDATASection",
+        "CharacterData",
+        "ChildNode",
+        "CSSPrimitiveValue",
+        "CSSValue",
+        "CSSValueList",
+        "Comment",
+        "CustomEvent",
+        "Document",
+        "DocumentFragment",
+        "DocumentType",
+        "DOMConfiguration",
+        "DOMError",
+        "DOMException",
+        "DOMImplementation",
+        "DOMImplementationList",
+        "DOMLocator",
+        "DOMObject",
+        "DOMParser",
+        "DOMPoint",
+        "DOMPointInit",
+        "DOMPointReadOnly",
+        "DOMRect",
+        "DOMString",
+        "DOMTimeStamp",
+        "DOMTokenList",
+        "DOMUserData",
+        "Document",
+        "DocumentFragment",
+        "DocumentType",
+        "Element",
+        "ElementTraversal",
+        "Event",
+        "EventTarget",
+        "HTMLCollection",
+        "MutationObserver",
+        "Node",
+        "NodeFilter",
+        "NodeIterator",
+        "NodeList",
+        "NonDocumentTypeChildNode",
+        "ProcessingInstruction",
+        "PromiseResolver",
+        "Range",
+        "StaticRange",
+        "Text",
+        "TextDecoder",
+        "TextEncoder",
+        "TimeRanges",
+        "TreeWalker",
+        "TypeInfo",
+        "UserDataHandler",
+        "USVString",
+        "XMLDocument"
+    ];
+    const modules = moduleList.map(name => [name, name]);
+    for (const [name, moduleObj] of modules) {
+        Object.defineProperty(this, name, {
+            enumerable: true,
+            value: moduleObj,
+            writable: false,
+        });
+    }
 }
 
 const funcs = findFunctions.apply(global);
 
-let caf;
-let fuzzing = true;
-try {
-    if (require) {
-        caf = require('caf');
-    } else {
-        caf = new CAFFuzzer();
-    }
-} catch (e) {
-    fuzzing = false;
-}
+console.log(JSON.stringify(funcs.map(f => f.name)));
 
-if (caf) {
-    caf.run(funcs);
-} else {
-    // Dump the JSON database.
-    console.log(JSON.stringify(funcs.map(f => f.canonicalize())));
-}
+// let caf;
+// let fuzzing = true;
+// try {
+//     if (this.require) {
+//         caf = require('caf');
+//     } else {
+//         caf = new CAFFuzzer();
+//     }
+// } catch (e) {
+//     fuzzing = false;
+// }
 
-if (require) {
-    require('process').exit(0);
-} else if (fuzzing) {
-    window.close();
-}
+// if (caf) {
+//     caf.run(funcs);
+// } else {
+//     // Dump the JSON database.
+//     console.log(JSON.stringify(funcs.map(f => f.canonicalize())));
+// }
+
+// if (this.require) {
+//     require('process').exit(0);
+// } else if (fuzzing) {
+//     window.close();
+// }

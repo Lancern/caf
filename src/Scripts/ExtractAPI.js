@@ -148,27 +148,5 @@ if (require) {
 
 const funcs = findFunctions.apply(global);
 
-let caf;
-let fuzzing = true;
-try {
-    if (require) {
-        caf = require('caf');
-    } else {
-        caf = new CAFFuzzer();
-    }
-} catch (e) {
-    fuzzing = false;
-}
-
-if (caf) {
-    caf.run(funcs);
-} else {
-    // Dump the JSON database.
-    console.log(JSON.stringify(funcs.map(f => f.canonicalize())));
-}
-
-if (require) {
-    require('process').exit(0);
-} else if (fuzzing) {
-    window.close();
-}
+// Dump the JSON database.
+console.log(JSON.stringify(funcs.map(f => f.canonicalize())));

@@ -28,7 +28,7 @@ void SetupAbortHandler() {
 }
 
 void Initialize(const v8::FunctionCallbackInfo<v8::Value>& args) {
-  SetupAbortHandler();
+  // SetupAbortHandler();
 }
 
 } // namespace <anonymous>

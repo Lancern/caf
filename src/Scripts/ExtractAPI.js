@@ -146,7 +146,19 @@ if (require) {
     }
 }
 
-const funcs = findFunctions.apply(global);
+let funcs = findFunctions.apply(global);
+
+// Filter out dangerous APIs.
+if (require) {
+    funcs = funcs.filter(f => {
+        let components = f.name.split('.').map(x => x.toLowerCase());
+        return !components.find(x => x.includes('kill')) &&
+            !components.find(x => x.includes('terminate')) &&
+            !components.find(x => x.includes('assert')) &&
+            !components.find(x => x.includes('exit')) &&
+            !components.find(x => x.startsWith('_'));
+    });
+}
 
 // Dump the JSON database.
 console.log(JSON.stringify(funcs.map(f => f.name)));

@@ -149,4 +149,4 @@ if (require) {
 const funcs = findFunctions.apply(global);
 
 // Dump the JSON database.
-console.log(JSON.stringify(funcs.map(f => f.canonicalize())));
+console.log(JSON.stringify(funcs.map(f => f.name)));

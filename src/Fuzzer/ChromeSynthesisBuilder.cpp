@@ -28,14 +28,12 @@ SynthesisVariable ChromeSynthesisBuilder::SynthesisFunctionCall(
 
 void ChromeSynthesisBuilder::EnterMainFunction() {
   auto& output = GetOutput();
-  output << ".open _chrome_fuzz_instance_\n";
+  output << ".open www.baidu.com\n";
 }
 
 void ChromeSynthesisBuilder::LeaveFunction() {
   auto& output = GetOutput();
-  output << "\n.cafcheck\n";
-  output << "window.close();";
-  output << "\n.quit\n";
+  output << "; close();";
 }
 
 } // namespace caf

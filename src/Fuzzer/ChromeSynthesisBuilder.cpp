@@ -9,31 +9,14 @@
 
 namespace caf {
 
-SynthesisVariable ChromeSynthesisBuilder::SynthesisFunctionCall(
-    const std::string& functionName,
-    bool isCtorCall,
-    const SynthesisVariable& receiver,
-    const std::vector<SynthesisVariable>& args) {
-
-  SynthesisBuilder::SynthesisFunctionCall(
-    functionName,
-    isCtorCall,
-    receiver,
-    args
-  );
-  
-  auto& output = GetOutput();
-  output << "console.log(\"API No." + std::to_string(apiNum++) + " finished.\");";
-}
-
 void ChromeSynthesisBuilder::EnterMainFunction() {
   auto& output = GetOutput();
-  output << ".open www.baidu.com\n";
+  output << ".open netsec.ccert.edu.cn/chs/people/zengyishun\n";
 }
 
 void ChromeSynthesisBuilder::LeaveFunction() {
   auto& output = GetOutput();
-  output << "; close();";
+  output << ";close();\n";
 }
 
 } // namespace caf

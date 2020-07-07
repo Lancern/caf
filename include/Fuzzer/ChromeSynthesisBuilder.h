@@ -14,22 +14,12 @@ class CAFStore;
 class ChromeSynthesisBuilder : public JavaScriptSynthesisBuilder {
 public:
   explicit ChromeSynthesisBuilder(const CAFStore& store)
-    : JavaScriptSynthesisBuilder { store },
-    apiNum(0)
+    : JavaScriptSynthesisBuilder { store }
   { }
-
-  SynthesisVariable SynthesisFunctionCall(
-      const std::string& functionName,
-      bool isCtorCall,
-      const SynthesisVariable& receiver,
-      const std::vector<SynthesisVariable>& args);
   
   void EnterMainFunction() override;
 
   void LeaveFunction() override;
-
-protected:
-  int32_t apiNum;
 
 }; // class ChromeSynthesisBuilder
 

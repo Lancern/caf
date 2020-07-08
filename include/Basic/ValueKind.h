@@ -5,7 +5,7 @@
 
 namespace caf {
 
-#define CAF_VALUE_KIND_LIST(V) \
+#define CAF_JS_VALUE_KIND_LIST(V) \
   V(Undefined) \
   V(Null) \
   V(Boolean) \
@@ -13,7 +13,10 @@ namespace caf {
   V(Function) \
   V(Integer) \
   V(Float) \
-  V(Array) \
+  V(Array)
+
+#define CAF_VALUE_KIND_LIST(V) \
+  CAF_JS_VALUE_KIND_LIST(V) \
   V(Placeholder)
 
 /**

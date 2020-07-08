@@ -1,9 +1,9 @@
 #ifndef CAF_PROBE_EXECUTOR_H
 #define CAF_PROBE_EXECUTOR_H
 
-#include "Fuzzer/TestCase.h"
-
 namespace caf {
+
+class TestCase;
 
 /**
  * @brief Abstract base class for probe executors.
